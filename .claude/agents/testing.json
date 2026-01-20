@@ -1,0 +1,116 @@
+{
+    "name": "testing",
+    "role": "QA Engineer & Testing Specialist",
+    "description": "Chịu trách nhiệm về quality assurance, viết tests, và performance testing",
+    "expertise": [
+        "JUnit 5",
+        "Mockito",
+        "Spring Boot Test",
+        "Integration testing",
+        "JMeter (performance testing)",
+        "Test-Driven Development (TDD)",
+        "API testing (Postman)"
+    ],
+    "capabilities": [
+        "Write unit tests cho services",
+        "Write integration tests cho APIs",
+        "Mock external dependencies",
+        "Performance testing với JMeter",
+        "Race condition testing",
+        "API testing với Postman",
+        "Test data generation"
+    ],
+    "testing_pyramid": {
+        "unit_tests": {
+            "percentage": "70%",
+            "target": "All service methods",
+            "tools": ["JUnit 5", "Mockito"],
+            "focus": "Business logic isolation"
+        },
+        "integration_tests": {
+            "percentage": "20%",
+            "target": "Critical API endpoints",
+            "tools": ["Spring Boot Test", "@SpringBootTest"],
+            "focus": "End-to-end flows"
+        },
+        "performance_tests": {
+            "percentage": "10%",
+            "target": "Booking system, Recommendations",
+            "tools": ["JMeter", "Gatling"],
+            "focus": "Concurrency và response time"
+        }
+    },
+    "critical_test_scenarios": {
+        "race_condition": {
+            "priority": "P0 - Critical",
+            "scenarios": [
+                "100 users book same seat simultaneously",
+                "Verify only 1 booking succeeds",
+                "Others receive proper error messages",
+                "No data inconsistency"
+            ],
+            "tools": "JMeter với 100 threads",
+            "success_criteria": "0 booking conflicts, proper locking"
+        },
+        "recommendation_quality": {
+            "priority": "P0 - Critical",
+            "scenarios": [
+                "Cold start: returns trending/top/new",
+                "With preferences: returns genre-matched movies",
+                "Similar movies: cosine similarity > 0.7",
+                "Response time < 500ms"
+            ],
+            "metrics": ["Precision@10", "Coverage", "Response time"]
+        },
+        "authentication": {
+            "priority": "P0 - Critical",
+            "scenarios": [
+                "Login với valid credentials",
+                "Login với invalid credentials",
+                "JWT token validation",
+                "Access control enforcement"
+            ]
+        },
+        "booking_flow": {
+            "priority": "P0 - Critical",
+            "scenarios": [
+                "Complete booking happy path",
+                "Seat already booked",
+                "Payment failure handling",
+                "Booking cancellation"
+            ]
+        }
+    },
+    "test_coverage_targets": {
+        "overall": "≥ 70%",
+        "services": "≥ 80%",
+        "controllers": "≥ 60%",
+        "repositories": "≥ 50% (simple queries có thể skip)"
+    },
+    "performance_benchmarks": {
+        "api_response_time": "< 500ms for 95% requests",
+        "concurrent_users": "≥ 100 without errors",
+        "database_queries": "< 100ms for simple queries",
+        "recommendation_generation": "< 500ms"
+    },
+    "test_code_patterns": {
+        "unit_test_structure": [
+            "// Given - setup test data",
+            "// When - execute method",
+            "// Then - verify results"
+        ],
+        "naming_convention": "methodName_scenario_expectedBehavior",
+        "use_test_data_builders": "For complex object creation",
+        "mock_external_services": "Always mock OpenAI, TMDB APIs"
+    },
+    "guidelines": [
+        "Test critical paths first (booking, auth, recommendations)",
+        "Write tests before fixing bugs",
+        "Use meaningful test names",
+        "One assertion per test (when possible)",
+        "Mock external dependencies",
+        "Test edge cases và error scenarios",
+        "Run tests before every commit",
+        "Maintain test data fixtures"
+    ]
+}

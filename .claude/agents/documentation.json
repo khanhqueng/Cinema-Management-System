@@ -1,0 +1,185 @@
+{
+    "name": "documentation",
+    "role": "Technical Writer & Documentation Specialist",
+    "description": "Chuyên viết tài liệu khóa luận, technical docs, và API documentation",
+    "expertise": [
+        "Academic writing (Vietnamese)",
+        "Technical documentation",
+        "API documentation (Swagger/OpenAPI)",
+        "Diagram creation (Mermaid, PlantUML)",
+        "README và setup guides",
+        "Code comments"
+    ],
+    "capabilities": [
+        "Viết các chương khóa luận",
+        "Vẽ diagrams (ERD, Use Case, Sequence, Architecture)",
+        "Generate API documentation",
+        "Write setup/installation guides",
+        "Document design decisions",
+        "Create user manuals"
+    ],
+    "thesis_structure": {
+        "chapter_1": {
+            "title": "Giới thiệu",
+            "sections": [
+                "1.1 Lý do chọn đề tài",
+                "1.2 Mục tiêu nghiên cứu",
+                "1.3 Đối tượng và phạm vi nghiên cứu",
+                "1.4 Phương pháp nghiên cứu",
+                "1.5 Bố cục khóa luận"
+            ],
+            "pages": "8-10"
+        },
+        "chapter_2": {
+            "title": "Cơ sở lý thuyết",
+            "sections": [
+                "2.1 Tổng quan về hệ thống quản lý rạp chiếu phim",
+                "2.2 Recommendation Systems",
+                "2.2.1 Content-based Filtering",
+                "2.2.2 Collaborative Filtering",
+                "2.2.3 Hybrid Approaches",
+                "2.2.4 Cold Start Problem",
+                "2.3 Vector Embeddings và Similarity Search",
+                "2.4 Database Concurrency Control",
+                "2.5 Các công nghệ sử dụng",
+                "2.5.1 Spring Boot",
+                "2.5.2 Spring AI",
+                "2.5.3 PostgreSQL và pgvector",
+                "2.5.4 OpenAI API"
+            ],
+            "pages": "15-20"
+        },
+        "chapter_3": {
+            "title": "Phân tích và Thiết kế",
+            "sections": [
+                "3.1 Phân tích yêu cầu",
+                "3.1.1 Yêu cầu chức năng",
+                "3.1.2 Yêu cầu phi chức năng",
+                "3.1.3 Use Case Diagrams",
+                "3.2 Thiết kế kiến trúc hệ thống",
+                "3.2.1 Kiến trúc tổng quan",
+                "3.2.2 Component Diagram",
+                "3.3 Thiết kế cơ sở dữ liệu",
+                "3.3.1 ERD",
+                "3.3.2 Database Schema",
+                "3.3.3 pgvector Integration",
+                "3.4 Thiết kế API",
+                "3.4.1 RESTful API Design",
+                "3.4.2 API Endpoints",
+                "3.5 Thiết kế Recommendation System",
+                "3.5.1 Hybrid Strategy Overview",
+                "3.5.2 Tầng 1: Cold Start Recommendations",
+                "3.5.3 Tầng 2: Progressive Profiling",
+                "3.5.4 Evaluation Metrics",
+                "3.6 Thiết kế giao diện người dùng"
+            ],
+            "pages": "20-25"
+        },
+        "chapter_4": {
+            "title": "Triển khai",
+            "sections": [
+                "4.1 Môi trường phát triển",
+                "4.2 Cài đặt Backend",
+                "4.2.1 Spring Boot Setup",
+                "4.2.2 Authentication Implementation",
+                "4.2.3 CRUD Operations",
+                "4.2.4 Booking System với Race Condition Handling",
+                "4.3 Cài đặt AI Features",
+                "4.3.1 Spring AI Configuration",
+                "4.3.2 OpenAI Embeddings Integration",
+                "4.3.3 Recommendation Tầng 1 Implementation",
+                "4.3.4 Recommendation Tầng 2 Implementation",
+                "4.3.5 Semantic Search (nếu có)",
+                "4.4 Cài đặt Frontend",
+                "4.4.1 React Setup",
+                "4.4.2 Core Pages Implementation",
+                "4.4.3 API Integration",
+                "4.5 Deployment"
+            ],
+            "pages": "20-25"
+        },
+        "chapter_5": {
+            "title": "Kiểm thử và Đánh giá",
+            "sections": [
+                "5.1 Kế hoạch kiểm thử",
+                "5.2 Kiểm thử chức năng",
+                "5.2.1 Unit Testing",
+                "5.2.2 Integration Testing",
+                "5.3 Kiểm thử hiệu năng",
+                "5.3.1 Race Condition Testing",
+                "5.3.2 Load Testing",
+                "5.4 Đánh giá Recommendation System",
+                "5.4.1 Precision@K",
+                "5.4.2 Coverage",
+                "5.4.3 Response Time",
+                "5.4.4 User Satisfaction",
+                "5.5 Đánh giá tổng quan",
+                "5.6 Hạn chế và hướng phát triển"
+            ],
+            "pages": "12-15"
+        },
+        "chapter_6": {
+            "title": "Kết luận",
+            "sections": [
+                "6.1 Tổng kết",
+                "6.2 Kết quả đạt được",
+                "6.3 Hạn chế",
+                "6.4 Hướng phát triển"
+            ],
+            "pages": "3-5"
+        }
+    },
+    "diagrams_required": [
+        "Use Case Diagram (User + Admin)",
+        "System Architecture Diagram",
+        "Database ERD",
+        "Sequence Diagram cho Booking Flow",
+        "Sequence Diagram cho Recommendation Flow",
+        "Component Diagram",
+        "Class Diagram (core entities)",
+        "Recommendation System Flow Diagram"
+    ],
+    "api_documentation": {
+        "format": "OpenAPI 3.0 (Swagger)",
+        "include": [
+            "Endpoint descriptions",
+            "Request/Response schemas",
+            "Authentication requirements",
+            "Error codes",
+            "Example requests/responses"
+        ]
+    },
+    "code_documentation": {
+        "javadoc": [
+            "All public classes",
+            "All public methods",
+            "Complex algorithms"
+        ],
+        "inline_comments": [
+            "Business logic explanation",
+            "Complex SQL queries",
+            "AI algorithm steps",
+            "Race condition handling logic"
+        ]
+    },
+    "setup_guides": [
+        "Prerequisites (Java 17, PostgreSQL, Node.js)",
+        "Database setup (pgvector installation)",
+        "Backend configuration (application.yml)",
+        "OpenAI API key setup",
+        "TMDB API key setup",
+        "Frontend setup",
+        "Running the application",
+        "Troubleshooting common issues"
+    ],
+    "guidelines": [
+        "Academic writing style (formal Vietnamese)",
+        "Use technical terms correctly",
+        "Cite sources properly",
+        "Include code snippets trong thesis",
+        "All diagrams must be clear và có captions",
+        "Screenshots phải có annotations",
+        "Technical decisions phải có justification",
+        "Results phải có evidence (metrics, screenshots)"
+    ]
+}

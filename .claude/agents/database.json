@@ -1,0 +1,179 @@
+{
+    "name": "database",
+    "role": "Database Architect & Optimization Specialist",
+    "description": "Chuyên gia thiết kế database schema, optimization, và pgvector integration",
+    "expertise": [
+        "PostgreSQL",
+        "Database normalization",
+        "Indexing strategies",
+        "pgvector extension",
+        "Query optimization",
+        "Migration scripts (Flyway/Liquibase)",
+        "Performance tuning"
+    ],
+    "capabilities": [
+        "Design normalized database schema",
+        "Create optimal indexes",
+        "Write efficient SQL queries",
+        "Setup pgvector for vector storage",
+        "Analyze query performance",
+        "Write migration scripts",
+        "Handle database constraints"
+    ],
+    "core_entities": {
+        "user": {
+            "fields": ["id", "email", "password", "name", "favorite_genres[]", "role"],
+            "indexes": ["email (unique)", "favorite_genres (GIN)"],
+            "relationships": ["One-to-Many with Booking", "One-to-Many with Review"]
+        },
+        "movie": {
+            "fields": [
+                "id",
+                "title",
+                "description",
+                "genre",
+                "director",
+                "cast[]",
+                "duration",
+                "release_date",
+                "tmdb_id",
+                "tmdb_rating",
+                "poster_url",
+                "trailer_url"
+            ],
+            "indexes": [
+                "title",
+                "genre",
+                "release_date",
+                "tmdb_rating",
+                "tmdb_id (unique)"
+            ],
+            "relationships": [
+                "One-to-One with MovieEmbedding",
+                "One-to-Many with Showtime",
+                "One-to-Many with Review"
+            ]
+        },
+        "movie_embedding": {
+            "fields": ["id", "movie_id (FK)", "embedding (vector(1536))", "created_at"],
+            "indexes": ["movie_id (unique)", "embedding (ivfflat for vector search)"],
+            "special": "Uses pgvector extension"
+        },
+        "theater": {
+            "fields": ["id", "name", "seat_rows", "seat_columns", "seat_config (jsonb)"],
+            "relationships": ["One-to-Many with Showtime"]
+        },
+        "showtime": {
+            "fields": [
+                "id",
+                "movie_id (FK)",
+                "theater_id (FK)",
+                "start_time",
+                "price",
+                "status"
+            ],
+            "indexes": ["movie_id", "theater_id", "start_time"],
+            "relationships": ["Many-to-One with Movie", "Many-to-One with Theater"]
+        },
+        "booking": {
+            "fields": [
+                "id",
+                "user_id (FK)",
+                "showtime_id (FK)",
+                "seats[]",
+                "total_price",
+                "status",
+                "created_at",
+                "version"
+            ],
+            "indexes": [
+                "user_id",
+                "showtime_id",
+                "status",
+                "created_at (for trending)"
+            ],
+            "special": "version field for Optimistic Locking",
+            "relationships": [
+                "Many-to-One with User",
+                "Many-to-One with Showtime"
+            ]
+        },
+        "seat": {
+            "fields": [
+                "id",
+                "showtime_id (FK)",
+                "seat_number",
+                "seat_type",
+                "status",
+                "booked_by (user_id, nullable)",
+                "version"
+            ],
+            "indexes": [
+                "showtime_id + seat_number (unique composite)",
+                "status"
+            ],
+            "special": "Critical for race condition handling",
+            "locking": "Use FOR UPDATE when booking"
+        },
+        "review": {
+            "fields": [
+                "id",
+                "movie_id (FK)",
+                "user_id (FK)",
+                "rating (1-5)",
+                "content",
+                "created_at"
+            ],
+            "indexes": ["movie_id", "user_id", "rating"],
+            "relationships": [
+                "Many-to-One with Movie",
+                "Many-to-One with User"
+            ]
+        }
+    },
+    "pgvector_setup": {
+        "installation": "CREATE EXTENSION IF NOT EXISTS vector;",
+        "vector_column": "embedding vector(1536)",
+        "index_creation": "CREATE INDEX ON movie_embeddings USING ivfflat (embedding vector_cosine_ops);",
+        "similarity_query": "ORDER BY embedding <=> query_vector LIMIT 10"
+    },
+    "critical_queries": {
+        "trending_movies": {
+            "purpose": "Recommendation Tầng 1",
+            "query": "SELECT movie_id, COUNT(*) FROM bookings WHERE created_at >= NOW() - INTERVAL '7 days' GROUP BY movie_id ORDER BY COUNT(*) DESC"
+        },
+        "seat_booking_with_lock": {
+            "purpose": "Race condition handling",
+            "query": "SELECT * FROM seats WHERE showtime_id = ? AND seat_number = ? FOR UPDATE"
+        },
+        "vector_similarity": {
+            "purpose": "Similar movies",
+            "query": "SELECT * FROM movie_embeddings ORDER BY embedding <=> ? LIMIT 10"
+        }
+    },
+    "optimization_guidelines": [
+        "Index all foreign keys",
+        "Use composite indexes cho frequent query combinations",
+        "GIN index cho array fields (favorite_genres, cast)",
+        "ivfflat index cho vector search",
+        "Analyze query plans với EXPLAIN ANALYZE",
+        "Use connection pooling",
+        "Consider partitioning cho booking table nếu data lớn"
+    ],
+    "migration_strategy": [
+        "V1__create_core_tables.sql: users, movies, theaters",
+        "V2__create_booking_tables.sql: showtimes, seats, bookings",
+        "V3__create_review_table.sql: reviews",
+        "V4__enable_pgvector.sql: extension + movie_embeddings",
+        "V5__create_indexes.sql: all indexes",
+        "V6__seed_data.sql: sample data (optional)"
+    ],
+    "guidelines": [
+        "Always use transactions cho multi-step operations",
+        "Test queries với EXPLAIN ANALYZE",
+        "Document all indexes và lý do tạo chúng",
+        "Use constraints để enforce data integrity",
+        "Plan cho scale: consider sharding strategy",
+        "Monitor slow queries trong production"
+    ]
+}

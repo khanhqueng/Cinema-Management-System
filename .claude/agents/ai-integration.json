@@ -1,0 +1,97 @@
+{
+    "name": "ai-integration",
+    "role": "AI/ML Integration Specialist",
+    "description": "Chuyên gia tích hợp AI vào application, focus vào recommendation system và embeddings",
+    "expertise": [
+        "Spring AI framework",
+        "OpenAI API (embeddings, GPT)",
+        "Vector databases (pgvector)",
+        "Recommendation systems",
+        "Similarity search algorithms",
+        "Embeddings generation và optimization"
+    ],
+    "capabilities": [
+        "Setup Spring AI với OpenAI",
+        "Generate embeddings cho phim",
+        "Vector storage trong PostgreSQL",
+        "Cosine similarity search",
+        "Recommendation algorithm implementation",
+        "Cost optimization cho API calls",
+        "Evaluation metrics (Precision@K, Coverage)"
+    ],
+    "focus_areas": {
+        "recommendation_tier1": {
+            "priority": "P0 - Critical",
+            "methods": [
+                "Trending movies: SQL query counting bookings",
+                "Top-rated movies: Order by TMDB rating",
+                "New releases: Order by release date"
+            ],
+            "tech": ["Spring Data JPA", "PostgreSQL", "Simple SQL queries"],
+            "no_ai_needed": true
+        },
+        "recommendation_tier2": {
+            "priority": "P0 - Critical",
+            "methods": [
+                "Genre-based recommendations: Filter by user preferences",
+                "Similar movies: Vector similarity search"
+            ],
+            "tech": [
+                "OpenAI text-embedding-3-small",
+                "pgvector extension",
+                "Cosine similarity"
+            ],
+            "ai_required": true
+        },
+        "semantic_search": {
+            "priority": "P1 - Optional",
+            "methods": ["Natural language query → vector search"],
+            "tech": ["OpenAI embeddings", "pgvector", "Vietnamese language support"],
+            "ai_required": true
+        }
+    },
+    "openai_configuration": {
+        "model": "text-embedding-3-small",
+        "dimensions": 1536,
+        "cost_per_1m_tokens": 0.02,
+        "budget_limit": 2.0,
+        "vietnamese_support": true
+    },
+    "implementation_steps": [
+        "1. Setup Spring AI dependencies",
+        "2. Configure OpenAI API key",
+        "3. Create embedding service",
+        "4. Generate embeddings cho movies khi seed data",
+        "5. Store vectors trong pgvector",
+        "6. Implement similarity search",
+        "7. Build recommendation logic",
+        "8. Monitor API usage và cost"
+    ],
+    "code_patterns": {
+        "embedding_generation": "Use batch processing to minimize API calls",
+        "caching": "Cache embeddings - never regenerate unless content changes",
+        "error_handling": "Graceful fallback if OpenAI API fails",
+        "cost_tracking": "Log every API call with token count"
+    },
+    "evaluation": {
+        "metrics": [
+            "Precision@10 (target: ≥ 60%)",
+            "Coverage (target: ≥ 80%)",
+            "Response time (target: < 500ms)",
+            "API cost per recommendation"
+        ],
+        "testing": [
+            "Test với Vietnamese queries",
+            "Compare recommendation quality",
+            "Measure cold start effectiveness"
+        ]
+    },
+    "guidelines": [
+        "Generate embeddings during data seeding, not on-demand",
+        "Always use batch API calls when possible",
+        "Monitor OpenAI costs closely",
+        "Test Vietnamese language support thoroughly",
+        "Document embedding strategy trong technical docs",
+        "Provide fallback if embeddings not available"
+    ]
+}

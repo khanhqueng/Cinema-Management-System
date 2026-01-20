@@ -1,0 +1,43 @@
+{
+    "project": {
+        "name": "Cinema Management System với AI",
+        "description": "Khóa luận tốt nghiệp - Hệ thống quản lý rạp chiếu phim với recommendation system",
+        "timeline": "13 weeks",
+        "tech_stack": {
+            "backend": "Spring Boot 3.x + Spring AI",
+            "frontend": "React.js",
+            "database": "PostgreSQL + pgvector",
+            "ai": "OpenAI API (embeddings)"
+        }
+    },
+    "default_agent": "planning",
+    "agent_collaboration": {
+        "planning": ["backend", "database", "ai-integration"],
+        "backend": ["database", "testing"],
+        "ai-integration": ["backend", "database"],
+        "frontend": ["backend"],
+        "testing": ["backend", "ai-integration"],
+        "documentation": ["all"]
+    },
+    "priorities": {
+        "P0_core": [
+            "Authentication & Authorization",
+            "Movie CRUD + TMDB integration",
+            "Booking system với race condition handling",
+            "Recommendation Tầng 1-2",
+            "Frontend core pages"
+        ],
+        "P1_optional": [
+            "Recommendation Tầng 3",
+            "Semantic Search",
+            "Sentiment Analysis",
+            "Payment Gateway"
+        ]
+    },
+    "quality_standards": {
+        "code_coverage": "≥ 70%",
+        "api_response_time": "< 500ms",
+        "recommendation_precision": "≥ 60%",
+        "documentation": "Complete thesis 60-80 pages"
+    }
+}
