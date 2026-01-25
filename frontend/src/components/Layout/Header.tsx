@@ -1,90 +1,173 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import styles from './Header.module.css';
 
 const Header: React.FC = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
   const isAuthenticated = authService.isAuthenticated();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
     window.location.href = '/';
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const isActiveLink = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
-    <header style={headerStyle}>
-      <nav style={navStyle}>
-        <Link to="/" style={logoStyle}>
-          Cinema Management
-        </Link>
+    <header className={`${styles.netflixHeader} ${isScrolled ? styles.scrolled : ''}`}>
+      <nav className={styles.netflixNav}>
+        {/* Logo */}
+        <div className={styles.netflixNavLeft}>
+          <Link to="/" className={styles.netflixLogo}>
+            <span className={styles.logoText}>CINEMA</span>
+          </Link>
 
-        <div style={navLinksStyle}>
-          <Link to="/movies" style={linkStyle}>Movies</Link>
-          <Link to="/theaters" style={linkStyle}>Theaters</Link>
+          {/* Desktop Navigation */}
+          <ul className={styles.netflixNavPrimary}>
+            <li>
+              <Link
+                to="/"
+                className={`${styles.navLink} ${isActiveLink('/') ? styles.active : ''}`}
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/movies"
+                className={`${styles.navLink} ${isActiveLink('/movies') ? styles.active : ''}`}
+              >
+                Movies
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/theaters"
+                className={`${styles.navLink} ${isActiveLink('/theaters') ? styles.active : ''}`}
+              >
+                Theaters
+              </Link>
+            </li>
+            {isAuthenticated && (
+              <li>
+                <Link
+                  to="/bookings"
+                  className={`${styles.navLink} ${isActiveLink('/bookings') ? styles.active : ''}`}
+                >
+                  My Bookings
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
 
+        {/* Right Side Navigation */}
+        <div className={styles.netflixNavRight}>
           {isAuthenticated ? (
-            <>
-              <Link to="/bookings" style={linkStyle}>My Bookings</Link>
-              <button onClick={handleLogout} style={buttonStyle}>
-                Logout
-              </button>
-            </>
+            <div className={styles.userMenu}>
+              <div className={styles.userAvatar}>
+                <img
+                  src="https://via.placeholder.com/32x32/E50914/FFFFFF?text=U"
+                  alt="User Avatar"
+                  className={styles.avatarImage}
+                />
+              </div>
+              <div className={styles.dropdownMenu}>
+                <button onClick={handleLogout} className={styles.logoutBtn}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                  </svg>
+                  Sign Out
+                </button>
+              </div>
+            </div>
           ) : (
-            <>
-              <Link to="/login" style={linkStyle}>Login</Link>
-              <Link to="/register" style={linkStyle}>Register</Link>
-            </>
+            <div className={styles.authButtons}>
+              <Link to="/login" className="btn btn-secondary btn-small">
+                Sign In
+              </Link>
+              <Link to="/register" className="btn btn-small">
+                Sign Up
+              </Link>
+            </div>
           )}
+
+          {/* Mobile Menu Button */}
+          <button className={styles.mobileMenuBtn} onClick={toggleMobileMenu}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.open : ''}`}>
+          <ul className={styles.mobileNavLinks}>
+            <li>
+              <Link to="/" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link to="/movies" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                Movies
+              </Link>
+            </li>
+            <li>
+              <Link to="/theaters" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                Theaters
+              </Link>
+            </li>
+            {isAuthenticated ? (
+              <>
+                <li>
+                  <Link to="/bookings" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                    My Bookings
+                  </Link>
+                </li>
+                <li>
+                  <button onClick={handleLogout} className={`${styles.mobileNavLink} ${styles.logout}`}>
+                    Sign Out
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link to="/login" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/register" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                    Sign Up
+                  </Link>
+                </li>
+              </>
+            )}
+          </ul>
         </div>
       </nav>
     </header>
   );
-};
-
-const headerStyle: React.CSSProperties = {
-  backgroundColor: '#1976d2',
-  color: 'white',
-  padding: '1rem 0',
-  marginBottom: '2rem',
-};
-
-const navStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 1rem',
-};
-
-const logoStyle: React.CSSProperties = {
-  color: 'white',
-  textDecoration: 'none',
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-};
-
-const navLinksStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'center',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: 'white',
-  textDecoration: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  transition: 'background-color 0.3s',
-};
-
-const buttonStyle: React.CSSProperties = {
-  backgroundColor: 'transparent',
-  color: 'white',
-  border: '1px solid white',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  textDecoration: 'none',
 };
 
 export default Header;

@@ -1,7 +1,9 @@
 package com.example.cinema.controller;
 
+import com.example.cinema.dto.TheaterDto;
 import com.example.cinema.entity.Theater;
 import com.example.cinema.repository.TheaterRepository;
+import com.example.cinema.service.TheaterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,12 +28,13 @@ import java.util.Optional;
 public class TheaterController {
 
     private final TheaterRepository theaterRepository;
+    private final TheaterService theaterService;
 
     /**
-     * Get all theaters with pagination and sorting
+     * Get all theaters with pagination and sorting (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping
-    public ResponseEntity<Page<Theater>> getAllTheaters(
+    public ResponseEntity<Page<TheaterDto>> getAllTheaters(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "name") String sortBy,
@@ -42,73 +45,73 @@ public class TheaterController {
             : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Theater> theaters = theaterRepository.findAll(pageable);
+        Page<TheaterDto> theaters = theaterService.getAllTheatersDto(pageable);
 
         return ResponseEntity.ok(theaters);
     }
 
     /**
-     * Get theater by ID
+     * Get theater by ID (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Theater> getTheaterById(@PathVariable Long id) {
-        Optional<Theater> theater = theaterRepository.findById(id);
+    public ResponseEntity<TheaterDto> getTheaterById(@PathVariable Long id) {
+        Optional<TheaterDto> theater = theaterService.getTheaterDtoById(id);
         return theater.map(ResponseEntity::ok)
                      .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Search theaters by name
+     * Search theaters by name (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/search")
-    public ResponseEntity<Page<Theater>> searchTheaters(
+    public ResponseEntity<Page<TheaterDto>> searchTheaters(
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        Page<Theater> theaters = theaterRepository.findByNameContainingIgnoreCase(name, pageable);
+        Page<TheaterDto> theaters = theaterService.searchTheatersDto(name, pageable);
 
         return ResponseEntity.ok(theaters);
     }
 
     /**
-     * Get theaters by type
+     * Get theaters by type (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/type/{type}")
-    public ResponseEntity<Page<Theater>> getTheatersByType(
+    public ResponseEntity<Page<TheaterDto>> getTheatersByType(
             @PathVariable Theater.TheaterType type,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        Page<Theater> theaters = theaterRepository.findByTheaterType(type, pageable);
+        Page<TheaterDto> theaters = theaterService.getTheatersDtoByType(type, pageable);
 
         return ResponseEntity.ok(theaters);
     }
 
     /**
-     * Get theaters by capacity range
+     * Get theaters by capacity range (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/capacity")
-    public ResponseEntity<Page<Theater>> getTheatersByCapacity(
+    public ResponseEntity<Page<TheaterDto>> getTheatersByCapacity(
             @RequestParam Integer minCapacity,
             @RequestParam Integer maxCapacity,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("capacity").ascending());
-        Page<Theater> theaters = theaterRepository.findByCapacityRange(minCapacity, maxCapacity, pageable);
+        Page<TheaterDto> theaters = theaterService.getTheatersDtoByCapacity(minCapacity, maxCapacity, pageable);
 
         return ResponseEntity.ok(theaters);
     }
 
     /**
-     * Get theaters with active showtimes
+     * Get theaters with active showtimes (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/with-showtimes")
-    public ResponseEntity<List<Theater>> getTheatersWithShowtimes() {
-        List<Theater> theaters = theaterRepository.findTheatersWithActiveShowtimes();
+    public ResponseEntity<List<TheaterDto>> getTheatersWithShowtimes() {
+        List<TheaterDto> theaters = theaterService.getTheatersWithShowtimesDto();
         return ResponseEntity.ok(theaters);
     }
 

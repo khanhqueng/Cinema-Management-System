@@ -1,0 +1,69 @@
+NỘI DUNG ĐỀ TÀI
+1. Lý do chọn đề tài
+Theo báo cáo của Vietnam Report năm 2024, thị trường rạp chiếu phim Việt Nam đạt doanh thu hơn 5.000 tỷ đồng với hơn 50 triệu lượt khán giả. Tuy nhiên, các hệ thống đặt vé hiện tại như CGV, Galaxy Cinema vẫn gặp phải các vấn đề: người dùng mới phải tự tìm kiếm phim trong hàng trăm lựa chọn mà không có gợi ý phù hợp, việc tìm kiếm phim chỉ dựa vào từ khóa chính xác không hỗ trợ tìm kiếm ngữ nghĩa như "phim hành động gay cấn có twist bất ngờ", hệ thống chưa tận dụng dữ liệu hành vi người dùng để cá nhân hóa trải nghiệm.
+Khoảng trống nghiên cứu mà đề tài hướng đến là áp dụng các kỹ thuật AI hiện đại như embeddings và vector similarity search vào bài toán Cold Start Problem trong recommendation systems, một thách thức phổ biến mà các nền tảng mới hoặc người dùng mới thường gặp phải. Thay vì chỉ dựa vào collaborative filtering truyền thống yêu cầu nhiều dữ liệu lịch sử, đề tài tập trung nghiên cứu Hybrid Recommendation Strategy kết hợp content-based filtering với popularity-based methods để giải quyết vấn đề này.
+Xuất phát từ thực tiễn và khoảng trống nghiên cứu nêu trên, đề tài được lựa chọn với mục tiêu xây dựng một hệ thống quản lý rạp chiếu phim có tích hợp AI, đồng thời nghiên cứu và đánh giá hiệu quả của phương pháp Hybrid Recommendation trong môi trường thiếu dữ liệu người dùng.
+2. Mục tiêu
+Mục tiêu chính (Bắt buộc):
+Xây dựng hệ thống quản lý rạp chiếu phim cơ bản với đầy đủ chức năng đặt vé trực tuyến. Nghiên cứu và triển khai Hybrid Recommendation System giải quyết Cold Start Problem với hai tầng: Cold Start Recommendations dựa trên trending, top-rated và new releases; Progressive Profiling dựa trên genre preferences. Triển khai tìm kiếm ngữ nghĩa Semantic Search cho phép người dùng tìm phim bằng mô tả tự nhiên tiếng Việt sử dụng vector embeddings. Xử lý race condition trong booking system bằng database locking mechanisms. Đánh giá hiệu quả của hệ thống gợi ý thông qua các metrics cụ thể.
+Mục tiêu mở rộng (Tùy chọn - nếu thời gian cho phép):
+Triển khai tầng thứ ba của recommendation system là Personalized Recommendations dựa trên lịch sử người dùng. Xây dựng sentiment analysis tự động cho reviews. Tích hợp payment gateway thực tế.
+Chỉ số lượng hóa:
+Hệ thống gợi ý đạt Precision@10 lớn hơn hoặc bằng 60 phần trăm, trong top 10 phim gợi ý có ít nhất 6 phim phù hợp với preferences của user. Coverage lớn hơn hoặc bằng 80 phần trăm, tức là 80 phần trăm phim trong hệ thống có cơ hội được gợi ý. Response time cho API gợi ý nhỏ hơn 500ms. Hệ thống xử lý được lớn hơn hoặc bằng 100 concurrent booking requests mà không có booking conflict.
+3. Phạm vi
+a) Nền tảng hỗ trợ
+Triển khai sản phẩm đề tài trên môi trường website.
+b) Chức năng
+Phân loại theo mức độ ưu tiên:
+CORE - Bắt buộc triển khai đầy đủ (P0):
+Chức năng tài khoản: Đăng ký, Đăng nhập với JWT authentication, Đăng xuất, Đặt lại mật khẩu.
+Quản lý phim cho Khách hàng: Xem danh sách phim, Xem chi tiết phim bao gồm mô tả, thể loại, diễn viên, đạo diễn, trailer và rating, Tìm kiếm phim theo từ khóa, Tìm kiếm ngữ nghĩa ví dụ "phim hành động gay cấn", Lưu phim yêu thích.
+Hệ thống gợi ý phim AI Core: Tầng 1 Cold Start gợi ý phim trending nhiều booking nhất 7 ngày qua, top-rated có rating cao nhất, new releases mới phát hành. Tầng 2 Progressive Profiling thu thập genre preferences khi đăng ký, gợi ý phim dựa trên genres yêu thích. Tìm phim tương tự Similar Movies dựa trên vector similarity.
+Đặt vé cho Khách hàng: Xem lịch chiếu theo phim hoặc theo ngày, Chọn suất chiếu, Xem sơ đồ ghế và chọn ghế, Đặt vé với xử lý race condition sử dụng database locking, Thanh toán mô phỏng mock payment không tích hợp gateway thật, Xem lịch sử đặt vé, Hủy vé theo policy trước 2 giờ chiếu.
+Đánh giá phim cho Khách hàng: Đánh giá phim 1-5 sao, Viết review văn bản, Xem reviews của người khác.
+Quản lý phim cho Admin: Thêm phim mới nhập thủ công hoặc import từ TMDB API, Chỉnh sửa thông tin phim, Xóa phim, Tự động generate embeddings khi thêm phim mới.
+Quản lý rạp và lịch chiếu cho Admin: Quản lý phòng chiếu thêm, sửa, xóa, Cấu hình sơ đồ ghế cho phòng chiếu, Tạo lịch chiếu với phim, phòng, thời gian, Chỉnh sửa và hủy lịch chiếu.
+Quản lý đặt vé cho Admin: Xem danh sách bookings, Tìm kiếm và filter bookings, Hủy booking và xử lý refund, Xem thống kê cơ bản.
+Dashboard thống kê cho Admin Simplified: Thống kê doanh thu theo ngày tuần tháng với biểu đồ đơn giản, Số lượng vé đặt theo phim, Top 10 phim bán chạy nhất, Tỷ lệ lấp đầy phòng chiếu trung bình. Lưu ý: Chỉ thống kê quản lý vận hành, không đi sâu vào nghiệp vụ kế toán tài chính.
+OPTIONAL - Triển khai nếu thời gian cho phép (P1):
+Hệ thống gợi ý nâng cao: Tầng 3 Personalized Recommendations dựa trên lịch sử xem và ratings của user, Collaborative filtering dựa trên similar users.
+Sentiment Analysis: Tự động phân tích sentiment từ reviews, Dashboard sentiment cho admin.
+Payment Integration: Tích hợp VNPay hoặc MoMo payment gateway thật.
+Notifications: Email notifications cho booking confirmation.
+Advanced Analytics: Báo cáo chi tiết hơn, export Excel hoặc PDF.
+MINH HỌA - Chỉ demo concept, không triển khai đầy đủ (P2):
+Real-time chat support, Mobile responsive chỉ cần desktop work tốt, Advanced admin features như user management và báo cáo phức tạp.
+4. Đối tượng sử dụng
+Khách hàng: cá nhân có nhu cầu tìm kiếm thông tin phim và đặt vé xem phim trực tuyến. Quản trị viên: người quản lý, vận hành và giám sát hệ thống rạp chiếu phim.
+5. Phương pháp thực hiện
+Phương pháp nghiên cứu chính:
+Nghiên cứu lý thuyết: Tìm hiểu các kỹ thuật Recommendation Systems bao gồm Content-based filtering, Collaborative filtering và Hybrid approaches, nghiên cứu Cold Start Problem và các giải pháp, tìm hiểu Vector Embeddings và Similarity Search, nghiên cứu Database Concurrency Control gồm Pessimistic và Optimistic Locking.
+Nghiên cứu thực nghiệm: Triển khai và so sánh hiệu quả của các phương pháp recommendation khác nhau, đánh giá accuracy của semantic search với tiếng Việt, đo lường performance của race condition handling với concurrent requests.
+Phương pháp phát triển hệ thống: Áp dụng Agile methodology với sprints 1-2 tuần, MVP Minimum Viable Product approach ưu tiên core features trước, Test-Driven Development cho critical features như booking và recommendations.
+Quy trình thực hiện:
+Thu thập yêu cầu: Phân tích các ứng dụng thực tế CGV và Galaxy Cinema, xác định pain points và improvement opportunities, định nghĩa core features versus optional features.
+Thiết kế hệ thống: Thiết kế database schema với normalization, thiết kế RESTful API, thiết kế kiến trúc layered bao gồm Controller Service và Repository, thiết kế UI/UX mockups trên Figma.
+Triển khai: Phát triển backend với Spring Boot ecosystem, tích hợp OpenAI API cho embeddings, implement recommendation algorithms, xây dựng frontend với React, viết unit tests và integration tests.
+Đánh giá: Đánh giá recommendation quality với Precision@K, Recall@K, Coverage và Diversity, performance testing với JMeter, user acceptance testing.
+6. Nền tảng công nghệ
+Công nghệ bắt buộc Core stack:
+Backend Framework: Spring Boot 3.x, Spring Security JWT, Spring Data JPA, Spring AI OpenAI integration.
+Database: PostgreSQL chính, pgvector extension vector storage.
+AI Services: OpenAI API text-embedding-3-small embeddings, TMDB API movie data.
+Frontend: React.js hoặc Next.js, TailwindCSS hoặc Material-UI, Axios.
+Development Tools: Maven, Git Github, Postman, pgAdmin.
+Testing: JUnit 5, Mockito, JMeter.
+Công nghệ tùy chọn Optional nếu thời gian cho phép:
+Redis caching, Docker containerization, OpenAI GPT-3.5-turbo nếu làm chatbot hoặc sentiment analysis, Payment SDK VNPay hoặc MoMo, CI/CD với Github Actions.
+Lưu ý: Không triển khai các công nghệ nâng cao nếu không đủ thời gian. Ưu tiên chất lượng core features hơn số lượng công nghệ.
+7. Kết quả mong đợi
+Sản phẩm:
+Website quản lý rạp chiếu phim hoạt động đầy đủ chức năng core. Hệ thống gợi ý phim AI với Tầng 1 và Tầng 2 hoạt động ổn định. Semantic search cho phép tìm kiếm bằng tiếng Việt. Database chứa ít nhất 100 phim với embeddings đầy đủ. Source code có cấu trúc rõ ràng, có comments và documentation.
+Nghiên cứu:
+Tài liệu phân tích so sánh các phương pháp recommendation trong môi trường Cold Start. Báo cáo đánh giá hiệu quả của Hybrid Recommendation Strategy. Phân tích performance của race condition handling mechanisms.
+Tiêu chí đánh giá cụ thể:
+Chức năng: 100 phần trăm core features P0 hoạt động đúng, lớn hơn hoặc bằng 50 phần trăm optional features P1 nếu thời gian cho phép.
+AI Recommendation Quality: Precision@10 lớn hơn hoặc bằng 60 phần trăm, Coverage lớn hơn hoặc bằng 80 phần trăm, User satisfaction lớn hơn hoặc bằng 70 phần trăm qua UAT survey.
+Performance: API response time nhỏ hơn 500ms cho 95 phần trăm requests, hệ thống handle được lớn hơn hoặc bằng 100 concurrent bookings không conflict, database queries có index optimization.
+Code Quality: Unit test coverage lớn hơn hoặc bằng 70 phần trăm cho services, không có critical security vulnerabilities, code tuân thủ coding conventions.
+Documentation: Tài liệu khóa luận 60-80 trang, đầy đủ diagrams ERD, Architecture, Sequence, hướng dẫn cài đặt và sử dụng rõ ràng.

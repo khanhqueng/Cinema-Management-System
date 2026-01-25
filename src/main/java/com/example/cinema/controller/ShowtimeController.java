@@ -1,11 +1,13 @@
 package com.example.cinema.controller;
 
+import com.example.cinema.dto.ShowtimeDto;
 import com.example.cinema.entity.Movie;
 import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.Theater;
 import com.example.cinema.repository.MovieRepository;
 import com.example.cinema.repository.ShowtimeRepository;
 import com.example.cinema.repository.TheaterRepository;
+import com.example.cinema.service.ShowtimeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,12 +35,13 @@ public class ShowtimeController {
     private final ShowtimeRepository showtimeRepository;
     private final MovieRepository movieRepository;
     private final TheaterRepository theaterRepository;
+    private final ShowtimeService showtimeService;
 
     /**
-     * Get all showtimes with pagination and sorting
+     * Get all showtimes with pagination and sorting (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping
-    public ResponseEntity<Page<Showtime>> getAllShowtimes(
+    public ResponseEntity<Page<ShowtimeDto>> getAllShowtimes(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "showDatetime") String sortBy,
@@ -49,114 +52,113 @@ public class ShowtimeController {
             : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Showtime> showtimes = showtimeRepository.findAll(pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getAllShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get showtime by ID
+     * Get showtime by ID (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Showtime> getShowtimeById(@PathVariable Long id) {
-        Optional<Showtime> showtime = showtimeRepository.findById(id);
+    public ResponseEntity<ShowtimeDto> getShowtimeById(@PathVariable Long id) {
+        Optional<ShowtimeDto> showtime = showtimeService.getShowtimeDtoById(id);
         return showtime.map(ResponseEntity::ok)
                       .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * Get upcoming showtimes
+     * Get upcoming showtimes (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/upcoming")
-    public ResponseEntity<Page<Showtime>> getUpcomingShowtimes(
+    public ResponseEntity<Page<ShowtimeDto>> getUpcomingShowtimes(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("showDatetime").ascending());
-        Page<Showtime> showtimes = showtimeRepository.findUpcomingShowtimes(LocalDateTime.now(), pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getUpcomingShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get available showtimes (with seats)
+     * Get available showtimes (with seats) (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/available")
-    public ResponseEntity<Page<Showtime>> getAvailableShowtimes(
+    public ResponseEntity<Page<ShowtimeDto>> getAvailableShowtimes(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("showDatetime").ascending());
-        Page<Showtime> showtimes = showtimeRepository.findAvailableShowtimes(LocalDateTime.now(), pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getAvailableShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get showtimes by movie
+     * Get showtimes by movie (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<Page<Showtime>> getShowtimesByMovie(
+    public ResponseEntity<Page<ShowtimeDto>> getShowtimesByMovie(
             @PathVariable Long movieId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("showDatetime").ascending());
-        Page<Showtime> showtimes = showtimeRepository.findByMovieIdOrderByShowDatetime(movieId, pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getShowtimesDtoByMovie(movieId, pageable);
 
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get showtimes by theater
+     * Get showtimes by theater (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/theater/{theaterId}")
-    public ResponseEntity<Page<Showtime>> getShowtimesByTheater(
+    public ResponseEntity<Page<ShowtimeDto>> getShowtimesByTheater(
             @PathVariable Long theaterId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("showDatetime").ascending());
-        Page<Showtime> showtimes = showtimeRepository.findByTheaterIdOrderByShowDatetime(theaterId, pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getShowtimesDtoByTheater(theaterId, pageable);
 
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get showtimes by date range
+     * Get showtimes by date range (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/date-range")
-    public ResponseEntity<List<Showtime>> getShowtimesByDateRange(
+    public ResponseEntity<List<ShowtimeDto>> getShowtimesByDateRange(
             @RequestParam LocalDateTime startDate,
             @RequestParam LocalDateTime endDate) {
 
-        List<Showtime> showtimes = showtimeRepository.findByDateRange(startDate, endDate);
+        List<ShowtimeDto> showtimes = showtimeService.getShowtimesDtoByDateRange(startDate, endDate);
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get showtimes for specific movie and theater
+     * Get showtimes for specific movie and theater (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/movie/{movieId}/theater/{theaterId}")
-    public ResponseEntity<List<Showtime>> getShowtimesByMovieAndTheater(
+    public ResponseEntity<List<ShowtimeDto>> getShowtimesByMovieAndTheater(
             @PathVariable Long movieId,
             @PathVariable Long theaterId) {
 
-        List<Showtime> showtimes = showtimeRepository.findByMovieAndTheater(
-            movieId, theaterId, LocalDateTime.now());
+        List<ShowtimeDto> showtimes = showtimeService.getShowtimesDtoByMovieAndTheater(movieId, theaterId);
         return ResponseEntity.ok(showtimes);
     }
 
     /**
-     * Get popular showtimes
+     * Get popular showtimes (returns DTO to avoid Hibernate proxy issues)
      */
     @GetMapping("/popular")
-    public ResponseEntity<Page<Showtime>> getPopularShowtimes(
+    public ResponseEntity<Page<ShowtimeDto>> getPopularShowtimes(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Showtime> showtimes = showtimeRepository.findPopularShowtimes(pageable);
+        Page<ShowtimeDto> showtimes = showtimeService.getPopularShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);
     }

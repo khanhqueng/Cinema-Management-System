@@ -4,6 +4,8 @@ import com.example.cinema.entity.Booking;
 import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.User;
 import com.example.cinema.entity.SeatBooking;
+import com.example.cinema.dto.BookingDto;
+import com.example.cinema.dto.SeatBookingDto;
 import com.example.cinema.exception.BusinessRuleViolationException;
 import com.example.cinema.exception.ResourceNotFoundException;
 import com.example.cinema.exception.UnauthorizedException;
@@ -20,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Booking Service - Business Logic for Booking Management
@@ -145,7 +148,13 @@ public class BookingService {
             throw new BusinessRuleViolationException("Failed to update showtime seat count");
         }
 
-        return new BookingWithSeatsResponse(booking, seatBookings);
+        // Convert entities to DTOs to avoid Hibernate proxy serialization issues
+        BookingDto bookingDto = BookingDto.fromEntity(booking);
+        List<SeatBookingDto> seatBookingDtos = seatBookings.stream()
+                .map(SeatBookingDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return new BookingWithSeatsResponse(bookingDto, seatBookingDtos);
     }
 
     /**
@@ -328,14 +337,14 @@ public class BookingService {
      * Booking with Seats Response DTO
      */
     public record BookingWithSeatsResponse(
-        Booking booking,
-        List<SeatBooking> seatBookings
+        BookingDto booking,
+        List<SeatBookingDto> seatBookings
     ) {
         public List<String> getSeatLabels() {
             return seatBookings.stream()
-                    .map(SeatBooking::getSeatLabel)
+                    .map(SeatBookingDto::getSeatLabel)
                     .sorted()
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         }
 
         public int getTotalSeats() {

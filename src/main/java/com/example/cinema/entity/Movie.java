@@ -1,6 +1,7 @@
 package com.example.cinema.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -74,12 +75,14 @@ public class Movie {
     @JsonIgnore
     private List<Review> reviews;
 
-    // Utility methods
+    // Computed fields for JSON response
+    @JsonProperty("currentlyShowing")
     public boolean isCurrentlyShowing() {
         LocalDate now = LocalDate.now();
         return releaseDate != null && !releaseDate.isAfter(now);
     }
 
+    @JsonProperty("formattedDuration")
     public String getFormattedDuration() {
         if (durationMinutes == null || durationMinutes <= 0) {
             return "N/A";
@@ -94,6 +97,7 @@ public class Movie {
         }
     }
 
+    @JsonProperty("averageRating")
     public Double getAverageRating() {
         if (reviews == null || reviews.isEmpty()) {
             return 0.0;
@@ -104,6 +108,7 @@ public class Movie {
                 .orElse(0.0);
     }
 
+    @JsonProperty("reviewCount")
     public int getReviewCount() {
         return reviews != null ? reviews.size() : 0;
     }

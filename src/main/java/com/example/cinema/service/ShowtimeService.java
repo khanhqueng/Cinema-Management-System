@@ -1,5 +1,6 @@
 package com.example.cinema.service;
 
+import com.example.cinema.dto.ShowtimeDto;
 import com.example.cinema.entity.Movie;
 import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.Theater;
@@ -68,6 +69,77 @@ public class ShowtimeService {
      */
     public Page<Showtime> getShowtimesByTheater(Long theaterId, Pageable pageable) {
         return showtimeRepository.findByTheaterIdOrderByShowDatetime(theaterId, pageable);
+    }
+
+    /**
+     * Get showtimes by theater as DTO (avoids Hibernate proxy issues)
+     */
+    public Page<ShowtimeDto> getShowtimesDtoByTheater(Long theaterId, Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findByTheaterIdOrderByShowDatetime(theaterId, pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get all showtimes as DTO with pagination
+     */
+    public Page<ShowtimeDto> getAllShowtimesDto(Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findAll(pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get showtime by ID as DTO
+     */
+    public Optional<ShowtimeDto> getShowtimeDtoById(Long id) {
+        return showtimeRepository.findById(id).map(this::convertToDto);
+    }
+
+    /**
+     * Get upcoming showtimes as DTO
+     */
+    public Page<ShowtimeDto> getUpcomingShowtimesDto(Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findUpcomingShowtimes(LocalDateTime.now(), pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get available showtimes as DTO
+     */
+    public Page<ShowtimeDto> getAvailableShowtimesDto(Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findAvailableShowtimes(LocalDateTime.now(), pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get showtimes by movie as DTO
+     */
+    public Page<ShowtimeDto> getShowtimesDtoByMovie(Long movieId, Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findByMovieIdOrderByShowDatetime(movieId, pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get popular showtimes as DTO
+     */
+    public Page<ShowtimeDto> getPopularShowtimesDto(Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.findPopularShowtimes(pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
+     * Get showtimes by date range as DTO
+     */
+    public List<ShowtimeDto> getShowtimesDtoByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        List<Showtime> showtimes = showtimeRepository.findByDateRange(startDate, endDate);
+        return showtimes.stream().map(this::convertToDto).toList();
+    }
+
+    /**
+     * Get showtimes for specific movie and theater as DTO
+     */
+    public List<ShowtimeDto> getShowtimesDtoByMovieAndTheater(Long movieId, Long theaterId) {
+        List<Showtime> showtimes = showtimeRepository.findByMovieAndTheater(movieId, theaterId, LocalDateTime.now());
+        return showtimes.stream().map(this::convertToDto).toList();
     }
 
     /**
@@ -204,6 +276,26 @@ public class ShowtimeService {
      */
     public boolean showtimeExists(Long id) {
         return showtimeRepository.existsById(id);
+    }
+
+    /**
+     * Convert Showtime entity to DTO (avoids Hibernate proxy issues)
+     */
+    private ShowtimeDto convertToDto(Showtime showtime) {
+        return ShowtimeDto.builder()
+                .id(showtime.getId())
+                .movieId(showtime.getMovie().getId())
+                .movieTitle(showtime.getMovie().getTitle())
+                .moviePosterUrl(showtime.getMovie().getPosterUrl())
+                .movieDurationMinutes(showtime.getMovie().getDurationMinutes())
+                .theaterId(showtime.getTheater().getId())
+                .theaterName(showtime.getTheater().getName())
+                .theaterCapacity(showtime.getTheater().getCapacity())
+                .showDatetime(showtime.getShowDatetime())
+                .price(showtime.getPrice())
+                .availableSeats(showtime.getAvailableSeats())
+                .createdAt(showtime.getCreatedAt())
+                .build();
     }
 
     /**

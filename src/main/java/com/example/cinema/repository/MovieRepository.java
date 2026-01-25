@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Movie Repository - Content Management
@@ -57,5 +58,17 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     // Get distinct genres
     @Query("SELECT DISTINCT m.genre FROM Movie m WHERE m.genre IS NOT NULL ORDER BY m.genre")
     List<String> findAllGenres();
+
+    // Fetch movie with reviews for rating calculations
+    @Query("SELECT DISTINCT m FROM Movie m LEFT JOIN FETCH m.reviews WHERE m.id = :id")
+    Optional<Movie> findByIdWithReviews(@Param("id") Long id);
+
+    // Get average rating for a movie
+    @Query("SELECT COALESCE(AVG(CAST(r.rating AS DOUBLE)), 0.0) FROM Review r WHERE r.movie.id = :movieId")
+    Double getAverageRatingByMovieId(@Param("movieId") Long movieId);
+
+    // Get review count for a movie
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.movie.id = :movieId")
+    Long getReviewCountByMovieId(@Param("movieId") Long movieId);
 
 }

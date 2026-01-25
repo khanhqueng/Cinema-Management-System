@@ -1,5 +1,6 @@
 package com.example.cinema.service;
 
+import com.example.cinema.dto.MovieResponseDto;
 import com.example.cinema.entity.Movie;
 import com.example.cinema.exception.ResourceNotFoundException;
 import com.example.cinema.repository.MovieRepository;
@@ -180,6 +181,136 @@ public class MovieService {
      */
     public List<Movie> getMoviesByIds(List<Long> movieIds) {
         return movieRepository.findAllById(movieIds);
+    }
+
+    // ================================
+    // Simple DTO methods (avoid Hibernate proxy issues)
+    // ================================
+
+    /**
+     * Get all movies as DTO with pagination
+     */
+    public Page<MovieResponseDto> getAllMoviesDto(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findAll(pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get movie by ID as DTO
+     */
+    public MovieResponseDto getMovieDtoById(Long id) {
+        Movie movie = getMovieByIdOrThrow(id);
+        return MovieResponseDto.from(movie);
+    }
+
+    /**
+     * Search movies by query as DTO
+     */
+    public Page<MovieResponseDto> searchMoviesDto(String query, Pageable pageable) {
+        Page<Movie> movies = movieRepository.searchMovies(query, pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get currently showing movies as DTO
+     */
+    public Page<MovieResponseDto> getCurrentlyShowingMoviesDto(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findCurrentlyShowing(LocalDate.now(), pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get upcoming movies as DTO
+     */
+    public Page<MovieResponseDto> getUpcomingMoviesDto(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findUpcoming(LocalDate.now(), pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get movies by genre as DTO
+     */
+    public Page<MovieResponseDto> getMoviesByGenreDto(String genre, Pageable pageable) {
+        Page<Movie> movies = movieRepository.findByGenreIgnoreCase(genre, pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get popular movies as DTO
+     */
+    public Page<MovieResponseDto> getPopularMoviesDto(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findPopularMovies(pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    /**
+     * Get movies with active showtimes as DTO
+     */
+    public Page<MovieResponseDto> getMoviesWithShowtimesDto(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findMoviesWithActiveShowtimes(pageable);
+        return movies.map(MovieResponseDto::from);
+    }
+
+    // ================================
+    // Enhanced DTO methods with computed fields
+    // ================================
+
+    /**
+     * Get all movies with computed fields (rating, review count)
+     */
+    public Page<MovieResponseDto> getAllMoviesWithDetails(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findAll(pageable);
+        return movies.map(movie -> {
+            Double avgRating = movieRepository.getAverageRatingByMovieId(movie.getId());
+            Long reviewCount = movieRepository.getReviewCountByMovieId(movie.getId());
+            return MovieResponseDto.from(movie, avgRating, reviewCount);
+        });
+    }
+
+    /**
+     * Get movie by ID with computed fields
+     */
+    public MovieResponseDto getMovieByIdWithDetails(Long id) {
+        Movie movie = getMovieByIdOrThrow(id);
+        Double avgRating = movieRepository.getAverageRatingByMovieId(id);
+        Long reviewCount = movieRepository.getReviewCountByMovieId(id);
+        return MovieResponseDto.from(movie, avgRating, reviewCount);
+    }
+
+    /**
+     * Get currently showing movies with computed fields
+     */
+    public Page<MovieResponseDto> getCurrentlyShowingMoviesWithDetails(Pageable pageable) {
+        Page<Movie> movies = movieRepository.findCurrentlyShowing(LocalDate.now(), pageable);
+        return movies.map(movie -> {
+            Double avgRating = movieRepository.getAverageRatingByMovieId(movie.getId());
+            Long reviewCount = movieRepository.getReviewCountByMovieId(movie.getId());
+            return MovieResponseDto.from(movie, avgRating, reviewCount);
+        });
+    }
+
+    /**
+     * Search movies with computed fields
+     */
+    public Page<MovieResponseDto> searchMoviesWithDetails(String query, Pageable pageable) {
+        Page<Movie> movies = movieRepository.searchMovies(query, pageable);
+        return movies.map(movie -> {
+            Double avgRating = movieRepository.getAverageRatingByMovieId(movie.getId());
+            Long reviewCount = movieRepository.getReviewCountByMovieId(movie.getId());
+            return MovieResponseDto.from(movie, avgRating, reviewCount);
+        });
+    }
+
+    /**
+     * Get movies by genre with computed fields
+     */
+    public Page<MovieResponseDto> getMoviesByGenreWithDetails(String genre, Pageable pageable) {
+        Page<Movie> movies = movieRepository.findByGenreIgnoreCase(genre, pageable);
+        return movies.map(movie -> {
+            Double avgRating = movieRepository.getAverageRatingByMovieId(movie.getId());
+            Long reviewCount = movieRepository.getReviewCountByMovieId(movie.getId());
+            return MovieResponseDto.from(movie, avgRating, reviewCount);
+        });
     }
 
     /**

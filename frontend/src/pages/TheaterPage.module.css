@@ -1,0 +1,439 @@
+/* TheaterPage.module.css */
+/* Netflix-inspired design for theaters listing */
+
+.container {
+  min-height: 100vh;
+  background-color: #111;
+  color: #fff;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  gap: 1rem;
+}
+
+.spinner {
+  border: 4px solid #333;
+  border-top: 4px solid #e50914;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  gap: 1rem;
+  text-align: center;
+}
+
+/* Header Section */
+.headerSection {
+  background-color: #222;
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.headerContent {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+/* Content Section */
+.contentSection {
+  padding: 3rem 0;
+}
+
+.contentContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Filters */
+.filtersContainer {
+  background-color: #222;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+}
+
+.searchSection {
+  margin-bottom: 1.5rem;
+}
+
+.searchForm {
+  display: flex;
+  gap: 1rem;
+  max-width: 500px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.searchInput::placeholder {
+  color: #999;
+}
+
+.searchButton {
+  background-color: #e50914;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.searchButton:hover {
+  background-color: #f40612;
+}
+
+.filtersSection {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filterLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.select {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background-color: #333;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.clearButton {
+  background-color: #666;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clearButton:hover {
+  background-color: #777;
+}
+
+.resultsInfo {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+/* No Results */
+.noResults {
+  text-align: center;
+  padding: 3rem;
+  color: #ccc;
+}
+
+/* Theaters Grid */
+.theatersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+/* Theater Card */
+.theaterCard {
+  background-color: #222;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #333;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.theaterCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.theaterHeader {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.theaterIcon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.theaterInfo {
+  flex: 1;
+}
+
+.theaterName {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.theaterMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.theaterType {
+  color: #ffc107;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.capacity {
+  color: #ccc;
+  font-size: 0.8rem;
+}
+
+/* Showtimes */
+.showtimesContainer {
+  margin-bottom: 1.5rem;
+}
+
+.showtimesHeader {
+  font-size: 1rem;
+  margin-bottom: 0.8rem;
+  color: #fff;
+}
+
+.showtimesLoading {
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.showtimesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.showtimeItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #333;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.showtimeItem:hover {
+  background-color: #444;
+}
+
+.movieTitle {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #fff;
+  flex: 1;
+  margin-right: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.showtimeDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.showtimeTime {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.showtimeDate {
+  font-size: 0.7rem;
+  color: #ccc;
+}
+
+.noShowtimes {
+  color: #666;
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* Theater Actions */
+.theaterActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.viewShowtimesButton {
+  background-color: #e50914;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-align: center;
+  flex: 1;
+  transition: background-color 0.2s;
+}
+
+.viewShowtimesButton:hover {
+  background-color: #f40612;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 0;
+}
+
+.pageButton {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: #555;
+}
+
+.disabledPageButton {
+  background-color: #222;
+  color: #666;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  color: #ccc;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.retryButton {
+  background-color: #e50914;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retryButton:hover {
+  background-color: #f40612;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .theatersGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .searchForm {
+    flex-direction: column;
+    max-width: none;
+  }
+
+  .filtersSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .contentContainer,
+  .headerContent {
+    padding: 0 1rem;
+  }
+
+  .theaterCard {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 1.8rem;
+  }
+}
