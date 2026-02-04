@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { movieService } from '../services/movieService';
-import { showtimeService } from '../services/showtimeService';
-import { theaterService } from '../services/theaterService';
-import { Movie, Showtime, Theater } from '../types';
+import { movieService } from '../../services/movieService';
+import { showtimeService } from '../../services/showtimeService';
+import { theaterService } from '../../services/theaterService';
+import { Movie, Showtime, Theater } from '../../types';
 
 const ShowtimePage: React.FC = () => {
   const { id, theaterId } = useParams<{ id?: string; theaterId?: string }>();

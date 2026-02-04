@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
-import { bookingService } from '../services/bookingService';
-import { BookingDto, BookingWithSeatsResponse, Booking } from '../types';
+import { bookingService } from '../../services/bookingService';
+import { BookingDto, BookingWithSeatsResponse, Booking } from '../../types';
 
 const BookingConfirmationPage: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();

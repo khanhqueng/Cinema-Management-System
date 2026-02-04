@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { showtimeService } from '../services/showtimeService';
-import { bookingService } from '../services/bookingService';
+import { showtimeService } from '../../services/showtimeService';
+import { bookingService } from '../../services/bookingService';
 import {
   Showtime,
   SeatMapResponse,
   SeatInfo,
   SeatAvailabilityResponse,
   BookingWithSeatsResponse
-} from '../types';
+} from '../../types';
 
 const BookingPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();

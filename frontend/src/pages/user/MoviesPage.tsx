@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { movieService } from '../services/movieService';
-import { Movie, PageResponse } from '../types';
+import { movieService } from '../../services/movieService';
+import { Movie, PageResponse } from '../../types';
 
 const MoviesPage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);

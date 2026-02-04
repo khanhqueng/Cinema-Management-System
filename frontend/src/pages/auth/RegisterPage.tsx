@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService } from '../services/authService';
-import { RegisterRequest } from '../types';
+import { authService } from '../../services/authService';
+import { RegisterRequest } from '../../types';
 import styles from './Auth.module.css';
 
 const RegisterPage: React.FC = () => {

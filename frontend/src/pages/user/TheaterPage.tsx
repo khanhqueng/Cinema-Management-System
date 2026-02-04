@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { theaterService } from '../services/theaterService';
-import { showtimeService } from '../services/showtimeService';
-import { Theater, TheaterType, PageResponse, Showtime } from '../types';
+import { theaterService } from '../../services/theaterService';
+import { showtimeService } from '../../services/showtimeService';
+import { Theater, TheaterType, PageResponse, Showtime } from '../../types';
 import styles from './TheaterPage.module.css';
 
 const TheaterPage: React.FC = () => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { movieService } from '../services/movieService';
-import { Movie } from '../types';
+import { movieService } from '../../services/movieService';
+import { Movie } from '../../types';
 import styles from './HomePage.module.css';
 import movieCardStyles from './MovieCard.module.css';
 
