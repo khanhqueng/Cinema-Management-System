@@ -10,7 +10,9 @@ import {
   SeatMapResponse,
   SeatBooking,
   SeatBookingDto,
-  PageResponse
+  PageResponse,
+  SeatLockResponse,
+  SeatReservationRequest
 } from '../types';
 
 interface GetBookingsParams {
@@ -88,6 +90,114 @@ export const bookingService = {
   async calculateSeatPrice(showtimeId: number, seatIds: number[]): Promise<SeatAvailabilityResponse> {
     const response = await api.post(`/seats/showtime/${showtimeId}/calculate-price`, { seatIds });
     return response.data;
+  },
+
+  // === DISTRIBUTED LOCKING METHODS ===
+
+  // Reserve seats temporarily for user selection (prevents race conditions)
+  async reserveSeatsForSelection(request: SeatReservationRequest): Promise<SeatLockResponse> {
+    const response = await api.post('/bookings/seats/reserve', request);
+    return response.data;
+  },
+
+  // Release seat reservations when user deselects seats or leaves the page
+  async releaseSeatsReservation(request: SeatReservationRequest): Promise<void> {
+    await api.post('/bookings/seats/release', request);
+  },
+
+  // Check which seats are currently locked for a showtime
+  async getLockedSeats(showtimeId: number, seatIds: number[]): Promise<number[]> {
+    const response = await api.get('/bookings/seats/locked', {
+      params: {
+        showtimeId,
+        seatIds: seatIds.join(',')
+      }
+    });
+    return response.data;
+  },
+
+  // Utility method to handle seat selection with locking
+  async handleSeatSelection(
+    showtimeId: number,
+    selectedSeats: number[],
+    onSuccess?: (response: SeatLockResponse) => void,
+    onError?: (error: any) => void
+  ): Promise<SeatLockResponse | null> {
+    if (selectedSeats.length === 0) {
+      return null;
+    }
+
+    try {
+      const response = await this.reserveSeatsForSelection({
+        showtimeId,
+        seatIds: selectedSeats
+      });
+
+      if (response.success) {
+        onSuccess?.(response);
+      } else {
+        onError?.(new Error(response.message));
+      }
+
+      return response;
+    } catch (error) {
+      onError?.(error);
+      return null;
+    }
+  },
+
+  // Utility method to release all selected seats
+  async handleSeatDeselection(
+    showtimeId: number,
+    selectedSeats: number[],
+    onComplete?: () => void
+  ): Promise<void> {
+    if (selectedSeats.length === 0) {
+      onComplete?.();
+      return;
+    }
+
+    try {
+      await this.releaseSeatsReservation({
+        showtimeId,
+        seatIds: selectedSeats
+      });
+    } catch (error) {
+      console.error('Error releasing seat reservations:', error);
+    } finally {
+      onComplete?.();
+    }
+  },
+
+  // Utility method to check if seats are locked by other users
+  async checkSeatsLockStatus(
+    showtimeId: number,
+    seatIds: number[]
+  ): Promise<{ lockedSeats: number[], availableSeats: number[] }> {
+    try {
+      const lockedSeats = await this.getLockedSeats(showtimeId, seatIds);
+      const availableSeats = seatIds.filter(id => !lockedSeats.includes(id));
+
+      return { lockedSeats, availableSeats };
+    } catch (error) {
+      console.error('Error checking seat lock status:', error);
+      return { lockedSeats: [], availableSeats: seatIds };
+    }
+  },
+
+  // Auto-cleanup method for seat reservations (call on page unload)
+  async cleanupSeatReservations(showtimeId: number, selectedSeats: number[]): Promise<void> {
+    if (selectedSeats.length > 0) {
+      try {
+        await this.releaseSeatsReservation({
+          showtimeId,
+          seatIds: selectedSeats
+        });
+      } catch (error) {
+        // Silent cleanup - don't throw errors during page unload
+        console.warn('Failed to cleanup seat reservations:', error);
+      }
+    }
   },
 
   // Utility methods

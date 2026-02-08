@@ -42,6 +42,10 @@ dependencies {
 	annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.0'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
+	// Redis for distributed locking
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.redisson:redisson-spring-boot-starter:3.35.0'
+
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

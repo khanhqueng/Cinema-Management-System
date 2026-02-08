@@ -10,7 +10,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 20000
-      maximum-pool-size: 10
+      maximum-pool-size: 50
       minimum-idle: 5
       idle-timeout: 300000
 
@@ -36,6 +36,19 @@ spring:
     validate-on-migrate: true
     out-of-order: false
     clean-disabled: true
+
+  # Redis Configuration
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
 
 # JWT Configuration (Simplified)
 jwt:

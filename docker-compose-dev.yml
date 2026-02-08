@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: cinema-postgres-dev
+    environment:
+      POSTGRES_DB: cinema_db
+      POSTGRES_USER: cinema_user
+      POSTGRES_PASSWORD: cinema_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Redis for distributed locking
+  redis:
+    image: redis:7-alpine
+    container_name: cinema-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

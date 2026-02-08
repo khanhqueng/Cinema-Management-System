@@ -236,6 +236,19 @@ export interface SeatAvailabilityResponse {
   seatCount: number;
 }
 
+// Seat locking types
+export interface SeatReservationRequest {
+  showtimeId: number;
+  seatIds: number[];
+}
+
+export interface SeatLockResponse {
+  success: boolean;
+  lockedSeatIds: number[];
+  failedSeatIds: number[];
+  message: string;
+}
+
 // Showtime availability
 export interface ShowtimeAvailability {
   availableSeats: number;

@@ -4,6 +4,7 @@ import com.example.cinema.entity.Booking;
 import com.example.cinema.entity.User;
 import com.example.cinema.service.BookingService;
 import com.example.cinema.service.UserService;
+import com.example.cinema.dto.SeatLockResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -214,6 +215,47 @@ public class BookingController {
     }
 
     /**
+     * Reserve seats temporarily for user selection (prevents race conditions)
+     * This endpoint is called when user selects seats to lock them temporarily
+     *
+     * @return 200 OK if seats reserved successfully
+     * @throws SeatLockException (409 Conflict) if seats cannot be reserved
+     */
+    @PostMapping("/seats/reserve")
+    public ResponseEntity<SeatLockResponse> reserveSeatsForSelection(
+            @Valid @RequestBody SeatReservationRequest request) {
+        User currentUser = userService.getCurrentUser();
+
+        // If this method returns without exception, seats were successfully reserved
+        SeatLockResponse response = bookingService.reserveSeatsForSelection(
+                currentUser, request.showtimeId(), request.seatIds());
+
+        return ResponseEntity.ok(response); // 200 OK - seats reserved successfully
+    }
+
+    /**
+     * Release seat reservations when user deselects seats or leaves the page
+     */
+    @PostMapping("/seats/release")
+    public ResponseEntity<Void> releaseSeatsReservation(
+            @Valid @RequestBody SeatReservationRequest request) {
+        User currentUser = userService.getCurrentUser();
+        bookingService.releaseSeatsReservation(currentUser, request.showtimeId(), request.seatIds());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Check which seats are currently locked for a showtime
+     */
+    @GetMapping("/seats/locked")
+    public ResponseEntity<List<Long>> getLockedSeats(
+            @RequestParam Long showtimeId,
+            @RequestParam List<Long> seatIds) {
+        List<Long> lockedSeats = bookingService.getLockedSeats(showtimeId, seatIds);
+        return ResponseEntity.ok(lockedSeats);
+    }
+
+    /**
      * Create Booking Request DTO
      */
     public record CreateBookingRequest(
@@ -225,6 +267,14 @@ public class BookingController {
      * Create Booking with Seats Request DTO
      */
     public record CreateBookingWithSeatsRequest(
+        Long showtimeId,
+        List<Long> seatIds
+    ) {}
+
+    /**
+     * Seat Reservation Request DTO
+     */
+    public record SeatReservationRequest(
         Long showtimeId,
         List<Long> seatIds
     ) {}

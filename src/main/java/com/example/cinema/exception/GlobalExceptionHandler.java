@@ -53,6 +53,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(SeatLockException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessRuleViolationException(
+            SeatLockException ex, HttpServletRequest request) {
+
+        log.warn("Race condition exception: {}", ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Race Condition Error",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Handle Business Rule Violation exceptions
      */
