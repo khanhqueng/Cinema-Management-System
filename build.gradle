@@ -17,6 +17,8 @@ java {
 
 repositories {
 	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
 }
 
 dependencies {
@@ -45,6 +47,13 @@ dependencies {
 	// Redis for distributed locking
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.redisson:redisson-spring-boot-starter:3.35.0'
+
+	// OpenAI Java Client for AI-powered recommendations
+	implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
+
+	// Spring Retry for robust API calls
+	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework:spring-aspects'
 
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'

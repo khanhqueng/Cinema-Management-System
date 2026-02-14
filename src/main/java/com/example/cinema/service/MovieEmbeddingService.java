@@ -1,0 +1,282 @@
+package com.example.cinema.service;
+
+import com.example.cinema.entity.Movie;
+import com.example.cinema.repository.MovieRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Movie Embedding Service - Manages AI embeddings for movies
+ * Handles generation and storage of movie embeddings for AI recommendations
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MovieEmbeddingService {
+
+    private final MovieRepository movieRepository;
+    private final EmbeddingService embeddingService;
+
+    /**
+     * Generate and save embedding for a single movie
+     */
+    @Transactional
+    public Movie generateAndSaveMovieEmbedding(Movie movie) {
+        try {
+            log.info("Generating embedding for movie: {} (ID: {})", movie.getTitle(), movie.getId());
+
+            // Generate embedding using OpenAI
+            List<Double> embedding = embeddingService.generateMovieEmbedding(
+                movie.getTitle(),
+                movie.getDescription(),
+                movie.getGenre(),
+                movie.getDirector()
+            );
+
+            // Convert to vector string for database storage
+            String embeddingString = convertEmbeddingToVectorString(embedding);
+
+            // Update movie with embedding
+            movie.setEmbedding(embeddingString);
+
+            // Save to database
+            Movie savedMovie = movieRepository.save(movie);
+
+            log.info("Successfully generated and saved embedding for movie: {}", movie.getTitle());
+            return savedMovie;
+
+        } catch (Exception e) {
+            log.error("Failed to generate embedding for movie: {} (ID: {}). Error: {}",
+                     movie.getTitle(), movie.getId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to generate movie embedding: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Generate embeddings for all movies that don't have embeddings
+     * This is useful for batch processing existing movies
+     */
+    @Transactional
+    public void generateEmbeddingsForAllMovies() {
+        log.info("Starting batch embedding generation for all movies without embeddings");
+
+        List<Movie> moviesWithoutEmbeddings = movieRepository.findMoviesWithoutEmbeddings();
+
+        if (moviesWithoutEmbeddings.isEmpty()) {
+            log.info("All movies already have embeddings. No processing needed.");
+            return;
+        }
+
+        log.info("Found {} movies without embeddings. Starting generation...",
+                 moviesWithoutEmbeddings.size());
+
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (Movie movie : moviesWithoutEmbeddings) {
+            try {
+                generateAndSaveMovieEmbedding(movie);
+                successCount++;
+
+                // Add small delay to avoid hitting OpenAI rate limits
+                Thread.sleep(500); // 500ms delay between requests
+
+            } catch (Exception e) {
+                failureCount++;
+                log.warn("Failed to generate embedding for movie: {} (ID: {}). Continuing with next movie.",
+                        movie.getTitle(), movie.getId());
+            }
+        }
+
+        log.info("Batch embedding generation completed. Success: {}, Failures: {}",
+                 successCount, failureCount);
+    }
+
+    /**
+     * Regenerate embedding for a movie (useful when movie content changes)
+     */
+    @Transactional
+    public Movie regenerateMovieEmbedding(Long movieId) {
+        Movie movie = movieRepository.findById(movieId)
+                .orElseThrow(() -> new RuntimeException("Movie not found with ID: " + movieId));
+
+        log.info("Regenerating embedding for movie: {} (ID: {})", movie.getTitle(), movieId);
+
+        return generateAndSaveMovieEmbedding(movie);
+    }
+
+    /**
+     * Check if movie has embedding
+     */
+    public boolean hasEmbedding(Movie movie) {
+        return movie.getEmbedding() != null && !movie.getEmbedding().trim().isEmpty();
+    }
+
+    /**
+     * Get embedding statistics
+     */
+    public EmbeddingStats getEmbeddingStats() {
+        long totalMovies = movieRepository.count();
+        long moviesWithEmbeddings = totalMovies - movieRepository.findMoviesWithoutEmbeddings().size();
+
+        return EmbeddingStats.builder()
+                .totalMovies(totalMovies)
+                .moviesWithEmbeddings(moviesWithEmbeddings)
+                .moviesWithoutEmbeddings(totalMovies - moviesWithEmbeddings)
+                .embeddingCoverage((double) moviesWithEmbeddings / totalMovies * 100)
+                .build();
+    }
+
+    /**
+     * Find similar movies using vector similarity
+     */
+    public List<Movie> findSimilarMovies(Movie targetMovie, double similarityThreshold, int limit) {
+        if (!hasEmbedding(targetMovie)) {
+            log.warn("Movie {} does not have embedding. Cannot find similar movies.", targetMovie.getTitle());
+            return List.of();
+        }
+
+        // Use fallback approach - in-memory similarity calculation with fixed Hibernate vector mapping
+        // Get movie IDs that have embeddings
+        List<Long> movieIdsWithEmbeddings = movieRepository.findMovieIdsWithEmbeddings();
+
+        if (movieIdsWithEmbeddings.isEmpty()) {
+            log.warn("No movies with embeddings found in database");
+            return List.of();
+        }
+
+        // Load movies by IDs (without embedding conflicts)
+        List<Movie> moviesWithEmbeddings = movieRepository.findAllById(movieIdsWithEmbeddings);
+        log.info("Found movies with embeddings: {}", moviesWithEmbeddings.size());
+
+        // Calculate similarities in-memory
+        List<MovieSimilarityResult> similarityResults = new ArrayList<>();
+        List<Double> targetEmbedding = parseVectorText(targetMovie.getEmbedding());
+
+        for (Movie movie : moviesWithEmbeddings) {
+            try {
+                // Parse movie's embedding string directly
+                List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
+                if (movieEmbedding.isEmpty()) continue;
+
+                double similarity = embeddingService.calculateCosineSimilarity(targetEmbedding, movieEmbedding);
+
+                // Always collect results for later filtering with improved thresholds
+                similarityResults.add(new MovieSimilarityResult(movie, similarity));
+            } catch (Exception e) {
+                // Skip movies with invalid embeddings
+                log.warn("Failed to process embedding for movie {}: {}", movie.getId(), e.getMessage());
+                continue;
+            }
+        }
+
+        // Apply improved thresholds with fallback logic
+        double primaryThreshold = Math.max(similarityThreshold, 0.65);
+        double fallbackThreshold = Math.max(similarityThreshold * 0.75, 0.5);
+
+        List<Movie> results = similarityResults.stream()
+                .filter(result -> result.similarity >= primaryThreshold)
+                .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                .limit(limit)
+                .map(result -> result.movie)
+                .collect(java.util.stream.Collectors.toList());
+
+        // Fallback if not enough results
+        if (results.size() < Math.min(2, limit) && !similarityResults.isEmpty()) {
+            results = similarityResults.stream()
+                    .filter(result -> result.similarity >= fallbackThreshold)
+                    .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                    .limit(limit)
+                    .map(result -> result.movie)
+                    .collect(java.util.stream.Collectors.toList());
+
+            log.info("MovieEmbeddingService - used fallback threshold: {} for {} results",
+                    fallbackThreshold, results.size());
+        } else {
+            log.info("MovieEmbeddingService - used primary threshold: {} for {} results",
+                    primaryThreshold, results.size());
+        }
+
+        return results;
+    }
+
+    /**
+     * Convert List<Double> embedding to PostgreSQL vector format
+     */
+    private String convertEmbeddingToVectorString(List<Double> embedding) {
+        if (embedding == null || embedding.isEmpty()) {
+            throw new IllegalArgumentException("Embedding cannot be null or empty");
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+
+        for (int i = 0; i < embedding.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(embedding.get(i));
+        }
+
+        sb.append("]");
+        return sb.toString();
+    }
+
+
+    /**
+     * Parse pgvector text format [1.0,2.0,3.0,...] to List<Double>
+     */
+    private List<Double> parseVectorText(String vectorText) {
+        if (vectorText == null || vectorText.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Remove brackets and split by comma
+        String cleanText = vectorText.trim();
+        if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
+            cleanText = cleanText.substring(1, cleanText.length() - 1);
+        }
+
+        List<Double> result = new ArrayList<>();
+        String[] values = cleanText.split(",");
+
+        for (String value : values) {
+            try {
+                result.add(Double.parseDouble(value.trim()));
+            } catch (NumberFormatException e) {
+                // Skip invalid values
+                log.warn("Invalid vector value: {}", value);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Helper class for similarity calculation
+     */
+    private static class MovieSimilarityResult {
+        Movie movie;
+        double similarity;
+
+        MovieSimilarityResult(Movie movie, double similarity) {
+            this.movie = movie;
+            this.similarity = similarity;
+        }
+    }
+
+    /**
+     * Embedding Statistics DTO
+     */
+    @lombok.Builder
+    @lombok.Data
+    public static class EmbeddingStats {
+        private long totalMovies;
+        private long moviesWithEmbeddings;
+        private long moviesWithoutEmbeddings;
+        private double embeddingCoverage; // Percentage
+    }
+}

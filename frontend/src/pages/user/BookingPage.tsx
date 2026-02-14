@@ -97,12 +97,16 @@ const BookingPage: React.FC = () => {
     updatePrice();
   }, [selectedSeats, showtimeId]);
 
+  // No cleanup needed since we're not locking seats until "Book Now" is clicked
+
   const handleSeatToggle = (seatId: number) => {
     setSelectedSeats(prev => {
       if (prev.includes(seatId)) {
+        // Deselecting seat - just remove from local state
         return prev.filter(id => id !== seatId);
       } else {
-        if (prev.length >= 8) { // Maximum 8 seats per booking
+        // Selecting seat - just add to local state
+        if (prev.length >= 8) {
           alert('You can select maximum 8 seats per booking');
           return prev;
         }
@@ -120,34 +124,44 @@ const BookingPage: React.FC = () => {
     try {
       setBookingLoading(true);
 
-      // Check availability one more time before booking
-      const availabilityCheck = await bookingService.checkSeatAvailability(
-        parseInt(showtimeId, 10),
-        { seatIds: selectedSeats }
-      );
+      // Step 1: Reserve seats first (this is where race condition prevention happens)
+      try {
+        const reserveResponse = await bookingService.reserveSeatsForSelection({
+          showtimeId: parseInt(showtimeId, 10),
+          seatIds: selectedSeats
+        });
 
-      if (!availabilityCheck.available) {
-        alert('Some selected seats are no longer available. Please select different seats.');
-        // Refresh seat map
+        // Seats successfully reserved, proceed to payment page
+
+      } catch (reserveErr: any) {
+        // Handle seat reservation conflicts
+        if (reserveErr.response?.status === 409) {
+          alert('Some selected seats are already taken by another user. Please select different seats.');
+        } else {
+          alert('Unable to reserve selected seats. Please try again.');
+        }
+
+        // Refresh seat map and reset selection
         const updatedSeatMap = await bookingService.getSeatMapForShowtime(parseInt(showtimeId, 10));
         setSeatMap(updatedSeatMap);
         setSelectedSeats([]);
         return;
       }
 
-      // Create booking
-      const bookingResponse = await bookingService.createBookingWithSeats({
-        showtimeId: parseInt(showtimeId, 10),
-        seatIds: selectedSeats
+      // Step 2: Navigate to payment page with reserved seats
+      // Instead of creating booking immediately, go to payment page
+      navigate(`/payment/${showtimeId}`, {
+        state: {
+          selectedSeats,
+          totalPrice,
+          showtime,
+          reservedUntil: Date.now() + 5 * 60 * 1000 // 5 minutes from now
+        }
       });
 
-      // Navigate to confirmation page
-      navigate(`/booking-confirmation/${bookingResponse.booking.id}`, {
-        state: { bookingData: bookingResponse }
-      });
     } catch (err) {
-      console.error('Error creating booking:', err);
-      alert('Failed to create booking. Please try again.');
+      console.error('Error in booking process:', err);
+      alert('Failed to proceed with booking. Please try again.');
     } finally {
       setBookingLoading(false);
     }

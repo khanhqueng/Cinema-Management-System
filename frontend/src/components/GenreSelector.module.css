@@ -1,0 +1,157 @@
+.genreSelector {
+  width: 100%;
+}
+
+.genreSelectorHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.genreSelectorTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.genreSelectorSubtitle {
+  font-size: 1rem;
+  color: #b3b3b3;
+  margin-bottom: 0.5rem;
+}
+
+.selectionCounter {
+  font-size: 0.9rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.genresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.genreCard {
+  background: #2a2a2a;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.genreCard:hover {
+  border-color: #e50914;
+  background: #333333;
+  transform: translateY(-2px);
+}
+
+.genreCard.selected {
+  border-color: #e50914;
+  background: linear-gradient(45deg, rgba(229, 9, 20, 0.2), rgba(229, 9, 20, 0.1));
+}
+
+.genreCard.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.genreCard.disabled:hover {
+  transform: none;
+  border-color: transparent;
+  background: #2a2a2a;
+}
+
+.genreIcon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.genreName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.genreDescription {
+  font-size: 0.875rem;
+  color: #b3b3b3;
+  line-height: 1.4;
+}
+
+.selectedIndicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 24px;
+  height: 24px;
+  background: #e50914;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.showMoreContainer {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.showMoreButton {
+  background: #333;
+  color: #ffffff;
+  border: 1px solid #666;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.showMoreButton:hover:not(:disabled) {
+  background: #444;
+  border-color: #e50914;
+}
+
+.showMoreButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .genresGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .genreCard {
+    padding: 1rem;
+  }
+
+  .genreIcon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .genreName {
+    font-size: 0.9rem;
+  }
+
+  .genreDescription {
+    font-size: 0.8rem;
+  }
+
+  .genreSelectorTitle {
+    font-size: 1.25rem;
+  }
+}

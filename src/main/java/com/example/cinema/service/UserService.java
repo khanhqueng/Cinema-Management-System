@@ -29,6 +29,7 @@ import java.util.Optional;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final UserGenrePreferenceService genrePreferenceService;
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
@@ -65,6 +66,24 @@ public class UserService implements UserDetailsService {
 
         User savedUser = userRepository.save(user);
         log.info("Successfully registered user: {}", savedUser.getEmail());
+
+        // Handle genre preferences if provided
+        if (request.getGenrePreferences() != null && !request.getGenrePreferences().isEmpty()) {
+            log.info("Setting genre preferences for user: {} - {} genres", savedUser.getEmail(),
+                    request.getGenrePreferences().size());
+
+            for (String genre : request.getGenrePreferences()) {
+                try {
+                    // Set preference score as 4 (High) for selected genres during registration
+                    genrePreferenceService.setGenrePreference(savedUser.getId(), genre, 4);
+                } catch (Exception e) {
+                    log.warn("Failed to set genre preference '{}' for user {}: {}",
+                            genre, savedUser.getEmail(), e.getMessage());
+                    // Continue with other preferences even if one fails
+                }
+            }
+            log.info("Completed setting genre preferences for user: {}", savedUser.getEmail());
+        }
 
         return UserDto.from(savedUser);
     }

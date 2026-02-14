@@ -56,4 +56,18 @@ export const authService = {
       return false;
     }
   },
+
+  async getCurrentUser(): Promise<any | null> {
+    try {
+      if (!this.isAuthenticated()) {
+        return null;
+      }
+
+      const response = await api.get('/auth/me');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  },
 };

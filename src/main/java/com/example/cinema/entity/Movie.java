@@ -66,6 +66,10 @@ public class Movie {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // AI Vector Embedding for similarity search
+    @Column(name = "embedding", columnDefinition = "vector(1536)")
+    private String embedding;
+
     // Relationships
     @OneToMany(mappedBy = "movie", fetch = FetchType.LAZY)
     @JsonIgnore

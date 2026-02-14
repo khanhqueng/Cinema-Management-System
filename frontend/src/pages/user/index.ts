@@ -4,5 +4,8 @@ export { default as MovieDetailPage } from './MovieDetailPage';
 export { default as ShowtimePage } from './ShowtimePage';
 export { default as AllShowtimesPage } from './AllShowtimesPage';
 export { default as BookingPage } from './BookingPage';
+export { default as PaymentPage } from './PaymentPage';
 export { default as BookingConfirmationPage } from './BookingConfirmationPage';
 export { default as TheaterPage } from './TheaterPage';
+export { default as UserProfilePage } from './UserProfilePage';
+export { default as RecommendationPage } from './RecommendationPage';

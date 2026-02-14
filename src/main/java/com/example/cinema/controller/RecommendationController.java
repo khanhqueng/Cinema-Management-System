@@ -22,13 +22,27 @@ public class RecommendationController {
 
     /**
      * Get personalized recommendations for current user
+     * Now enhanced with AI-powered recommendations
      */
     @GetMapping("/for-me")
     public ResponseEntity<RecommendationService.RecommendationResponse> getPersonalizedRecommendations(
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "true") boolean useAI) {
         User currentUser = userService.getCurrentUser();
-        RecommendationService.RecommendationResponse recommendations =
-                recommendationService.getPersonalizedRecommendations(currentUser.getId(), limit);
+
+        RecommendationService.RecommendationResponse recommendations;
+
+        if (useAI) {
+            // Try AI recommendations first, fallback to traditional if needed
+            recommendations = recommendationService.getAIPersonalizedRecommendations(currentUser.getId(), limit);
+            if (recommendations.movies().isEmpty()) {
+                recommendations = recommendationService.getPersonalizedRecommendations(currentUser.getId(), limit);
+            }
+        } else {
+            // Traditional recommendations only
+            recommendations = recommendationService.getPersonalizedRecommendations(currentUser.getId(), limit);
+        }
+
         return ResponseEntity.ok(recommendations);
     }
 
@@ -87,6 +101,58 @@ public class RecommendationController {
         User currentUser = userService.getCurrentUser();
         RecommendationService.MixedRecommendationResponse recommendations =
                 recommendationService.getMixedRecommendations(currentUser.getId(), 25);
+        return ResponseEntity.ok(recommendations);
+    }
+
+    // ================================
+    // AI-POWERED RECOMMENDATION ENDPOINTS
+    // ================================
+
+    /**
+     * Get AI-powered personalized recommendations
+     */
+    @GetMapping("/ai-personalized")
+    public ResponseEntity<RecommendationService.RecommendationResponse> getAIPersonalizedRecommendations(
+            @RequestParam(defaultValue = "12") int limit) {
+        User currentUser = userService.getCurrentUser();
+        RecommendationService.RecommendationResponse recommendations =
+                recommendationService.getAIPersonalizedRecommendations(currentUser.getId(), limit);
+        return ResponseEntity.ok(recommendations);
+    }
+
+    /**
+     * Find movies similar to a specific movie using AI
+     */
+    @GetMapping("/similar-movies/{movieId}")
+    public ResponseEntity<RecommendationService.RecommendationResponse> findSimilarMovies(
+            @PathVariable Long movieId,
+            @RequestParam(defaultValue = "12") int limit) {
+        RecommendationService.RecommendationResponse recommendations =
+                recommendationService.findSimilarMovies(movieId, limit);
+        return ResponseEntity.ok(recommendations);
+    }
+
+    /**
+     * Semantic search for movies using natural language
+     */
+    @GetMapping("/semantic-search")
+    public ResponseEntity<RecommendationService.RecommendationResponse> semanticMovieSearch(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "12") int limit) {
+        RecommendationService.RecommendationResponse recommendations =
+                recommendationService.semanticMovieSearch(query, limit);
+        return ResponseEntity.ok(recommendations);
+    }
+
+    /**
+     * Get personalized recommendations (traditional approach)
+     */
+    @GetMapping("/personalized")
+    public ResponseEntity<RecommendationService.RecommendationResponse> getPersonalizedRecommendationsTraditional(
+            @RequestParam(defaultValue = "12") int limit) {
+        User currentUser = userService.getCurrentUser();
+        RecommendationService.RecommendationResponse recommendations =
+                recommendationService.getPersonalizedRecommendations(currentUser.getId(), limit);
         return ResponseEntity.ok(recommendations);
     }
 }

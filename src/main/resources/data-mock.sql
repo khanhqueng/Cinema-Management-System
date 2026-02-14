@@ -1,16 +1,49 @@
--- Clear existing data first
-DELETE FROM bookings;
-DELETE FROM showtimes;
-DELETE FROM seats;
-DELETE FROM theaters;
-DELETE FROM movies;
+-- Clear existing data first (only if tables exist) - Delete in proper order to respect foreign key constraints
+DO $$
+BEGIN
+    -- Delete in order: child tables first, parent tables last
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'bookings') THEN
+        DELETE FROM bookings;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'showtimes') THEN
+        DELETE FROM showtimes;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'seats') THEN
+        DELETE FROM seats;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'reviews') THEN
+        DELETE FROM reviews;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'theaters') THEN
+        DELETE FROM theaters;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'movies') THEN
+        DELETE FROM movies;
+    END IF;
+END
+$$;
 
--- Reset sequences for PostgreSQL (equivalent to AUTO_INCREMENT)
-ALTER SEQUENCE IF EXISTS movies_id_seq RESTART WITH 1;
-ALTER SEQUENCE IF EXISTS theaters_id_seq RESTART WITH 1;
-ALTER SEQUENCE IF EXISTS showtimes_id_seq RESTART WITH 1;
-ALTER SEQUENCE IF EXISTS bookings_id_seq RESTART WITH 1;
-ALTER SEQUENCE IF EXISTS seats_id_seq RESTART WITH 1;
+-- Reset sequences for PostgreSQL (only if they exist)
+DO $$
+BEGIN
+    -- Reset sequences only if they exist
+    IF EXISTS (SELECT FROM information_schema.sequences WHERE sequence_name = 'movies_id_seq') THEN
+        ALTER SEQUENCE movies_id_seq RESTART WITH 1;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.sequences WHERE sequence_name = 'theaters_id_seq') THEN
+        ALTER SEQUENCE theaters_id_seq RESTART WITH 1;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.sequences WHERE sequence_name = 'showtimes_id_seq') THEN
+        ALTER SEQUENCE showtimes_id_seq RESTART WITH 1;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.sequences WHERE sequence_name = 'bookings_id_seq') THEN
+        ALTER SEQUENCE bookings_id_seq RESTART WITH 1;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.sequences WHERE sequence_name = 'seats_id_seq') THEN
+        ALTER SEQUENCE seats_id_seq RESTART WITH 1;
+    END IF;
+END
+$$;
 
 -- Insert Movies with real poster URLs
 INSERT INTO movies (title, director, genre, description, duration_minutes, release_date, poster_url, price_base, created_at) VALUES

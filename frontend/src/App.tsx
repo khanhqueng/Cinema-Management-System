@@ -11,8 +11,11 @@ import {
   ShowtimePage,
   AllShowtimesPage,
   BookingPage,
+  PaymentPage,
   BookingConfirmationPage,
-  TheaterPage
+  TheaterPage,
+  UserProfilePage,
+  RecommendationPage
 } from './pages/user';
 
 // Auth Pages
@@ -55,10 +58,13 @@ function App() {
                   <Route path="/movies/:id/showtimes" element={<ShowtimePage />} />
                   <Route path="/showtimes" element={<AllShowtimesPage />} />
                   <Route path="/booking/:showtimeId" element={<BookingPage />} />
+                  <Route path="/payment/:showtimeId" element={<PaymentPage />} />
                   <Route path="/booking-confirmation/:bookingId" element={<BookingConfirmationPage />} />
                   <Route path="/theaters" element={<TheaterPage />} />
                   <Route path="/theaters/:theaterId/showtimes" element={<ShowtimePage />} />
-                  {/* Future routes for user bookings, profiles, etc. */}
+                  <Route path="/profile" element={<UserProfilePage />} />
+                  <Route path="/recommendations" element={<RecommendationPage />} />
+                  {/* Future routes for user bookings, etc. */}
                 </Routes>
               </main>
             </div>

@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * Registration Request DTO
  * Data transfer object for user registration
@@ -28,4 +30,7 @@ public class RegisterRequest {
     @Pattern(regexp = "^[0-9+\\-\\s()]*$", message = "Phone number contains invalid characters")
     @Size(max = 15, message = "Phone number cannot exceed 15 characters")
     private String phone;
+
+    @Size(max = 10, message = "Cannot select more than 10 genres")
+    private List<String> genrePreferences;
 }

@@ -281,6 +281,7 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   phone?: string;
+  genrePreferences?: string[]; // Selected genres during registration
 }
 
 export interface AuthResponse {

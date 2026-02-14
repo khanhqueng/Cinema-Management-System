@@ -24,6 +24,8 @@ public class RecommendationService {
     private final UserGenrePreferenceService genrePreferenceService;
     private final FavoriteMovieService favoriteMovieService;
     private final MovieRepository movieRepository;
+    private final EmbeddingService embeddingService;
+    private final MovieEmbeddingService movieEmbeddingService;
 
     /**
      * Get personalized movie recommendations for user
@@ -260,6 +262,294 @@ public class RecommendationService {
         BY_GENRE,
         FOR_NEW_USERS,
         POPULAR,
-        TRENDING
+        TRENDING,
+        AI_PERSONALIZED,
+        AI_SIMILAR_MOVIES
+    }
+
+    // ================================
+    // AI-POWERED RECOMMENDATION METHODS
+    // ================================
+
+    /**
+     * AI-powered recommendations using vector similarity
+     */
+    public RecommendationResponse getAIPersonalizedRecommendations(Long userId, int limit) {
+        try {
+            // Get user's genre preferences and favorite movies
+            List<UserGenrePreference> preferences = genrePreferenceService.getUserGenrePreferences(userId);
+            List<FavoriteMovie> favorites = favoriteMovieService.getAllUserFavorites(userId);
+
+            if (preferences.isEmpty()) {
+                return getDefaultRecommendations(limit, "New user - showing popular movies");
+            }
+
+            // Extract user's preferred genres and favorite movie titles
+            List<String> preferredGenres = preferences.stream()
+                    .filter(p -> p.getPreferenceScore() >= 3)
+                    .map(UserGenrePreference::getGenre)
+                    .collect(Collectors.toList());
+
+            List<String> favoriteMovieTitles = favorites.stream()
+                    .map(fm -> fm.getMovie().getTitle())
+                    .collect(Collectors.toList());
+
+            // Generate user preference embedding
+            List<Double> userPreferenceEmbedding = embeddingService.generateUserPreferenceEmbedding(
+                    preferredGenres, favoriteMovieTitles);
+
+            // Convert to float array and search for similar movies
+            float[] userEmbeddingArray = embeddingService.convertToFloatArray(userPreferenceEmbedding);
+
+            // Find similar movies using in-memory calculation (fallback approach)
+            List<Long> movieIdsWithEmbeddings = movieRepository.findMovieIdsWithEmbeddings();
+            List<Movie> moviesWithEmbeddings = movieRepository.findAllById(movieIdsWithEmbeddings);
+
+            // If no movies with embeddings, return empty
+            if (moviesWithEmbeddings.isEmpty()) {
+                return new RecommendationResponse("AI-Powered Recommendations", List.of(),
+                    List.of("No movies with embeddings available"), RecommendationType.AI_PERSONALIZED);
+            }
+
+            // Calculate similarities and get top matches
+            List<Movie> similarMovies = calculateSimilarMovies(userPreferenceEmbedding, moviesWithEmbeddings, limit * 2);
+
+            // Remove user's favorite movies from recommendations
+            Set<Long> favoriteMovieIds = favorites.stream()
+                    .map(fm -> fm.getMovie().getId())
+                    .collect(Collectors.toSet());
+
+            List<Movie> filteredRecommendations = similarMovies.stream()
+                    .filter(movie -> !favoriteMovieIds.contains(movie.getId()))
+                    .limit(limit)
+                    .collect(Collectors.toList());
+
+            if (!filteredRecommendations.isEmpty()) {
+                return new RecommendationResponse(
+                        "AI-Powered Recommendations",
+                        filteredRecommendations,
+                        List.of("Based on AI analysis of your movie preferences"),
+                        RecommendationType.AI_PERSONALIZED
+                );
+            }
+
+        } catch (Exception e) {
+            // Log error but don't fail - fallback to traditional recommendations
+            System.err.println("AI recommendation failed, falling back to traditional: " + e.getMessage());
+        }
+
+        return new RecommendationResponse("", List.of(), List.of(), RecommendationType.AI_PERSONALIZED);
+    }
+
+    /**
+     * Find movies similar to a specific movie using AI embeddings
+     */
+    public RecommendationResponse findSimilarMovies(Long movieId, int limit) {
+        try {
+            Movie targetMovie = movieRepository.findById(movieId)
+                    .orElseThrow(() -> new RuntimeException("Movie not found with ID: " + movieId));
+
+            if (!movieEmbeddingService.hasEmbedding(targetMovie)) {
+                // Generate embedding if not exists
+                targetMovie = movieEmbeddingService.generateAndSaveMovieEmbedding(targetMovie);
+            }
+
+            List<Movie> similarMovies = movieEmbeddingService.findSimilarMovies(targetMovie, 0.6, limit + 1);
+
+            // Remove the target movie itself from results
+            List<Movie> filteredSimilarMovies = similarMovies.stream()
+                    .filter(movie -> !movie.getId().equals(movieId))
+                    .limit(limit)
+                    .collect(Collectors.toList());
+
+            return new RecommendationResponse(
+                    "Similar to " + targetMovie.getTitle(),
+                    filteredSimilarMovies,
+                    List.of("Based on AI analysis of movie content and characteristics"),
+                    RecommendationType.AI_SIMILAR_MOVIES
+            );
+
+        } catch (Exception e) {
+            System.err.println("Failed to find similar movies: " + e.getMessage());
+            return new RecommendationResponse("Similar Movies", List.of(), List.of(), RecommendationType.AI_SIMILAR_MOVIES);
+        }
+    }
+
+    /**
+     * Semantic search for movies using natural language queries
+     */
+    public RecommendationResponse semanticMovieSearch(String query, int limit) {
+        try {
+            // Generate embedding for the search query
+            List<Double> queryEmbedding = embeddingService.generateEmbedding(query);
+
+            // Get movies that have embeddings - now simplified since embedding is String
+            List<Movie> moviesWithEmbeddings = movieRepository.findAllById(
+                movieRepository.findMovieIdsWithEmbeddings()
+            );
+
+            if (moviesWithEmbeddings.isEmpty()) {
+                System.err.println("No movies with embeddings found");
+                return new RecommendationResponse(
+                        "Search Results for: \"" + query + "\"",
+                        List.of(),
+                        List.of("No movies with embeddings available"),
+                        RecommendationType.AI_PERSONALIZED
+                );
+            }
+
+            System.out.println("Found movies with embeddings: " + moviesWithEmbeddings.size());
+
+            // Calculate similarity scores and sort
+            List<MovieSimilarityResult> similarityResults = new ArrayList<>();
+
+            for (Movie movie : moviesWithEmbeddings) {
+                try {
+                    // Parse movie's embedding string directly
+                    List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
+                    if (movieEmbedding.isEmpty()) continue;
+
+                    double similarity = embeddingService.calculateCosineSimilarity(queryEmbedding, movieEmbedding);
+                    similarityResults.add(new MovieSimilarityResult(movie, similarity));
+                } catch (Exception e) {
+                    // Skip movies with invalid embeddings
+                    System.err.println("Failed to process embedding for movie " + movie.getId() + ": " + e.getMessage());
+                    continue;
+                }
+            }
+
+            // Debug logging
+            System.out.println("Total similarity results calculated: " + similarityResults.size());
+            if (!similarityResults.isEmpty()) {
+                double maxSim = similarityResults.stream().mapToDouble(r -> r.similarity).max().orElse(0.0);
+                double minSim = similarityResults.stream().mapToDouble(r -> r.similarity).min().orElse(0.0);
+                System.out.println("Similarity range: " + minSim + " to " + maxSim);
+            }
+
+            // Sort by similarity (highest first) and take top results with improved threshold
+            double primaryThreshold = 0.6; // High quality results
+            double fallbackThreshold = 0.4; // Fallback if not enough results
+
+            List<Movie> searchResults = similarityResults.stream()
+                    .filter(result -> result.similarity > primaryThreshold)
+                    .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                    .limit(limit)
+                    .map(result -> result.movie)
+                    .collect(Collectors.toList());
+
+            // Fallback: if not enough high-quality results, use lower threshold
+            if (searchResults.size() < Math.min(3, limit) && !similarityResults.isEmpty()) {
+                searchResults = similarityResults.stream()
+                        .filter(result -> result.similarity > fallbackThreshold)
+                        .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                        .limit(limit)
+                        .map(result -> result.movie)
+                        .collect(Collectors.toList());
+
+                System.out.println("Used fallback threshold " + fallbackThreshold + " - Results: " + searchResults.size());
+            } else {
+                System.out.println("Results with primary threshold " + primaryThreshold + ": " + searchResults.size());
+            }
+
+            return new RecommendationResponse(
+                    "Search Results for: \"" + query + "\"",
+                    searchResults,
+                    List.of("AI semantic search results (" + searchResults.size() + " matches)"),
+                    RecommendationType.AI_PERSONALIZED
+            );
+
+        } catch (Exception e) {
+            System.err.println("Semantic search failed: " + e.getMessage());
+            e.printStackTrace();
+            return new RecommendationResponse("Search Results", List.of(),
+                    List.of("Search failed: " + e.getMessage()), RecommendationType.AI_PERSONALIZED);
+        }
+    }
+
+    // Helper class for similarity calculation
+    private static class MovieSimilarityResult {
+        Movie movie;
+        double similarity;
+
+        MovieSimilarityResult(Movie movie, double similarity) {
+            this.movie = movie;
+            this.similarity = similarity;
+        }
+    }
+
+
+    /**
+     * Calculate similar movies using in-memory cosine similarity
+     */
+    private List<Movie> calculateSimilarMovies(List<Double> queryEmbedding, List<Movie> movies, int limit) {
+        List<MovieSimilarityResult> similarityResults = new ArrayList<>();
+
+        for (Movie movie : movies) {
+            try {
+                List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
+                double similarity = embeddingService.calculateCosineSimilarity(queryEmbedding, movieEmbedding);
+                similarityResults.add(new MovieSimilarityResult(movie, similarity));
+            } catch (Exception e) {
+                // Skip movies with invalid embeddings
+                continue;
+            }
+        }
+
+        // Improved thresholds for similar movies
+        double primaryThreshold = 0.65; // High quality similar movies
+        double fallbackThreshold = 0.5; // Fallback threshold
+
+        List<Movie> results = similarityResults.stream()
+                .filter(result -> result.similarity > primaryThreshold)
+                .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                .limit(limit)
+                .map(result -> result.movie)
+                .collect(Collectors.toList());
+
+        // Fallback if not enough results
+        if (results.size() < Math.min(2, limit) && !similarityResults.isEmpty()) {
+            results = similarityResults.stream()
+                    .filter(result -> result.similarity > fallbackThreshold)
+                    .sorted((a, b) -> Double.compare(b.similarity, a.similarity))
+                    .limit(limit)
+                    .map(result -> result.movie)
+                    .collect(Collectors.toList());
+
+            System.out.println("Similar movies - used fallback threshold: " + fallbackThreshold);
+        } else {
+            System.out.println("Similar movies - used primary threshold: " + primaryThreshold);
+        }
+
+        return results;
+    }
+
+
+    /**
+     * Parse pgvector text format [1.0,2.0,3.0,...] to List<Double>
+     */
+    private List<Double> parseVectorText(String vectorText) {
+        if (vectorText == null || vectorText.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Remove brackets and split by comma
+        String cleanText = vectorText.trim();
+        if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
+            cleanText = cleanText.substring(1, cleanText.length() - 1);
+        }
+
+        List<Double> result = new ArrayList<>();
+        String[] values = cleanText.split(",");
+
+        for (String value : values) {
+            try {
+                result.add(Double.parseDouble(value.trim()));
+            } catch (NumberFormatException e) {
+                // Skip invalid values
+                System.err.println("Invalid vector value: " + value);
+            }
+        }
+
+        return result;
     }
 }

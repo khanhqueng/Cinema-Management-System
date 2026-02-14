@@ -66,6 +66,14 @@ const Header: React.FC = () => {
                 Theaters
               </Link>
             </li>
+            <li>
+              <Link
+                to="/recommendations"
+                className={`${styles.navLink} ${isActiveLink('/recommendations') ? styles.active : ''}`}
+              >
+                For You
+              </Link>
+            </li>
             {isAuthenticated && (
               <li>
                 <Link
@@ -134,6 +142,11 @@ const Header: React.FC = () => {
             <li>
               <Link to="/theaters" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
                 Theaters
+              </Link>
+            </li>
+            <li>
+              <Link to="/recommendations" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                For You
               </Link>
             </li>
             {isAuthenticated ? (
