@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { Search, Filter, Star, Clock, Play, Calendar, Loader2, Sparkles } from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { movieService } from '../../services/movieService';
 import { Movie, PageResponse } from '../../types';
 import SemanticSearch from '../../components/SemanticSearch';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
 
 const MoviesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -117,506 +125,374 @@ const MoviesPage: React.FC = () => {
     fetchMovies();
   };
 
-  if (loading) return <div style={centerStyle}>Loading movies...</div>;
-  if (error) return <div style={centerStyle}>Error: {error}</div>;
-
-  return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h1>All Movies ({totalElements} movies)</h1>
-
-        {/* AI Semantic Search Toggle */}
-        <div style={searchToggleStyle}>
-          <button
-            onClick={() => setShowSemanticSearch(!showSemanticSearch)}
-            style={showSemanticSearch ? activeToggleStyle : toggleStyle}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-            </svg>
-            {showSemanticSearch ? 'Traditional Search' : 'AI Smart Search'}
-          </button>
-        </div>
-
-        {/* Conditional Search UI */}
-        {showSemanticSearch ? (
-          /* AI Semantic Search */
-          <SemanticSearch
-            onResults={(results) => {
-              setMovies(results);
-              setTotalPages(1);
-              setTotalElements(results.length);
-              setCurrentPage(0);
-            }}
-            className="search-section"
-          />
-        ) : (
-          /* Traditional Search */
-          <form onSubmit={handleSearch} style={searchFormStyle}>
-            <input
-              type="text"
-              placeholder="Search movies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={searchInputStyle}
-            />
-            <button type="submit" style={searchButtonStyle}>
-              Search
-            </button>
-          </form>
-        )}
-
-        {/* Filters and Sort */}
-        <div style={filtersStyle}>
-          {/* Genre Filter */}
-          <div style={filterGroupStyle}>
-            <label>Genre:</label>
-            <select
-              value={selectedGenre}
-              onChange={(e) => handleGenreFilter(e.target.value)}
-              style={selectStyle}
-            >
-              <option value="">All Genres</option>
-              {genres.map(genre => (
-                <option key={genre} value={genre}>{genre}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort Options */}
-          <div style={filterGroupStyle}>
-            <label>Sort by:</label>
-            <div style={sortButtonsStyle}>
-              <button
-                onClick={() => handleSort('title')}
-                style={sortBy === 'title' ? activeSortButtonStyle : sortButtonStyle}
-              >
-                Title {sortBy === 'title' && (sortDir === 'asc' ? '↑' : '↓')}
-              </button>
-              <button
-                onClick={() => handleSort('averageRating')}
-                style={sortBy === 'averageRating' ? activeSortButtonStyle : sortButtonStyle}
-              >
-                Rating {sortBy === 'averageRating' && (sortDir === 'asc' ? '↑' : '↓')}
-              </button>
-              <button
-                onClick={() => handleSort('createdAt')}
-                style={sortBy === 'createdAt' ? activeSortButtonStyle : sortButtonStyle}
-              >
-                Latest {sortBy === 'createdAt' && (sortDir === 'asc' ? '↑' : '↓')}
-              </button>
+  // NEW loading UI
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading movies...</p>
             </div>
           </div>
-
-          {/* Clear Filters */}
-          {(searchQuery || selectedGenre) && (
-            <button onClick={clearFilters} style={clearButtonStyle}>
-              Clear All Filters
-            </button>
-          )}
         </div>
       </div>
+    );
+  }
 
-      {movies.length === 0 ? (
-        <div style={centerStyle}>
-          {searchQuery || selectedGenre ? 'No movies found matching your filters.' : 'No movies available.'}
-        </div>
-      ) : (
-        <>
-          <div style={moviesGridStyle}>
-            {movies.map((movie) => (
-              <div key={movie.id} style={movieCardStyle}>
-                <div style={posterContainerStyle}>
-                  <img
-                    src={movie.posterUrl || `https://via.placeholder.com/300x450/141414/E50914?text=${encodeURIComponent(movie.title)}`}
-                    alt={movie.title}
-                    style={posterStyle}
-                  />
-                  {movie.currentlyShowing && (
-                    <div style={nowShowingBadgeStyle}>Now Showing</div>
-                  )}
-                  {movie.averageRating > 0 && (
-                    <div style={ratingBadgeStyle}>
-                      ★ {movieService.formatRating(movie.averageRating)}
-                    </div>
-                  )}
-                </div>
-                <div style={movieInfoStyle}>
-                  <h3 style={titleStyle}>{movie.title}</h3>
-                  <p style={directorStyle}>Directed by {movie.director}</p>
-                  <p style={genreStyle}>{movie.genre}</p>
-                  <div style={metaStyle}>
-                    <span style={durationStyle}>{movie.formattedDuration}</span>
-                    <span style={priceStyle}>{movieService.formatPrice(movie.priceBase)}</span>
-                  </div>
-                  {movie.reviewCount > 0 && (
-                    <p style={reviewsStyle}>
-                      {movie.reviewCount} review{movie.reviewCount !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                  <p style={descriptionStyle}>
-                    {movie.description && movie.description.length > 120
-                      ? `${movie.description.substring(0, 120)}...`
-                      : movie.description || 'No description available'
-                    }
-                  </p>
-                  <div style={actionsStyle}>
-                    <Link to={`/movies/${movie.id}`} style={detailsButtonStyle}>
-                      View Details
-                    </Link>
-                    <Link to={`/movies/${movie.id}/showtimes`} style={showtimesButtonStyle}>
-                      Show Times
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
+  // NEW error UI
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <h2 className="text-2xl font-bold text-white mb-4">Something went wrong</h2>
+                <p className="text-gray-400 mb-6">Error: {error}</p>
+                <Button
+                  onClick={() => {
+                    setError(null);
+                    fetchMovies();
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={paginationStyle}>
-              <button
-                onClick={() => setCurrentPage(0)}
-                disabled={currentPage === 0}
-                style={currentPage === 0 ? disabledButtonStyle : pageButtonStyle}
-              >
-                First
-              </button>
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 0}
-                style={currentPage === 0 ? disabledButtonStyle : pageButtonStyle}
-              >
-                Previous
-              </button>
+  return (
+    <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-4xl font-bold text-white mb-2">
+            All Movies ({totalElements} movies)
+          </h1>
+          <p className="text-gray-400">Discover your next favorite film</p>
+        </motion.div>
 
-              <span style={pageInfoStyle}>
-                Page {currentPage + 1} of {totalPages}
-              </span>
+        {/* AI Semantic Search Toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6 text-center"
+        >
+          <Button
+            onClick={() => setShowSemanticSearch(!showSemanticSearch)}
+            variant={showSemanticSearch ? "default" : "outline"}
+            className={`
+              ${showSemanticSearch
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'
+              }
+            `}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            {showSemanticSearch ? 'Traditional Search' : 'AI Smart Search'}
+          </Button>
+        </motion.div>
 
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1}
-                style={currentPage >= totalPages - 1 ? disabledButtonStyle : pageButtonStyle}
-              >
-                Next
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages - 1)}
-                disabled={currentPage >= totalPages - 1}
-                style={currentPage >= totalPages - 1 ? disabledButtonStyle : pageButtonStyle}
-              >
-                Last
-              </button>
+        {/* Search Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-8"
+        >
+          {showSemanticSearch ? (
+            /* AI Semantic Search - preserve OLD logic */
+            <div className="bg-gray-900/50 rounded-xl p-6 border border-gray-800">
+              <SemanticSearch
+                onResults={(results) => {
+                  setMovies(results);
+                  setTotalPages(1);
+                  setTotalElements(results.length);
+                  setCurrentPage(0);
+                }}
+                className="search-section"
+              />
             </div>
+          ) : (
+            /* Traditional Search - NEW UI with OLD logic */
+            <form onSubmit={handleSearch} className="flex gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search movies..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                />
+              </div>
+              <Button type="submit" className="bg-red-600 hover:bg-red-700">
+                Search
+              </Button>
+            </form>
           )}
-        </>
-      )}
+        </motion.div>
+
+        {/* Filters Section - NEW UI with OLD logic */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 bg-gray-900/30 rounded-xl p-6 border border-gray-800"
+        >
+          <div className="flex flex-wrap gap-6 items-end">
+            {/* Genre Filter */}
+            <div className="min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Genre:</label>
+              <div className="relative">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <select
+                  value={selectedGenre}
+                  onChange={(e) => handleGenreFilter(e.target.value)}
+                  className="w-full pl-12 pr-10 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent appearance-none cursor-pointer"
+                >
+                  <option value="">All Genres</option>
+                  {genres.map(genre => (
+                    <option key={genre} value={genre}>{genre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Sort Options */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Sort by:</label>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleSort('title')}
+                  variant={sortBy === 'title' ? 'default' : 'outline'}
+                  size="sm"
+                  className={sortBy === 'title' ? 'bg-red-600 hover:bg-red-700 text-white' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
+                >
+                  Title {sortBy === 'title' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+                <Button
+                  onClick={() => handleSort('averageRating')}
+                  variant={sortBy === 'averageRating' ? 'default' : 'outline'}
+                  size="sm"
+                  className={sortBy === 'averageRating' ? 'bg-red-600 hover:bg-red-700 text-white' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
+                >
+                  Rating {sortBy === 'averageRating' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+                <Button
+                  onClick={() => handleSort('createdAt')}
+                  variant={sortBy === 'createdAt' ? 'default' : 'outline'}
+                  size="sm"
+                  className={sortBy === 'createdAt' ? 'bg-red-600 hover:bg-red-700 text-white' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
+                >
+                  Latest {sortBy === 'createdAt' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(searchQuery || selectedGenre) && (
+              <Button
+                onClick={clearFilters}
+                variant="outline"
+                size="sm"
+                className="!bg-gray-800 !border-gray-600 !text-gray-400 hover:!bg-gray-700 hover:!text-white"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Results Count */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-gray-400 mb-6"
+        >
+          {totalElements} {totalElements === 1 ? 'movie' : 'movies'} found
+        </motion.p>
+
+        {/* Movies Grid or No Results */}
+        {movies.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-900 rounded-full mb-4">
+              <Search className="w-10 h-10 text-gray-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">No movies found</h3>
+            <p className="text-gray-400">
+              {searchQuery || selectedGenre ? 'Try adjusting your search or filters' : 'No movies available at the moment'}
+            </p>
+          </motion.div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {movies.map((movie, index) => (
+                <motion.div
+                  key={movie.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.1 * (index % 8) // Stagger by grid position
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  className="group cursor-pointer"
+                >
+                  <Card className="bg-gray-900 border-gray-800 overflow-hidden hover:bg-gray-800 transition-all duration-300 hover:shadow-2xl hover:shadow-red-500/10">
+                    {/* Poster Section */}
+                    <div className="relative aspect-[2/3] overflow-hidden">
+                      <img
+                        src={movie.posterUrl || `https://via.placeholder.com/300x450/141414/E50914?text=${encodeURIComponent(movie.title)}`}
+                        alt={movie.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      {/* Badges */}
+                      {movie.currentlyShowing && (
+                        <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md uppercase">
+                          Now Showing
+                        </div>
+                      )}
+                      {movie.averageRating > 0 && (
+                        <div className="absolute top-3 right-3 bg-black/80 text-yellow-500 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-yellow-500" />
+                          {movieService.formatRating(movie.averageRating)}
+                        </div>
+                      )}
+
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Play className="w-12 h-12 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Movie Info */}
+                    <CardContent className="p-4">
+                      <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">{movie.title}</h3>
+                      <p className="text-gray-400 text-sm mb-2 italic">Directed by {movie.director}</p>
+                      <p className="text-red-500 font-semibold text-sm mb-3">{movie.genre}</p>
+
+                      {/* Meta Info */}
+                      <div className="flex items-center justify-between text-sm text-gray-400 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{movie.formattedDuration}</span>
+                        </div>
+                        <span className="text-green-500 font-bold">
+                          {movieService.formatPrice(movie.priceBase)}
+                        </span>
+                      </div>
+
+                      {/* Reviews */}
+                      {movie.reviewCount > 0 && (
+                        <p className="text-gray-500 text-xs mb-3">
+                          {movie.reviewCount} review{movie.reviewCount !== 1 ? 's' : ''}
+                        </p>
+                      )}
+
+                      {/* Description */}
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">
+                        {movie.description && movie.description.length > 100
+                          ? `${movie.description.substring(0, 100)}...`
+                          : movie.description || 'No description available'
+                        }
+                      </p>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" className="flex-1 bg-red-600 hover:bg-red-700">
+                          <Link to={`/movies/${movie.id}`}>
+                            <Play className="w-4 h-4 mr-1" />
+                            Details
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm" className="flex-1 !bg-gray-800 !border-gray-600 !text-white hover:!bg-green-600 hover:!border-green-600 hover:!text-white">
+                          <Link to={`/movies/${movie.id}/showtimes`}>
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Showtimes
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Pagination - NEW UI with OLD logic */}
+            {totalPages > 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex justify-center items-center gap-4 mt-12 py-8"
+              >
+                <Button
+                  onClick={() => setCurrentPage(0)}
+                  disabled={currentPage === 0}
+                  variant="outline"
+                  size="sm"
+                  className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!border-red-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  First
+                </Button>
+                <Button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  variant="outline"
+                  size="sm"
+                  className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!border-red-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </Button>
+
+                <span className="text-gray-400 font-medium px-4">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+
+                <Button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages - 1}
+                  variant="outline"
+                  size="sm"
+                  className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!border-red-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </Button>
+                <Button
+                  onClick={() => setCurrentPage(totalPages - 1)}
+                  disabled={currentPage >= totalPages - 1}
+                  variant="outline"
+                  size="sm"
+                  className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!border-red-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Last
+                </Button>
+              </motion.div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
 
-const containerStyle: React.CSSProperties = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 1rem',
-};
-
-const centerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '200px',
-  fontSize: '1.2rem',
-  color: '#666',
-};
-
-const headerStyle: React.CSSProperties = {
-  marginBottom: '2rem',
-};
-
-const searchFormStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-  marginTop: '1rem',
-  flexWrap: 'wrap',
-};
-
-const searchInputStyle: React.CSSProperties = {
-  flex: '1',
-  minWidth: '200px',
-  padding: '0.8rem',
-  border: '1px solid #ddd',
-  borderRadius: '4px',
-  fontSize: '1rem',
-};
-
-const searchButtonStyle: React.CSSProperties = {
-  backgroundColor: '#1976d2',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '1rem',
-};
-
-const clearButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '1rem',
-};
-
-const moviesGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-  gap: '2rem',
-  marginTop: '2rem',
-};
-
-const movieCardStyle: React.CSSProperties = {
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  overflow: 'hidden',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  transition: 'transform 0.2s, box-shadow 0.2s',
-};
-
-const posterStyle: React.CSSProperties = {
-  width: '100%',
-  height: '250px',
-  objectFit: 'cover',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  padding: '1.5rem',
-};
-
-const titleStyle: React.CSSProperties = {
-  margin: '0 0 0.5rem 0',
-  fontSize: '1.3rem',
-  color: '#333',
-};
-
-const genreStyle: React.CSSProperties = {
-  color: '#1976d2',
-  fontWeight: 'bold',
-  margin: '0.5rem 0',
-  fontSize: '0.9rem',
-};
-
-const metaStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  margin: '0.5rem 0 1rem 0',
-};
-
-const durationStyle: React.CSSProperties = {
-  color: '#888',
-  fontSize: '0.9rem',
-};
-
-const descriptionStyle: React.CSSProperties = {
-  color: '#555',
-  fontSize: '0.9rem',
-  lineHeight: '1.4',
-  margin: '1rem 0 1.5rem 0',
-};
-
-const actionsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-  flexWrap: 'wrap',
-};
-
-const detailsButtonStyle: React.CSSProperties = {
-  backgroundColor: '#1976d2',
-  color: 'white',
-  padding: '0.6rem 1.2rem',
-  textDecoration: 'none',
-  borderRadius: '4px',
-  fontSize: '0.9rem',
-  flex: '1',
-  textAlign: 'center',
-  minWidth: '100px',
-};
-
-const showtimesButtonStyle: React.CSSProperties = {
-  backgroundColor: '#388e3c',
-  color: 'white',
-  padding: '0.6rem 1.2rem',
-  textDecoration: 'none',
-  borderRadius: '4px',
-  fontSize: '0.9rem',
-  flex: '1',
-  textAlign: 'center',
-  minWidth: '100px',
-};
-
-// New styles for enhanced UI
-const filtersStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '2rem',
-  marginTop: '1.5rem',
-  padding: '1rem',
-  backgroundColor: '#f8f9fa',
-  borderRadius: '8px',
-  flexWrap: 'wrap',
-  alignItems: 'center',
-};
-
-const filterGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.5rem',
-};
-
-const selectStyle: React.CSSProperties = {
-  padding: '0.5rem',
-  border: '1px solid #ddd',
-  borderRadius: '4px',
-  fontSize: '0.9rem',
-  minWidth: '120px',
-};
-
-const sortButtonsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-  flexWrap: 'wrap',
-};
-
-const sortButtonStyle: React.CSSProperties = {
-  padding: '0.4rem 0.8rem',
-  border: '1px solid #ddd',
-  backgroundColor: 'white',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-  transition: 'all 0.2s',
-};
-
-const activeSortButtonStyle: React.CSSProperties = {
-  ...sortButtonStyle,
-  backgroundColor: '#1976d2',
-  color: 'white',
-  borderColor: '#1976d2',
-};
-
-const posterContainerStyle: React.CSSProperties = {
-  position: 'relative',
-};
-
-const nowShowingBadgeStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '8px',
-  left: '8px',
-  backgroundColor: '#e50914',
-  color: 'white',
-  padding: '4px 8px',
-  borderRadius: '4px',
-  fontSize: '0.7rem',
-  fontWeight: 'bold',
-  textTransform: 'uppercase',
-};
-
-const ratingBadgeStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '8px',
-  right: '8px',
-  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  color: '#ffc107',
-  padding: '4px 6px',
-  borderRadius: '4px',
-  fontSize: '0.7rem',
-  fontWeight: 'bold',
-};
-
-const directorStyle: React.CSSProperties = {
-  color: '#666',
-  fontSize: '0.85rem',
-  margin: '0.2rem 0',
-  fontStyle: 'italic',
-};
-
-const priceStyle: React.CSSProperties = {
-  color: '#2e7d32',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const reviewsStyle: React.CSSProperties = {
-  color: '#666',
-  fontSize: '0.8rem',
-  margin: '0.3rem 0',
-};
-
-const paginationStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: '1rem',
-  margin: '3rem 0',
-  padding: '1rem',
-};
-
-const pageButtonStyle: React.CSSProperties = {
-  padding: '0.5rem 1rem',
-  border: '1px solid #1976d2',
-  backgroundColor: 'white',
-  color: '#1976d2',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-  transition: 'all 0.2s',
-};
-
-const disabledButtonStyle: React.CSSProperties = {
-  ...pageButtonStyle,
-  backgroundColor: '#f5f5f5',
-  color: '#999',
-  borderColor: '#ddd',
-  cursor: 'not-allowed',
-};
-
-const pageInfoStyle: React.CSSProperties = {
-  color: '#666',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-// AI Search Toggle Styles
-const searchToggleStyle: React.CSSProperties = {
-  marginTop: '1rem',
-  marginBottom: '1rem',
-  textAlign: 'center',
-};
-
-const toggleStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  backgroundColor: '#f8f9fa',
-  color: '#666',
-  border: '1px solid #ddd',
-  padding: '0.75rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '1rem',
-  fontWeight: '500',
-  transition: 'all 0.2s ease',
-};
-
-const activeToggleStyle: React.CSSProperties = {
-  ...toggleStyle,
-  backgroundColor: '#e50914',
-  color: 'white',
-  borderColor: '#e50914',
-  boxShadow: '0 2px 4px rgba(229, 9, 20, 0.2)',
-};
 
 export default MoviesPage;

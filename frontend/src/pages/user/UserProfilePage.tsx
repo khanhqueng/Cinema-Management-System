@@ -1,9 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  User as UserIcon,
+  Mail,
+  Phone,
+  Settings,
+  Heart,
+  LogOut,
+  Save,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Film
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { User } from '../../types';
 import { UserGenrePreference } from '../../types/genres';
 import GenreSelector from '../../components/GenreSelector';
 import { authService } from '../../services/authService';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const UserProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -103,13 +124,16 @@ const UserProfilePage: React.FC = () => {
     navigate('/login');
   };
 
+  // NEW loading UI (modern design)
   if (loading) {
     return (
-      <div className="profile-page">
-        <div className="profile-container">
-          <div className="loading-spinner">
-            <div className="spinner"></div>
-            <p>Loading your profile...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading your profile...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -117,159 +141,234 @@ const UserProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="profile-page">
-      <div className="profile-container">
-        <div className="profile-header">
-          <h1>My Profile</h1>
-          <p>Manage your account settings and movie preferences</p>
+    <div className="min-h-screen bg-gray-950">
+      {/* Header Section - NEW UI */}
+      <section className="bg-gradient-to-r from-blue-900 to-blue-800 py-16 text-center">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
+              <UserIcon className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">My Profile</h1>
+            <p className="text-lg text-blue-100 max-w-2xl mx-auto">
+              Manage your account settings and movie preferences
+            </p>
+          </motion.div>
         </div>
+      </section>
 
-        {error && (
-          <div className="alert alert-error">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="alert alert-success">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            {success}
-          </div>
-        )}
-
-        <div className="profile-sections">
-          {/* Basic Profile Information */}
-          <section className="profile-section">
-            <div className="section-header">
-              <h2>Account Information</h2>
-              <p>Update your basic account details</p>
-            </div>
-
-            <form onSubmit={handleProfileUpdate} className="profile-form">
-              <div className="form-group">
-                <label htmlFor="fullName">Full Name</label>
-                <input
-                  type="text"
-                  id="fullName"
-                  name="fullName"
-                  value={profileData.fullName}
-                  onChange={handleInputChange}
-                  required
-                  maxLength={100}
-                  className="form-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email">Email Address</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={profileData.email}
-                  disabled
-                  className="form-input disabled"
-                />
-                <small className="helper-text">Email cannot be changed</small>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={profileData.phone}
-                  onChange={handleInputChange}
-                  maxLength={15}
-                  placeholder="Optional"
-                  className="form-input"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={updating}
-                className="btn btn-primary"
+      {/* Content Section */}
+      <main className="py-12 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
+          >
+            {/* Error Alert - NEW UI with OLD logic */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-red-900/50 border border-red-600 text-red-300 p-4 rounded-lg flex items-center"
               >
-                {updating ? (
-                  <>
-                    <span className="spinner-small"></span>
-                    Updating...
-                  </>
-                ) : (
-                  'Update Profile'
-                )}
-              </button>
-            </form>
-          </section>
+                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                {error}
+              </motion.div>
+            )}
 
-          {/* Movie Preferences */}
-          <section className="profile-section">
-            <div className="section-header">
-              <h2>Movie Preferences</h2>
-              <p>Update your favorite movie genres to get better recommendations</p>
-            </div>
-
-            <div className="preferences-content">
-              <GenreSelector
-                selectedGenres={selectedGenres}
-                onGenresChange={setSelectedGenres}
-                title="What movies do you love?"
-                subtitle="Select your favorite genres for personalized recommendations"
-                minSelections={1}
-                maxSelections={8}
-                disabled={updating}
-              />
-
-              <div className="preferences-actions">
-                <button
-                  type="button"
-                  onClick={handleGenrePreferencesUpdate}
-                  disabled={updating || selectedGenres.length === 0}
-                  className="btn btn-primary btn-large"
-                >
-                  {updating ? (
-                    <>
-                      <span className="spinner-small"></span>
-                      Updating Preferences...
-                    </>
-                  ) : (
-                    'Update Movie Preferences'
-                  )}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Account Actions */}
-          <section className="profile-section">
-            <div className="section-header">
-              <h2>Account Actions</h2>
-              <p>Manage your account</p>
-            </div>
-
-            <div className="account-actions">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn btn-secondary"
+            {/* Success Alert - NEW UI with OLD logic */}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-green-900/50 border border-green-600 text-green-300 p-4 rounded-lg flex items-center"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight: '8px'}}>
-                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                </svg>
-                Log Out
-              </button>
-            </div>
-          </section>
+                <CheckCircle2 className="w-5 h-5 mr-2 flex-shrink-0" />
+                {success}
+              </motion.div>
+            )}
+
+            {/* Account Information Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6">
+                    <Settings className="w-6 h-6 text-blue-500 mr-3" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Account Information</h2>
+                      <p className="text-gray-400">Update your basic account details</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleProfileUpdate} className="space-y-6">
+                    {/* Full Name Input */}
+                    <div className="space-y-2">
+                      <label htmlFor="fullName" className="text-sm font-medium text-gray-300 flex items-center">
+                        <UserIcon className="w-4 h-4 mr-2" />
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        id="fullName"
+                        name="fullName"
+                        value={profileData.fullName}
+                        onChange={handleInputChange}
+                        required
+                        maxLength={100}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-medium text-gray-300 flex items-center">
+                        <Mail className="w-4 h-4 mr-2" />
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={profileData.email}
+                        disabled
+                        className="w-full px-4 py-3 bg-gray-600/30 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                      />
+                      <p className="text-gray-500 text-xs">Email cannot be changed</p>
+                    </div>
+
+                    {/* Phone Input */}
+                    <div className="space-y-2">
+                      <label htmlFor="phone" className="text-sm font-medium text-gray-300 flex items-center">
+                        <Phone className="w-4 h-4 mr-2" />
+                        Phone Number <span className="text-gray-500 ml-1">(optional)</span>
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={profileData.phone}
+                        onChange={handleInputChange}
+                        maxLength={15}
+                        placeholder="Optional"
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                      type="submit"
+                      disabled={updating}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      size="lg"
+                    >
+                      {updating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Update Profile
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Movie Preferences Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6">
+                    <Heart className="w-6 h-6 text-red-500 mr-3" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Movie Preferences</h2>
+                      <p className="text-gray-400">Update your favorite movie genres to get better recommendations</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <GenreSelector
+                      selectedGenres={selectedGenres}
+                      onGenresChange={setSelectedGenres}
+                      title="What movies do you love?"
+                      subtitle="Select your favorite genres for personalized recommendations"
+                      minSelections={1}
+                      maxSelections={8}
+                      disabled={updating}
+                    />
+
+                    <Button
+                      onClick={handleGenrePreferencesUpdate}
+                      disabled={updating || selectedGenres.length === 0}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                      size="lg"
+                    >
+                      {updating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Updating Preferences...
+                        </>
+                      ) : (
+                        <>
+                          <Film className="w-5 h-5 mr-2" />
+                          Update Movie Preferences
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Account Actions Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-8">
+                  <div className="flex items-center mb-6">
+                    <Settings className="w-6 h-6 text-yellow-500 mr-3" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Account Actions</h2>
+                      <p className="text-gray-400">Manage your account</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    className="!bg-gray-800 !border-red-600 !text-red-400 hover:!bg-red-600 hover:!text-white"
+                    size="lg"
+                  >
+                    <LogOut className="w-5 h-5 mr-2" />
+                    Log Out
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
-
+      </main>
     </div>
   );
 };

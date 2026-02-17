@@ -1,7 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  Clock,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowLeft,
+  Timer,
+  Film,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { bookingService } from '../../services/bookingService';
 import { Showtime } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 interface PaymentPageState {
   selectedSeats: number[];
@@ -123,16 +145,26 @@ const PaymentPage: React.FC = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Check if we have valid state
+  // NEW error UI (modern design) - Check if we have valid state
   if (!state || !state.selectedSeats || !state.showtime) {
     return (
-      <div style={containerStyle}>
-        <div style={errorContainerStyle}>
-          <h2>Payment Not Available</h2>
-          <p>No valid seat reservation found.</p>
-          <Link to="/movies" style={backButtonStyle}>
-            Back to Movies
-          </Link>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4">Payment Not Available</h2>
+                <p className="text-gray-400 mb-6">No valid seat reservation found.</p>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to="/movies">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Movies
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -141,318 +173,207 @@ const PaymentPage: React.FC = () => {
   const isExpiringSoon = timeRemaining < 60000; // Less than 1 minute
 
   return (
-    <div style={containerStyle}>
-      {/* Header with timer */}
-      <div style={headerStyle}>
-        <div style={timerContainerStyle}>
-          <div style={{
-            ...timerStyle,
-            color: isExpiringSoon ? '#ff4444' : '#ffc107'
-          }}>
-            ⏰ Time remaining: {formatTimeRemaining(timeRemaining)}
-          </div>
-          {isExpiringSoon && (
-            <div style={warningStyle}>
-              ⚠️ Your reservation will expire soon!
+    <div className="min-h-screen bg-gray-950">
+      {/* Header with timer - NEW UI */}
+      <section className={`py-4 border-b-4 ${isExpiringSoon ? 'border-red-500 bg-red-900/20' : 'border-yellow-500 bg-yellow-900/20'}`}>
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <div className={`text-xl font-bold mb-2 flex items-center justify-center ${
+              isExpiringSoon ? 'text-red-400' : 'text-yellow-400'
+            }`}>
+              <Timer className="w-6 h-6 mr-2" />
+              Time remaining: {formatTimeRemaining(timeRemaining)}
             </div>
-          )}
+            {isExpiringSoon && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-red-400 text-sm flex items-center justify-center animate-pulse"
+              >
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                Your reservation will expire soon!
+              </motion.div>
+            )}
+          </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Payment content */}
-      <div style={contentStyle}>
-        <div style={paymentContainerStyle}>
+      <main className="py-8 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="space-y-8">
 
-          {/* Booking Summary */}
-          <div style={summaryCardStyle}>
-            <h2 style={titleStyle}>Complete Your Booking</h2>
+            {/* Booking Summary */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <h2 className="text-2xl font-bold text-yellow-400 mb-6 flex items-center">
+                    <CheckCircle2 className="w-6 h-6 mr-2" />
+                    Complete Your Booking
+                  </h2>
 
-            <div style={movieInfoStyle}>
-              <img
-                src={state.showtime.moviePosterUrl || `https://via.placeholder.com/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`}
-                alt={state.showtime.movieTitle}
-                style={posterStyle}
-              />
-              <div>
-                <h3>{state.showtime.movieTitle}</h3>
-                <p>{state.showtime.theaterName}</p>
-                <p>{new Date(state.showtime.showDatetime).toLocaleString()}</p>
-              </div>
-            </div>
+                  {/* Movie Info */}
+                  <div className="flex items-center space-x-4 p-4 bg-gray-700 rounded-lg mb-6">
+                    <img
+                      src={state.showtime.moviePosterUrl || `https://via.placeholder.com/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`}
+                      alt={state.showtime.movieTitle}
+                      className="w-15 h-22 object-cover rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://via.placeholder.com/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`;
+                      }}
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-white mb-2 flex items-center">
+                        <Film className="w-4 h-4 mr-2" />
+                        {state.showtime.movieTitle}
+                      </h3>
+                      <p className="text-gray-300 mb-1 flex items-center">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        {state.showtime.theaterName}
+                      </p>
+                      <p className="text-gray-300 flex items-center">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {new Date(state.showtime.showDatetime).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
 
-            <div style={seatsInfoStyle}>
-              <h4>Selected Seats ({state.selectedSeats.length})</h4>
-              <div style={seatListStyle}>
-                {state.selectedSeats.map(seatId => (
-                  <span key={seatId} style={seatChipStyle}>
-                    Seat {seatId}
-                  </span>
-                ))}
-              </div>
-            </div>
+                  {/* Selected Seats */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-white mb-3">Selected Seats ({state.selectedSeats.length})</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {state.selectedSeats.map(seatId => (
+                        <Badge key={seatId} className="bg-red-600 text-white hover:bg-red-700">
+                          Seat {seatId}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
 
-            <div style={priceInfoStyle}>
-              <div style={priceLineStyle}>
-                <span>Subtotal:</span>
-                <span>{(state.totalPrice).toLocaleString('vi-VN')} VND</span>
-              </div>
-              <div style={priceLineStyle}>
-                <span>Service Fee:</span>
-                <span>10,000 VND</span>
-              </div>
-              <div style={totalLineStyle}>
-                <span>Total:</span>
-                <span>{(state.totalPrice + 10000).toLocaleString('vi-VN')} VND</span>
-              </div>
-            </div>
+                  {/* Price Breakdown */}
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-300">Subtotal:</span>
+                      <span className="text-white font-medium">{(state.totalPrice).toLocaleString('vi-VN')} VND</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-gray-300">Service Fee:</span>
+                      <span className="text-white font-medium">10,000 VND</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-bold pt-3 border-t border-gray-600">
+                      <span className="text-white">Total:</span>
+                      <span className="text-yellow-400 flex items-center">
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        {(state.totalPrice + 10000).toLocaleString('vi-VN')} VND
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Methods */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Payment Method
+                  </h3>
+                  <div className="space-y-4">
+                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
+                      <input type="radio" name="payment" defaultChecked className="text-red-600 focus:ring-red-500" />
+                      <CreditCard className="w-5 h-5 text-blue-400" />
+                      <span className="text-white font-medium">Credit/Debit Card</span>
+                    </label>
+                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
+                      <input type="radio" name="payment" className="text-red-600 focus:ring-red-500" />
+                      <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">🏦</div>
+                      <span className="text-white font-medium">Bank Transfer</span>
+                    </label>
+                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
+                      <input type="radio" name="payment" className="text-red-600 focus:ring-red-500" />
+                      <div className="w-5 h-5 bg-red-600 rounded flex items-center justify-center text-white text-xs font-bold">📱</div>
+                      <span className="text-white font-medium">VNPay</span>
+                    </label>
+                  </div>
+                </motion.div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Actions */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-8">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-red-900/50 border border-red-600 text-red-300 p-4 rounded-lg mb-6 flex items-center"
+                    >
+                      <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                      {error}
+                    </motion.div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button
+                      onClick={handleCancel}
+                      disabled={paymentLoading}
+                      variant="outline"
+                      size="lg"
+                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+
+                    <Button
+                      onClick={handlePayment}
+                      disabled={paymentLoading || timeRemaining <= 0}
+                      size="lg"
+                      className="bg-red-600 hover:bg-red-700 min-w-[200px]"
+                    >
+                      {paymentLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Pay {(state.totalPrice + 10000).toLocaleString('vi-VN')} VND
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </motion.div>
+              </CardContent>
+            </Card>
+
           </div>
-
-          {/* Payment Methods */}
-          <div style={paymentMethodsStyle}>
-            <h3>Payment Method</h3>
-            <div style={paymentOptionsStyle}>
-              <label style={paymentOptionStyle}>
-                <input type="radio" name="payment" defaultChecked />
-                <span>💳 Credit/Debit Card</span>
-              </label>
-              <label style={paymentOptionStyle}>
-                <input type="radio" name="payment" />
-                <span>🏦 Bank Transfer</span>
-              </label>
-              <label style={paymentOptionStyle}>
-                <input type="radio" name="payment" />
-                <span>📱 VNPay</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Payment Actions */}
-          <div style={actionsStyle}>
-            {error && (
-              <div style={errorMessageStyle}>{error}</div>
-            )}
-
-            <div style={buttonContainerStyle}>
-              <button
-                onClick={handleCancel}
-                style={cancelButtonStyle}
-                disabled={paymentLoading}
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handlePayment}
-                style={payButtonStyle}
-                disabled={paymentLoading || timeRemaining <= 0}
-              >
-                {paymentLoading ? 'Processing...' : `Pay ${(state.totalPrice + 10000).toLocaleString('vi-VN')} VND`}
-              </button>
-            </div>
-          </div>
-
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  backgroundColor: '#111',
-  color: '#fff',
-};
-
-const headerStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  padding: '1rem',
-  borderBottom: '3px solid #ffc107',
-};
-
-const timerContainerStyle: React.CSSProperties = {
-  textAlign: 'center',
-};
-
-const timerStyle: React.CSSProperties = {
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-  marginBottom: '0.5rem',
-};
-
-const warningStyle: React.CSSProperties = {
-  color: '#ff4444',
-  fontSize: '0.9rem',
-  animation: 'blink 1s infinite',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '2rem',
-  maxWidth: '800px',
-  margin: '0 auto',
-};
-
-const paymentContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2rem',
-};
-
-const summaryCardStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const titleStyle: React.CSSProperties = {
-  marginBottom: '1.5rem',
-  color: '#ffc107',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'center',
-  marginBottom: '1.5rem',
-  padding: '1rem',
-  backgroundColor: '#333',
-  borderRadius: '8px',
-};
-
-const posterStyle: React.CSSProperties = {
-  width: '60px',
-  height: '90px',
-  objectFit: 'cover',
-  borderRadius: '4px',
-};
-
-const seatsInfoStyle: React.CSSProperties = {
-  marginBottom: '1.5rem',
-};
-
-const seatListStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-  flexWrap: 'wrap',
-  marginTop: '0.5rem',
-};
-
-const seatChipStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.3rem 0.8rem',
-  borderRadius: '20px',
-  fontSize: '0.8rem',
-};
-
-const priceInfoStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  padding: '1rem',
-  borderRadius: '8px',
-};
-
-const priceLineStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '0.5rem',
-};
-
-const totalLineStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-  paddingTop: '0.5rem',
-  borderTop: '1px solid #555',
-  color: '#ffc107',
-};
-
-const paymentMethodsStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const paymentOptionsStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-  marginTop: '1rem',
-};
-
-const paymentOptionStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1rem',
-  padding: '1rem',
-  backgroundColor: '#333',
-  borderRadius: '8px',
-  cursor: 'pointer',
-};
-
-const actionsStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const errorMessageStyle: React.CSSProperties = {
-  color: '#ff4444',
-  backgroundColor: '#331111',
-  padding: '1rem',
-  borderRadius: '8px',
-  marginBottom: '1rem',
-  textAlign: 'center',
-};
-
-const buttonContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  justifyContent: 'center',
-};
-
-const cancelButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '1rem 2rem',
-  fontSize: '1rem',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s',
-};
-
-const payButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '1rem 2rem',
-  fontSize: '1rem',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s',
-  minWidth: '200px',
-};
-
-const errorContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  textAlign: 'center',
-};
-
-const backButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.8rem 1.5rem',
-  textDecoration: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  display: 'inline-block',
-};
 
 export default PaymentPage;
