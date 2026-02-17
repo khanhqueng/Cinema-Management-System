@@ -1,8 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  LogIn,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  Film
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { authService } from '../../services/authService';
 import { LoginRequest } from '../../types';
-import styles from './Auth.module.css';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,115 +56,185 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className={styles.authPage}>
-      {/* Background */}
-      <div className={styles.authBackground}>
-        <div className={styles.authBackgroundGradient}></div>
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center relative overflow-hidden">
+      {/* Background Elements - NEW UI */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 to-gray-950" />
+        <div className="absolute top-0 left-0 w-72 h-72 bg-red-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Form Container */}
-      <div className={styles.authContainer}>
-        <div className={styles.authFormWrapper}>
-          <div className={styles.authHeader}>
-            <h1>Sign In</h1>
-            <p>Welcome back! Please sign in to continue</p>
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
+        >
+          {/* Brand */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mr-3">
+              <Film className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Cinema</h1>
           </div>
 
-          <form className={styles.authForm} onSubmit={handleSubmit}>
-            {error && (
-              <div className={`${styles.alert} ${styles.alertError}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                </svg>
-                {error}
+          {/* Back to Home */}
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="text-gray-400 hover:text-white mb-4"
+          >
+            <Link to="/">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+        </motion.div>
+
+        {/* Auth Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm">
+            <CardContent className="p-8">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-white mb-2">Sign In</h2>
+                <p className="text-gray-400">Welcome back! Please sign in to continue</p>
               </div>
-            )}
 
-            <div className={styles.formGroup}>
-              <label htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="name@example.com"
-                className={styles.formInput}
-                autoComplete="email"
-              />
-            </div>
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Error Alert - NEW UI with OLD logic */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-red-900/50 border border-red-600 text-red-300 p-4 rounded-lg flex items-center"
+                  >
+                    <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
 
-            <div className={styles.formGroup}>
-              <label htmlFor="password">Password</label>
-              <div className={styles.passwordInputWrapper}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={6}
-                  placeholder="Enter your password"
-                  className={styles.formInput}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className={styles.passwordToggle}
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                {/* Email Input */}
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-gray-300 flex items-center">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="name@example.com"
+                    autoComplete="email"
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                  />
+                </div>
+
+                {/* Password Input */}
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium text-gray-300 flex items-center">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      minLength={6}
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                      className="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form Options */}
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 border-2 border-gray-600 rounded mr-3 flex items-center justify-center transition-colors ${
+                      rememberMe ? 'bg-red-600 border-red-600' : 'bg-transparent'
+                    }`}>
+                      {rememberMe && (
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-gray-300 text-sm">Remember me</span>
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-base font-medium"
+                  size="lg"
                 >
-                  {showPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
-                    </svg>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Signing In...
+                    </>
                   ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                    </svg>
+                    <>
+                      <LogIn className="w-5 h-5 mr-2" />
+                      Sign In
+                    </>
                   )}
-                </button>
+                </Button>
+              </form>
+
+              {/* Footer */}
+              <div className="text-center mt-8 pt-6 border-t border-gray-700">
+                <p className="text-gray-400">
+                  New to Cinema?{' '}
+                  <Link
+                    to="/register"
+                    className="text-red-400 hover:text-red-300 font-medium transition-colors"
+                  >
+                    Create an account
+                  </Link>
+                </p>
               </div>
-            </div>
-
-            <div className={styles.formOptions}>
-              <label className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className={styles.checkboxInput}
-                />
-                <span className={styles.checkboxText}>Remember me</span>
-              </label>
-              <Link to="/forgot-password" className={styles.forgotLink}>
-                Forgot password?
-              </Link>
-            </div>
-
-            <button type="submit" disabled={loading} className={`btn ${styles.btnPrimary} btn-large ${styles.btnFull}`}>
-              {loading ? (
-                <>
-                  <span className="spinner-small"></span>
-                  Signing In...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
-
-          <div className={styles.authFooter}>
-            <p>
-              New to Cinema?{' '}
-              <Link to="/register" className={styles.authLink}>
-                Create an account
-              </Link>
-            </p>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Layout/Header';
+import { Header } from './components/Header';
 import AdminLayout from './components/admin/AdminLayout';
 
 // User Pages
@@ -9,6 +9,7 @@ import {
   MoviesPage,
   MovieDetailPage,
   ShowtimePage,
+  AllShowtimesPage,
   BookingPage,
   BookingConfirmationPage,
   TheaterPage
@@ -52,6 +53,7 @@ function App() {
                   <Route path="/movies" element={<MoviesPage />} />
                   <Route path="/movies/:id" element={<MovieDetailPage />} />
                   <Route path="/movies/:id/showtimes" element={<ShowtimePage />} />
+                  <Route path="/showtimes" element={<AllShowtimesPage />} />
                   <Route path="/booking/:showtimeId" element={<BookingPage />} />
                   <Route path="/booking-confirmation/:bookingId" element={<BookingConfirmationPage />} />
                   <Route path="/theaters" element={<TheaterPage />} />

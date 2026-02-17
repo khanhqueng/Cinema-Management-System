@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  ArrowLeft,
+  MapPin,
+  Clock,
+  Users,
+  DollarSign,
+  Loader2,
+  Calendar,
+  Film,
+  Armchair,
+  AlertCircle,
+  CheckCircle2
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { showtimeService } from '../../services/showtimeService';
 import { bookingService } from '../../services/bookingService';
 import {
@@ -9,6 +25,11 @@ import {
   SeatAvailabilityResponse,
   BookingWithSeatsResponse
 } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const BookingPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
@@ -132,23 +153,43 @@ const BookingPage: React.FC = () => {
     }
   };
 
+  // NEW loading UI (modern design)
   if (loading) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading seat map...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading seat map...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // NEW error UI (modern design)
   if (error || !showtime || !seatMap) {
     return (
-      <div style={errorContainerStyle}>
-        <h2>Booking Not Available</h2>
-        <p>{error || 'Unable to load booking information.'}</p>
-        <Link to="/movies" style={backButtonStyle}>
-          Back to Movies
-        </Link>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4">Booking Not Available</h2>
+                <p className="text-gray-400 mb-6">{error || 'Unable to load booking information.'}</p>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to="/movies">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Movies
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -157,545 +198,275 @@ const BookingPage: React.FC = () => {
   const rows = Object.keys(seatMapByRow).sort();
 
   return (
-    <div style={containerStyle}>
-      {/* Header Section */}
-      <div style={headerSectionStyle}>
-        <div style={breadcrumbStyle}>
-          <Link to="/movies" style={breadcrumbLinkStyle}>Movies</Link>
-          <span style={breadcrumbSeparatorStyle}>/</span>
-          <Link to={`/movies/${showtime.movieId}`} style={breadcrumbLinkStyle}>
-            {showtime.movieTitle}
-          </Link>
-          <span style={breadcrumbSeparatorStyle}>/</span>
-          <Link to={`/movies/${showtime.movieId}/showtimes`} style={breadcrumbLinkStyle}>
-            Showtimes
-          </Link>
-          <span style={breadcrumbSeparatorStyle}>/</span>
-          <span style={currentPageStyle}>Book Tickets</span>
-        </div>
+    <div className="min-h-screen bg-gray-950">
+      {/* Header Section - NEW UI with OLD data */}
+      <section className="bg-gray-900 py-6 border-b border-gray-800">
+        <div className="container mx-auto px-4">
+          {/* Breadcrumb */}
+          <nav className="mb-6">
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Link to="/movies" className="hover:text-white transition-colors">Movies</Link>
+              <span className="text-gray-600">/</span>
+              <Link to={`/movies/${showtime.movieId}`} className="hover:text-white transition-colors">
+                {showtime.movieTitle}
+              </Link>
+              <span className="text-gray-600">/</span>
+              <Link to={`/movies/${showtime.movieId}/showtimes`} className="hover:text-white transition-colors">
+                Showtimes
+              </Link>
+              <span className="text-gray-600">/</span>
+              <span className="text-white">Book Tickets</span>
+            </div>
+          </nav>
 
-        <div style={movieInfoStyle}>
-          <img
-            src={showtime.moviePosterUrl || `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`}
-            alt={showtime.movieTitle}
-            style={posterStyle}
-          />
-          <div style={movieDetailsStyle}>
-            <h1 style={titleStyle}>{showtime.movieTitle}</h1>
-            <div style={showtimeInfoStyle}>
-              <div style={theaterInfoStyle}>
-                <span style={theaterNameStyle}>{showtime.theaterName}</span>
-                <span style={theaterTypeStyle}>Capacity: {showtime.theaterCapacity} seats</span>
-              </div>
-              <div style={timeInfoStyle}>
-                <span style={dateTimeStyle}>
-                  {showtimeService.formatShowtime(showtime)}
-                </span>
-                <span style={priceStyle}>
-                  {showtimeService.formatPrice(showtime.price)} per seat
-                </span>
+          {/* Movie & Showtime Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex items-start space-x-4"
+          >
+            <img
+              src={showtime.moviePosterUrl || `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`}
+              alt={showtime.movieTitle}
+              className="w-20 h-30 object-cover rounded-lg"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`;
+              }}
+            />
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-white mb-4">{showtime.movieTitle}</h1>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <MapPin className="w-4 h-4" />
+                    <span className="font-medium">{showtime.theaterName}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Users className="w-4 h-4" />
+                    <span>Capacity: {showtime.theaterCapacity} seats</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Calendar className="w-4 h-4" />
+                    <span>{showtimeService.formatShowtime(showtime)}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-green-500 font-bold">
+                    <DollarSign className="w-4 h-4" />
+                    <span>{showtimeService.formatPrice(showtime.price)} per seat</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Content Section */}
-      <div style={contentSectionStyle}>
-        <div style={contentContainerStyle}>
-          <div style={bookingLayoutStyle}>
+      <main className="py-8 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Seat Map Section */}
-            <div style={seatMapSectionStyle}>
-              <h2 style={sectionTitleStyle}>Select Your Seats</h2>
+            <div className="lg:col-span-2">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                      <Armchair className="w-6 h-6 mr-2 text-red-500" />
+                      Select Your Seats
+                    </h2>
 
-              {/* Screen Indicator */}
-              <div style={screenContainerStyle}>
-                <div style={screenStyle}>SCREEN</div>
-              </div>
-
-              {/* Legend */}
-              <div style={legendStyle}>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#4caf50'}}></div>
-                  <span>Thường (1.0x)</span>
-                </div>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#e50914'}}></div>
-                  <span>Đã chọn</span>
-                </div>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#666'}}></div>
-                  <span>Đã đặt</span>
-                </div>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#ffc107'}}></div>
-                  <span>VIP (1.5x)</span>
-                </div>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#e91e63', width: '45px'}}></div>
-                  <span>Đôi (1.3x)</span>
-                </div>
-                <div style={legendItemStyle}>
-                  <div style={{...seatButtonStyle, backgroundColor: '#2196f3'}}></div>
-                  <span>Người khuyết tật (1.0x)</span>
-                </div>
-              </div>
-
-              {/* Seat Map */}
-              <div style={seatMapContainerStyle}>
-                {rows.map(row => (
-                  <div key={row} style={seatRowStyle}>
-                    <div style={rowLabelStyle}>{row}</div>
-                    <div style={seatsInRowStyle}>
-                      {seatMapByRow[row].map((seat, index) => {
-                        // Add aisle spacing - typical CGV layout has aisles every 4-6 seats
-                        const shouldAddAisle = index > 0 && (index + 1) % 4 === 0 && index < seatMapByRow[row].length - 1;
-                        const isSelected = selectedSeats.includes(seat.id);
-                        const isBooked = !seat.isAvailable;
-                        const isVIP = seat.seatType === 'VIP';
-                        const isCouple = seat.seatType === 'COUPLE';
-                        const isWheelchair = seat.seatType === 'WHEELCHAIR';
-
-                        let seatStyleColor = '#4caf50'; // Available
-                        let seatSize = { width: '35px', height: '35px' };
-
-                        if (isBooked) {
-                          seatStyleColor = '#666'; // Occupied
-                        } else if (isSelected) {
-                          seatStyleColor = '#e50914'; // Selected
-                        } else if (isVIP) {
-                          seatStyleColor = '#ffc107'; // VIP
-                        } else if (isCouple) {
-                          seatStyleColor = '#e91e63'; // Couple (Pink)
-                          seatSize = { width: '45px', height: '35px' }; // Wider for couple seats
-                        } else if (isWheelchair) {
-                          seatStyleColor = '#2196f3'; // Wheelchair (Blue)
-                        }
-
-                        return (
-                          <React.Fragment key={seat.id}>
-                            <button
-                              onClick={() => seat.isAvailable && handleSeatToggle(seat.id)}
-                              disabled={!seat.isAvailable}
-                              style={{
-                                ...seatButtonStyle,
-                                backgroundColor: seatStyleColor,
-                                cursor: !seat.isAvailable ? 'not-allowed' : 'pointer',
-                                ...seatSize
-                              }}
-                              title={`${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`}
-                            >
-                              {seat.seatNumber}
-                            </button>
-                            {shouldAddAisle && <div style={aisleSpacingStyle}></div>}
-                          </React.Fragment>
-                        );
-                      })}
+                    {/* Screen Indicator */}
+                    <div className="text-center mb-8">
+                      <div className="inline-block bg-gray-700 text-gray-300 px-8 py-2 rounded-full text-sm font-bold tracking-wide">
+                        SCREEN
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-green-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Thường (1.0x)</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-red-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Đã chọn</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-gray-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Đã đặt</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-yellow-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">VIP (1.5x)</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-6 bg-pink-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Đôi (1.3x)</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-blue-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Người khuyết tật (1.0x)</span>
+                      </div>
+                    </div>
+
+                    {/* Seat Map */}
+                    <div className="flex flex-col items-center space-y-3">
+                      {rows.map(row => (
+                        <div key={row} className="flex items-center space-x-4">
+                          <div className="w-8 text-center font-bold text-gray-400">{row}</div>
+                          <div className="flex space-x-2">
+                            {seatMapByRow[row].map((seat, index) => {
+                              // Add aisle spacing - typical CGV layout has aisles every 4-6 seats
+                              const shouldAddAisle = index > 0 && (index + 1) % 4 === 0 && index < seatMapByRow[row].length - 1;
+                              const isSelected = selectedSeats.includes(seat.id);
+                              const isBooked = !seat.isAvailable;
+                              const isVIP = seat.seatType === 'VIP';
+                              const isCouple = seat.seatType === 'COUPLE';
+                              const isWheelchair = seat.seatType === 'WHEELCHAIR';
+
+                              let seatClasses = "w-9 h-9 border border-gray-600 rounded text-white text-xs font-bold transition-all duration-200 hover:scale-105";
+                              let seatSize = "w-9 h-9";
+
+                              if (isBooked) {
+                                seatClasses += " bg-gray-600 cursor-not-allowed opacity-50";
+                              } else if (isSelected) {
+                                seatClasses += " bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30";
+                              } else if (isVIP) {
+                                seatClasses += " bg-yellow-500 hover:bg-yellow-600 cursor-pointer";
+                              } else if (isCouple) {
+                                seatClasses += " bg-pink-600 hover:bg-pink-700 cursor-pointer";
+                                seatSize = "w-12 h-9"; // Wider for couple seats
+                              } else if (isWheelchair) {
+                                seatClasses += " bg-blue-500 hover:bg-blue-600 cursor-pointer";
+                              } else {
+                                seatClasses += " bg-green-500 hover:bg-green-600 cursor-pointer";
+                              }
+
+                              return (
+                                <React.Fragment key={seat.id}>
+                                  <button
+                                    onClick={() => seat.isAvailable && handleSeatToggle(seat.id)}
+                                    disabled={!seat.isAvailable}
+                                    className={`${seatClasses} ${seatSize}`}
+                                    title={`${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`}
+                                  >
+                                    {seat.seatNumber}
+                                  </button>
+                                  {shouldAddAisle && (
+                                    <div className="w-5 min-w-[20px] border-l-2 border-gray-600 mx-2 h-9 flex items-center justify-center text-gray-600 text-xs font-bold"></div>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Booking Summary Section */}
-            <div style={summarySectionStyle}>
-              <div style={summaryCardStyle}>
-                <h3 style={summaryTitleStyle}>Booking Summary</h3>
+            <div className="lg:col-span-1">
+              <Card className="bg-gray-800 border-gray-700 sticky top-8">
+                <CardContent className="p-6">
+                  <motion.div
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  >
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                      <CheckCircle2 className="w-5 h-5 mr-2 text-green-500" />
+                      Booking Summary
+                    </h3>
 
-                <div style={selectedSeatsInfoStyle}>
-                  <h4>Selected Seats ({selectedSeats.length})</h4>
-                  {selectedSeats.length > 0 ? (
-                    <div style={selectedSeatsListStyle}>
-                      {selectedSeats.map(seatId => {
-                        const seat = seatMap.seats.find(s => s.id === seatId);
-                        return seat ? (
-                          <div key={seatId} style={selectedSeatItemStyle}>
-                            <span>{seat.rowLetter}{seat.seatNumber}</span>
-                            <span style={seatTypeStyle}>
-                              {bookingService.getSeatTypeDisplay(seat.seatType)}
-                            </span>
-                          </div>
-                        ) : null;
-                      })}
+                    <div className="mb-6">
+                      <h4 className="font-semibold text-white mb-3">
+                        Selected Seats ({selectedSeats.length})
+                      </h4>
+                      {selectedSeats.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedSeats.map(seatId => {
+                            const seat = seatMap.seats.find(s => s.id === seatId);
+                            return seat ? (
+                              <div key={seatId} className="flex justify-between items-center py-2 border-b border-gray-700">
+                                <span className="text-white font-medium">
+                                  {seat.rowLetter}{seat.seatNumber}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {bookingService.getSeatTypeDisplay(seat.seatType)}
+                                </Badge>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 italic">No seats selected</p>
+                      )}
                     </div>
-                  ) : (
-                    <p style={noSeatsSelectedStyle}>No seats selected</p>
-                  )}
-                </div>
 
-                {priceCheck && (
-                  <div style={priceBreakdownStyle}>
-                    <div style={priceLineStyle}>
-                      <span>Seats ({priceCheck.seatCount})</span>
-                      <span>{bookingService.formatPrice(priceCheck.totalPrice)}</span>
+                    {priceCheck && (
+                      <div className="bg-gray-700 rounded-lg p-4 mb-6">
+                        <div className="flex justify-between items-center mb-2 text-sm">
+                          <span className="text-gray-300">Seats ({priceCheck.seatCount})</span>
+                          <span className="text-white">{bookingService.formatPrice(priceCheck.totalPrice)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-600">
+                          <span className="text-white">Total</span>
+                          <span className="text-green-500">{bookingService.formatPrice(priceCheck.totalPrice)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleBooking}
+                      disabled={selectedSeats.length === 0 || bookingLoading}
+                      className={`w-full mb-6 ${
+                        selectedSeats.length > 0 && !bookingLoading
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-gray-600 cursor-not-allowed"
+                      }`}
+                    >
+                      {bookingLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Book Now'
+                      )}
+                    </Button>
+
+                    <div className="text-xs text-gray-400">
+                      <h4 className="font-semibold text-white mb-2 flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        Important Notes:
+                      </h4>
+                      <ul className="space-y-1">
+                        <li>• Maximum 8 seats per booking</li>
+                        <li>• Bookings can be cancelled up to 2 hours before showtime</li>
+                        <li>• Please arrive at least 15 minutes before showtime</li>
+                        <li>• VIP seats include premium amenities</li>
+                      </ul>
                     </div>
-                    <div style={totalLineStyle}>
-                      <span>Total</span>
-                      <span>{bookingService.formatPrice(priceCheck.totalPrice)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleBooking}
-                  disabled={selectedSeats.length === 0 || bookingLoading}
-                  style={selectedSeats.length > 0 && !bookingLoading ? bookButtonStyle : disabledBookButtonStyle}
-                >
-                  {bookingLoading ? 'Processing...' : 'Book Now'}
-                </button>
-
-                <div style={bookingNotesStyle}>
-                  <h4>Important Notes:</h4>
-                  <ul>
-                    <li>Maximum 8 seats per booking</li>
-                    <li>Bookings can be cancelled up to 2 hours before showtime</li>
-                    <li>Please arrive at least 15 minutes before showtime</li>
-                    <li>VIP seats include premium amenities</li>
-                  </ul>
-                </div>
-              </div>
+                  </motion.div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  backgroundColor: '#111',
-  color: '#fff',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #333',
-  borderTop: '4px solid #e50914',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const errorContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  textAlign: 'center',
-};
-
-const headerSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  padding: '1rem 0',
-};
-
-const breadcrumbStyle: React.CSSProperties = {
-  padding: '0 2rem',
-  marginBottom: '1rem',
-  fontSize: '0.9rem',
-};
-
-const breadcrumbLinkStyle: React.CSSProperties = {
-  color: '#ccc',
-  textDecoration: 'none',
-};
-
-const breadcrumbSeparatorStyle: React.CSSProperties = {
-  margin: '0 0.5rem',
-  color: '#666',
-};
-
-const currentPageStyle: React.CSSProperties = {
-  color: '#fff',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1.5rem',
-  padding: '0 2rem',
-  alignItems: 'flex-start',
-};
-
-const posterStyle: React.CSSProperties = {
-  width: '80px',
-  height: '120px',
-  objectFit: 'cover',
-  borderRadius: '8px',
-};
-
-const movieDetailsStyle: React.CSSProperties = {
-  flex: 1,
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  margin: '0 0 0.5rem 0',
-};
-
-const showtimeInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '2rem',
-  flexWrap: 'wrap',
-};
-
-const theaterInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.3rem',
-};
-
-const theaterNameStyle: React.CSSProperties = {
-  fontSize: '1rem',
-  fontWeight: '500',
-};
-
-const theaterTypeStyle: React.CSSProperties = {
-  color: '#ffc107',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const timeInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.3rem',
-};
-
-const dateTimeStyle: React.CSSProperties = {
-  fontSize: '0.9rem',
-  color: '#ccc',
-};
-
-const priceStyle: React.CSSProperties = {
-  color: '#4caf50',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const contentSectionStyle: React.CSSProperties = {
-  padding: '2rem 0',
-};
-
-const contentContainerStyle: React.CSSProperties = {
-  maxWidth: '1400px',
-  margin: '0 auto',
-  padding: '0 2rem',
-};
-
-const bookingLayoutStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 350px',
-  gap: '3rem',
-  alignItems: 'start',
-};
-
-const seatMapSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  marginBottom: '1.5rem',
-};
-
-const screenContainerStyle: React.CSSProperties = {
-  textAlign: 'center',
-  marginBottom: '2rem',
-};
-
-const screenStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  color: '#ccc',
-  padding: '0.5rem 2rem',
-  borderRadius: '20px',
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-  letterSpacing: '2px',
-  display: 'inline-block',
-};
-
-const legendStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1.5rem',
-  justifyContent: 'center',
-  marginBottom: '2rem',
-  flexWrap: 'wrap',
-};
-
-const legendItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  fontSize: '0.9rem',
-};
-
-const seatMapContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.8rem',
-  alignItems: 'center',
-};
-
-const seatRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1rem',
-};
-
-const rowLabelStyle: React.CSSProperties = {
-  width: '30px',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  color: '#ccc',
-};
-
-const seatsInRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-};
-
-const seatButtonStyle: React.CSSProperties = {
-  width: '35px',
-  height: '35px',
-  border: 'none',
-  borderRadius: '6px',
-  color: '#fff',
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-  transition: 'all 0.2s',
-};
-
-const summarySectionStyle: React.CSSProperties = {
-  position: 'sticky',
-  top: '2rem',
-};
-
-const summaryCardStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const summaryTitleStyle: React.CSSProperties = {
-  fontSize: '1.3rem',
-  fontWeight: 'bold',
-  marginBottom: '1.5rem',
-};
-
-const selectedSeatsInfoStyle: React.CSSProperties = {
-  marginBottom: '1.5rem',
-};
-
-const selectedSeatsListStyle: React.CSSProperties = {
-  marginTop: '0.5rem',
-};
-
-const selectedSeatItemStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  padding: '0.5rem 0',
-  borderBottom: '1px solid #333',
-};
-
-const seatTypeStyle: React.CSSProperties = {
-  color: '#ffc107',
-  fontSize: '0.8rem',
-};
-
-const noSeatsSelectedStyle: React.CSSProperties = {
-  color: '#666',
-  fontStyle: 'italic',
-};
-
-const priceBreakdownStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  borderRadius: '8px',
-  padding: '1rem',
-  marginBottom: '1.5rem',
-};
-
-const priceLineStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '0.5rem',
-  fontSize: '0.9rem',
-};
-
-const totalLineStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '1.1rem',
-  fontWeight: 'bold',
-  paddingTop: '0.5rem',
-  borderTop: '1px solid #555',
-};
-
-const bookButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '1rem',
-  width: '100%',
-  fontSize: '1rem',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  marginBottom: '1.5rem',
-  transition: 'background-color 0.2s',
-};
-
-const disabledBookButtonStyle: React.CSSProperties = {
-  ...bookButtonStyle,
-  backgroundColor: '#666',
-  cursor: 'not-allowed',
-};
-
-const bookingNotesStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  color: '#ccc',
-};
-
-const backButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.8rem 1.5rem',
-  textDecoration: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  display: 'inline-block',
-};
-
-// CGV-style aisle spacing
-const aisleSpacingStyle: React.CSSProperties = {
-  width: '20px',
-  minWidth: '20px',
-  borderLeft: '2px solid #444',
-  marginLeft: '10px',
-  marginRight: '10px',
-  height: '35px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#666',
-  fontSize: '0.7rem',
-  fontWeight: 'bold',
-};
 
 export default BookingPage;

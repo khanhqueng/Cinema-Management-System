@@ -1,7 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import {
+  Building2,
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Save,
+  Loader2,
+  AlertCircle,
+  Users,
+  Calendar,
+  ArrowLeft,
+  ArrowRight,
+  Activity,
+  Star,
+  Crown,
+  Volume2
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import adminService, { CreateTheaterRequest, UpdateTheaterRequest, TheaterUtilization } from '../../services/adminService';
 import { Theater, TheaterType, PageResponse } from '../../types';
 import { theaterService } from '../../services/theaterService';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const AdminTheaters: React.FC = () => {
   const [theaters, setTheaters] = useState<PageResponse<Theater> | null>(null);
@@ -133,572 +160,423 @@ const AdminTheaters: React.FC = () => {
     setCurrentPage(newPage);
   };
 
+  // NEW loading UI (modern design)
   if (loading && !theaters) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading theaters...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading theaters...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>Theater Management</h1>
-        <button
-          onClick={() => {
-            setEditingTheater(null);
-            resetForm();
-            setShowForm(true);
-          }}
-          style={addButtonStyle}
-        >
-          + Add New Theater
-        </button>
-      </div>
-
-      {/* Search */}
-      <div style={searchSectionStyle}>
-        <input
-          type="text"
-          placeholder="Search theaters by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={searchInputStyle}
-        />
-        <button onClick={handleSearch} style={searchButtonStyle}>
-          Search
-        </button>
-        {searchQuery && (
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              fetchTheaters();
-            }}
-            style={clearButtonStyle}
+    <div className="min-h-screen bg-gray-950">
+      {/* Header Section - NEW UI */}
+      <section className="bg-gradient-to-r from-green-900 to-green-800 py-16 text-center">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
           >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {/* Theater Form Modal */}
-      {showForm && (
-        <div style={modalOverlayStyle}>
-          <div style={modalStyle}>
-            <div style={modalHeaderStyle}>
-              <h2>{editingTheater ? 'Edit Theater' : 'Add New Theater'}</h2>
-              <button
-                onClick={() => setShowForm(false)}
-                style={closeButtonStyle}
-              >
-                ×
-              </button>
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
+              <Building2 className="w-10 h-10 text-white" />
             </div>
-
-            <form onSubmit={handleFormSubmit} style={formStyle}>
-              <div style={formGroupStyle}>
-                <label style={labelStyle}>Theater Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
-                  style={inputStyle}
-                  placeholder="e.g., Theater A, VIP Hall 1"
-                />
-              </div>
-
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Capacity *</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
-                    required
-                    min="1"
-                    style={inputStyle}
-                    placeholder="Number of seats"
-                  />
-                </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Theater Type *</label>
-                  <select
-                    value={formData.theaterType}
-                    onChange={(e) => setFormData({...formData, theaterType: e.target.value as TheaterType})}
-                    required
-                    style={selectStyle}
-                  >
-                    {theaterTypes.map(type => (
-                      <option key={type} value={type}>
-                        {adminService.getTheaterTypeDisplay(type)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={formActionsStyle}>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  style={cancelButtonStyle}
-                >
-                  Cancel
-                </button>
-                <button type="submit" style={saveButtonStyle}>
-                  {editingTheater ? 'Update' : 'Create'} Theater
-                </button>
-              </div>
-            </form>
-          </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Theater Management</h1>
+            <p className="text-lg text-green-100 max-w-2xl mx-auto">
+              Manage your cinema's theater configurations and seating
+            </p>
+          </motion.div>
         </div>
-      )}
+      </section>
 
-      {/* Theaters List */}
-      {error ? (
-        <div style={errorMessageStyle}>{error}</div>
-      ) : (
-        <>
-          {theaters && (
-            <div style={theatersListStyle}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={tableHeaderRowStyle}>
-                    <th style={tableHeaderStyle}>Theater Name</th>
-                    <th style={tableHeaderStyle}>Type</th>
-                    <th style={tableHeaderStyle}>Capacity</th>
-                    <th style={tableHeaderStyle}>Status</th>
-                    <th style={tableHeaderStyle}>Created</th>
-                    <th style={tableHeaderStyle}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {theaters.content.map(theater => (
-                    <tr key={theater.id} style={tableRowStyle}>
-                      <td style={tableCellStyle}>
-                        <div style={theaterNameStyle}>{theater.name}</div>
-                        <div style={theaterIdStyle}>ID: {theater.id}</div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <span style={{
-                          ...theaterTypeBadgeStyle,
-                          backgroundColor: getTheaterTypeColor(theater.theaterType)
-                        }}>
-                          {adminService.getTheaterTypeDisplay(theater.theaterType)}
-                        </span>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={capacityStyle}>
-                          <span style={capacityNumberStyle}>{theater.capacity}</span>
-                          <span style={capacityLabelStyle}>seats</span>
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <span style={{
-                          ...statusBadgeStyle,
-                          backgroundColor: adminService.getStatusColor(true) // Assume active for now
-                        }}>
-                          Active
-                        </span>
-                      </td>
-                      <td style={tableCellStyle}>
-                        {adminService.formatDate(theater.createdAt)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={actionButtonsStyle}>
-                          <button
-                            onClick={() => handleEdit(theater)}
-                            style={editButtonStyle}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(theater.id)}
-                            style={deleteButtonStyle}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Pagination */}
-              {theaters.totalPages > 1 && (
-                <div style={paginationStyle}>
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                    style={pageButtonStyle}
-                  >
-                    Previous
-                  </button>
-
-                  <span style={pageInfoStyle}>
-                    Page {currentPage + 1} of {theaters.totalPages}
-                    ({theaters.totalElements} total theaters)
-                  </span>
-
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= theaters.totalPages - 1}
-                    style={pageButtonStyle}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+      {/* Content Section */}
+      <main className="py-12 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
+          >
+            {/* Action Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Theaters</h2>
+                <p className="text-gray-400">Add, edit, and manage theater configurations</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingTheater(null);
+                  resetForm();
+                  setShowForm(true);
+                }}
+                className="bg-red-600 hover:bg-red-700"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add New Theater
+              </Button>
             </div>
-          )}
-        </>
-      )}
+
+            {/* Search Section - NEW UI with OLD logic */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search theaters by name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleSearch} className="bg-green-600 hover:bg-green-700" size="lg">
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </Button>
+                  {searchQuery && (
+                    <Button
+                      onClick={() => {
+                        setSearchQuery('');
+                        fetchTheaters();
+                      }}
+                      variant="outline"
+                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                      size="lg"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Theater Form Modal - NEW UI with OLD logic */}
+            {showForm && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden"
+                >
+                  {/* Modal Header */}
+                  <div className="bg-gray-700 px-8 py-6 border-b border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-white flex items-center">
+                        <Building2 className="w-6 h-6 mr-3 text-green-500" />
+                        {editingTheater ? 'Edit Theater' : 'Add New Theater'}
+                      </h2>
+                      <Button
+                        onClick={() => setShowForm(false)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="p-8">
+                    <form onSubmit={handleFormSubmit} className="space-y-6">
+                      {/* Theater Name Field */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300 flex items-center">
+                          <Building2 className="w-4 h-4 mr-2" />
+                          Theater Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          required
+                          placeholder="e.g., Theater A, VIP Hall 1"
+                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Form Fields Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <Users className="w-4 h-4 mr-2" />
+                            Capacity *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.capacity}
+                            onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})}
+                            required
+                            min="1"
+                            placeholder="Number of seats"
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <Activity className="w-4 h-4 mr-2" />
+                            Theater Type *
+                          </label>
+                          <select
+                            value={formData.theaterType}
+                            onChange={(e) => setFormData({...formData, theaterType: e.target.value as TheaterType})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          >
+                            {theaterTypes.map(type => (
+                              <option key={type} value={type} className="bg-gray-700 text-white">
+                                {adminService.getTheaterTypeDisplay(type)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Form Actions */}
+                      <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-600">
+                        <Button
+                          type="button"
+                          onClick={() => setShowForm(false)}
+                          variant="outline"
+                          className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                          size="lg"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="bg-green-600 hover:bg-green-700"
+                          size="lg"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {editingTheater ? 'Update' : 'Create'} Theater
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Theaters List - NEW UI with OLD logic */}
+            {error ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="bg-red-900/50 border-red-600">
+                  <CardContent className="p-6">
+                    <div className="flex items-center text-red-300">
+                      <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                      {error}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <>
+                {theaters && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    <Card className="bg-gray-800 border-gray-700 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-700 border-b border-gray-600">
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Theater Name</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Type</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Capacity</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Status</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Created</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {theaters.content.map((theater, index) => {
+                              const TypeIcon = getTheaterTypeIcon(theater.theaterType);
+                              return (
+                                <motion.tr
+                                  key={theater.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                                  className="border-b border-gray-600 hover:bg-gray-700/30 transition-colors"
+                                >
+                                  <td className="px-6 py-4">
+                                    <div className="font-semibold text-white mb-1">{theater.name}</div>
+                                    <div className="text-sm text-gray-400">ID: {theater.id}</div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <Badge variant="secondary" className={getTheaterTypeBadgeClass(theater.theaterType)}>
+                                      <TypeIcon className="w-3 h-3 mr-1" />
+                                      {adminService.getTheaterTypeDisplay(theater.theaterType)}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="text-center">
+                                      <div className="text-xl font-bold text-white">{theater.capacity}</div>
+                                      <div className="text-xs text-gray-400">seats</div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <Badge variant="secondary" className="bg-green-600 text-white">
+                                      <Activity className="w-3 h-3 mr-1" />
+                                      Active
+                                    </Badge>
+                                  </td>
+                                  <td className="px-6 py-4 text-gray-300">
+                                    <div className="flex items-center">
+                                      <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+                                      {adminService.formatDate(theater.createdAt)}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        onClick={() => handleEdit(theater)}
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700"
+                                      >
+                                        <Edit3 className="w-4 h-4 mr-1" />
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        onClick={() => handleDelete(theater.id)}
+                                        size="sm"
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-1" />
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+
+                      </div>
+
+                      {/* Pagination - NEW UI with OLD logic */}
+                      {theaters.totalPages > 1 && (
+                        <div className="bg-gray-700 px-6 py-4 border-t border-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => handlePageChange(0)}
+                                disabled={currentPage === 0}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ArrowLeft className="w-4 h-4 mr-1" />
+                                First
+                              </Button>
+                              <Button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 0}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Previous
+                              </Button>
+                            </div>
+
+                            <div className="text-sm text-gray-300">
+                              Page {currentPage + 1} of {theaters.totalPages} • {theaters.totalElements} total theaters
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage >= theaters.totalPages - 1}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Next
+                              </Button>
+                              <Button
+                                onClick={() => handlePageChange(theaters.totalPages - 1)}
+                                disabled={currentPage >= theaters.totalPages - 1}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Last
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
+      </main>
     </div>
   );
 };
 
-// Helper function for theater type colors
-const getTheaterTypeColor = (type: TheaterType): string => {
+// Helper functions for theater type styling - NEW approach with icons
+const getTheaterTypeIcon = (type: TheaterType) => {
   switch (type) {
     case TheaterType.STANDARD:
-      return '#4caf50';
+      return Building2;
     case TheaterType.VIP:
-      return '#ff9800';
+      return Crown;
     case TheaterType.IMAX:
-      return '#2196f3';
+      return Star;
     case TheaterType.DOLBY:
-      return '#9c27b0';
+      return Volume2;
     default:
-      return '#666';
+      return Building2;
   }
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  padding: '2rem',
-  backgroundColor: '#f5f5f5',
-  minHeight: '100vh',
+const getTheaterTypeBadgeClass = (type: TheaterType): string => {
+  switch (type) {
+    case TheaterType.STANDARD:
+      return 'bg-green-600 text-white';
+    case TheaterType.VIP:
+      return 'bg-orange-600 text-white';
+    case TheaterType.IMAX:
+      return 'bg-blue-600 text-white';
+    case TheaterType.DOLBY:
+      return 'bg-purple-600 text-white';
+    default:
+      return 'bg-gray-600 text-white';
+  }
 };
 
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #f3f3f3',
-  borderTop: '4px solid #e50914',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '2rem',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '2rem',
-  fontWeight: 'bold',
-  color: '#333',
-  margin: 0,
-};
-
-const addButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-  fontSize: '0.9rem',
-};
-
-const searchSectionStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  marginBottom: '2rem',
-  alignItems: 'center',
-};
-
-const searchInputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '0.8rem',
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  fontSize: '1rem',
-};
-
-const searchButtonStyle: React.CSSProperties = {
-  backgroundColor: '#4caf50',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const clearButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-};
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000,
-};
-
-const modalStyle: React.CSSProperties = {
-  backgroundColor: 'white',
-  borderRadius: '12px',
-  padding: '0',
-  width: '90%',
-  maxWidth: '500px',
-  maxHeight: '90vh',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-};
-
-const modalHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1.5rem 2rem',
-  borderBottom: '1px solid #eee',
-  backgroundColor: '#f8f9fa',
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  fontSize: '1.5rem',
-  cursor: 'pointer',
-  color: '#666',
-  padding: '0.2rem 0.5rem',
-};
-
-const formStyle: React.CSSProperties = {
-  padding: '2rem',
-  overflow: 'auto',
-};
-
-const formRowStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '1rem',
-  marginBottom: '1rem',
-};
-
-const formGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  marginBottom: '1rem',
-};
-
-const labelStyle: React.CSSProperties = {
-  marginBottom: '0.5rem',
-  fontWeight: 'bold',
-  color: '#333',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '0.8rem',
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  fontSize: '1rem',
-};
-
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  backgroundColor: 'white',
-};
-
-const formActionsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  justifyContent: 'flex-end',
-  marginTop: '2rem',
-};
-
-const cancelButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const saveButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const errorMessageStyle: React.CSSProperties = {
-  color: '#f44336',
-  backgroundColor: '#ffebee',
-  padding: '1rem',
-  borderRadius: '8px',
-  marginBottom: '2rem',
-};
-
-const theatersListStyle: React.CSSProperties = {
-  backgroundColor: 'white',
-  borderRadius: '12px',
-  overflow: 'hidden',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-};
-
-const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse' as const,
-};
-
-const tableHeaderRowStyle: React.CSSProperties = {
-  backgroundColor: '#f8f9fa',
-};
-
-const tableHeaderStyle: React.CSSProperties = {
-  padding: '1rem',
-  textAlign: 'left' as const,
-  fontWeight: 'bold',
-  color: '#333',
-  borderBottom: '2px solid #dee2e6',
-};
-
-const tableRowStyle: React.CSSProperties = {
-  borderBottom: '1px solid #dee2e6',
-};
-
-const tableCellStyle: React.CSSProperties = {
-  padding: '1rem',
-  verticalAlign: 'middle' as const,
-};
-
-const theaterNameStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-  marginBottom: '0.2rem',
-};
-
-const theaterIdStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  color: '#666',
-};
-
-const theaterTypeBadgeStyle: React.CSSProperties = {
-  color: 'white',
-  padding: '0.3rem 0.8rem',
-  borderRadius: '20px',
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-};
-
-const capacityStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-};
-
-const capacityNumberStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  color: '#333',
-};
-
-const capacityLabelStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  color: '#666',
-};
-
-const statusBadgeStyle: React.CSSProperties = {
-  color: 'white',
-  padding: '0.3rem 0.8rem',
-  borderRadius: '20px',
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-};
-
-const actionButtonsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-};
-
-const editButtonStyle: React.CSSProperties = {
-  backgroundColor: '#4caf50',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-};
-
-const deleteButtonStyle: React.CSSProperties = {
-  backgroundColor: '#f44336',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-};
-
-const paginationStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1rem 2rem',
-  backgroundColor: '#f8f9fa',
-  borderTop: '1px solid #dee2e6',
-};
-
-const pageButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-};
-
-const pageInfoStyle: React.CSSProperties = {
-  color: '#666',
-  fontSize: '0.9rem',
-};
 
 export default AdminTheaters;

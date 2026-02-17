@@ -1,7 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import {
+  Film,
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Save,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  User,
+  DollarSign,
+  Image,
+  FileText,
+  ArrowLeft,
+  ArrowRight,
+  Eye
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { movieService } from '../../services/movieService';
 import adminService, { CreateMovieRequest, UpdateMovieRequest } from '../../services/adminService';
 import { Movie, PageResponse } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const AdminMovies: React.FC = () => {
   const [movies, setMovies] = useState<PageResponse<Movie> | null>(null);
@@ -132,577 +161,468 @@ const AdminMovies: React.FC = () => {
     setCurrentPage(newPage);
   };
 
+  // NEW loading UI (modern design)
   if (loading && !movies) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading movies...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading movies...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>Movie Management</h1>
-        <button
-          onClick={() => {
-            setEditingMovie(null);
-            resetForm();
-            setShowForm(true);
-          }}
-          style={addButtonStyle}
-        >
-          + Add New Movie
-        </button>
-      </div>
-
-      {/* Search */}
-      <div style={searchSectionStyle}>
-        <input
-          type="text"
-          placeholder="Search movies..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={searchInputStyle}
-        />
-        <button onClick={handleSearch} style={searchButtonStyle}>
-          Search
-        </button>
-        {searchQuery && (
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              fetchMovies();
-            }}
-            style={clearButtonStyle}
+    <div className="min-h-screen bg-gray-950">
+      {/* Header Section - NEW UI */}
+      <section className="bg-gradient-to-r from-blue-900 to-blue-800 py-16 text-center">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
           >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {/* Movie Form Modal */}
-      {showForm && (
-        <div style={modalOverlayStyle}>
-          <div style={modalStyle}>
-            <div style={modalHeaderStyle}>
-              <h2>{editingMovie ? 'Edit Movie' : 'Add New Movie'}</h2>
-              <button
-                onClick={() => setShowForm(false)}
-                style={closeButtonStyle}
-              >
-                ×
-              </button>
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
+              <Film className="w-10 h-10 text-white" />
             </div>
-
-            <form onSubmit={handleFormSubmit} style={formStyle}>
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Title *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Genre *</label>
-                  <input
-                    type="text"
-                    value={formData.genre}
-                    onChange={(e) => setFormData({...formData, genre: e.target.value})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Director *</label>
-                  <input
-                    type="text"
-                    value={formData.director}
-                    onChange={(e) => setFormData({...formData, director: e.target.value})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Duration (minutes) *</label>
-                  <input
-                    type="number"
-                    value={formData.durationMinutes}
-                    onChange={(e) => setFormData({...formData, durationMinutes: parseInt(e.target.value)})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Release Date *</label>
-                  <input
-                    type="date"
-                    value={formData.releaseDate}
-                    onChange={(e) => setFormData({...formData, releaseDate: e.target.value})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Base Price (VND) *</label>
-                  <input
-                    type="number"
-                    value={formData.priceBase}
-                    onChange={(e) => setFormData({...formData, priceBase: parseFloat(e.target.value)})}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={formGroupStyle}>
-                <label style={labelStyle}>Poster URL</label>
-                <input
-                  type="url"
-                  value={formData.posterUrl}
-                  onChange={(e) => setFormData({...formData, posterUrl: e.target.value})}
-                  style={inputStyle}
-                />
-              </div>
-
-              <div style={formGroupStyle}>
-                <label style={labelStyle}>Description *</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  required
-                  rows={4}
-                  style={textareaStyle}
-                />
-              </div>
-
-              <div style={formActionsStyle}>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  style={cancelButtonStyle}
-                >
-                  Cancel
-                </button>
-                <button type="submit" style={saveButtonStyle}>
-                  {editingMovie ? 'Update' : 'Create'} Movie
-                </button>
-              </div>
-            </form>
-          </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Movie Management</h1>
+            <p className="text-lg text-blue-100 max-w-2xl mx-auto">
+              Manage your cinema's movie catalog
+            </p>
+          </motion.div>
         </div>
-      )}
+      </section>
 
-      {/* Movies List */}
-      {error ? (
-        <div style={errorMessageStyle}>{error}</div>
-      ) : (
-        <>
-          {movies && (
-            <div style={moviesListStyle}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr style={tableHeaderRowStyle}>
-                    <th style={tableHeaderStyle}>Poster</th>
-                    <th style={tableHeaderStyle}>Title</th>
-                    <th style={tableHeaderStyle}>Genre</th>
-                    <th style={tableHeaderStyle}>Director</th>
-                    <th style={tableHeaderStyle}>Duration</th>
-                    <th style={tableHeaderStyle}>Release Date</th>
-                    <th style={tableHeaderStyle}>Price</th>
-                    <th style={tableHeaderStyle}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movies.content.map(movie => (
-                    <tr key={movie.id} style={tableRowStyle}>
-                      <td style={tableCellStyle}>
-                        <img
-                          src={movie.posterUrl || `https://via.placeholder.com/60x90/141414/E50914?text=${encodeURIComponent(movie.title.slice(0, 3))}`}
-                          alt={movie.title}
-                          style={posterImageStyle}
-                        />
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={movieTitleStyle}>{movie.title}</div>
-                        <div style={movieDescriptionStyle}>
-                          {movie.description.length > 100
-                            ? movie.description.substring(0, 100) + '...'
-                            : movie.description}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>{movie.genre}</td>
-                      <td style={tableCellStyle}>{movie.director}</td>
-                      <td style={tableCellStyle}>{movie.durationMinutes} min</td>
-                      <td style={tableCellStyle}>
-                        {adminService.formatDate(movie.releaseDate)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {adminService.formatCurrency(movie.priceBase)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={actionButtonsStyle}>
-                          <button
-                            onClick={() => handleEdit(movie)}
-                            style={editButtonStyle}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(movie.id)}
-                            style={deleteButtonStyle}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Pagination */}
-              {movies.totalPages > 1 && (
-                <div style={paginationStyle}>
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                    style={pageButtonStyle}
-                  >
-                    Previous
-                  </button>
-
-                  <span style={pageInfoStyle}>
-                    Page {currentPage + 1} of {movies.totalPages}
-                    ({movies.totalElements} total movies)
-                  </span>
-
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= movies.totalPages - 1}
-                    style={pageButtonStyle}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+      {/* Content Section */}
+      <main className="py-12 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
+          >
+            {/* Action Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Movies</h2>
+                <p className="text-gray-400">Add, edit, and manage movie information</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingMovie(null);
+                  resetForm();
+                  setShowForm(true);
+                }}
+                className="bg-red-600 hover:bg-red-700"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add New Movie
+              </Button>
             </div>
-          )}
-        </>
-      )}
+
+            {/* Search Section - NEW UI with OLD logic */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search movies..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700" size="lg">
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </Button>
+                  {searchQuery && (
+                    <Button
+                      onClick={() => {
+                        setSearchQuery('');
+                        fetchMovies();
+                      }}
+                      variant="outline"
+                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                      size="lg"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Movie Form Modal - NEW UI with OLD logic */}
+            {showForm && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                >
+                  {/* Modal Header */}
+                  <div className="bg-gray-700 px-8 py-6 border-b border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-white flex items-center">
+                        <Film className="w-6 h-6 mr-3 text-blue-500" />
+                        {editingMovie ? 'Edit Movie' : 'Add New Movie'}
+                      </h2>
+                      <Button
+                        onClick={() => setShowForm(false)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <X className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="p-8 overflow-y-auto max-h-[calc(90vh-8rem)]">
+                    <form onSubmit={handleFormSubmit} className="space-y-6">
+                      {/* Form Fields - Row 1 */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <Film className="w-4 h-4 mr-2" />
+                            Title *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.title}
+                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Genre *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.genre}
+                            onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Form Fields - Row 2 */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <User className="w-4 h-4 mr-2" />
+                            Director *
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.director}
+                            onChange={(e) => setFormData({...formData, director: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <Clock className="w-4 h-4 mr-2" />
+                            Duration (minutes) *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.durationMinutes}
+                            onChange={(e) => setFormData({...formData, durationMinutes: parseInt(e.target.value)})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Form Fields - Row 3 */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Release Date *
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.releaseDate}
+                            onChange={(e) => setFormData({...formData, releaseDate: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-300 flex items-center">
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            Base Price (VND) *
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.priceBase}
+                            onChange={(e) => setFormData({...formData, priceBase: parseFloat(e.target.value)})}
+                            required
+                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Poster URL Field */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300 flex items-center">
+                          <Image className="w-4 h-4 mr-2" />
+                          Poster URL <span className="text-gray-500 ml-1">(optional)</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.posterUrl}
+                          onChange={(e) => setFormData({...formData, posterUrl: e.target.value})}
+                          placeholder="https://example.com/poster.jpg"
+                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Description Field */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300 flex items-center">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Description *
+                        </label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                          required
+                          rows={4}
+                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                        />
+                      </div>
+
+                      {/* Form Actions */}
+                      <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-600">
+                        <Button
+                          type="button"
+                          onClick={() => setShowForm(false)}
+                          variant="outline"
+                          className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                          size="lg"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          size="lg"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {editingMovie ? 'Update' : 'Create'} Movie
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Movies List - NEW UI with OLD logic */}
+            {error ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="bg-red-900/50 border-red-600">
+                  <CardContent className="p-6">
+                    <div className="flex items-center text-red-300">
+                      <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                      {error}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <>
+                {movies && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    <Card className="bg-gray-800 border-gray-700 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">{/* table content continues */}
+                          <thead>
+                            <tr className="bg-gray-700 border-b border-gray-600">
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Poster</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Title</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Genre</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Director</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Duration</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Release Date</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Price</th>
+                              <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {movies.content.map((movie, index) => (
+                              <motion.tr
+                                key={movie.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.05 }}
+                                className="border-b border-gray-600 hover:bg-gray-700/30 transition-colors"
+                              >
+                                <td className="px-6 py-4">
+                                  <img
+                                    src={movie.posterUrl || `https://via.placeholder.com/60x90/141414/E50914?text=${encodeURIComponent(movie.title.slice(0, 3))}`}
+                                    alt={movie.title}
+                                    className="w-16 h-24 object-cover rounded-lg border border-gray-600"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="font-semibold text-white mb-1">{movie.title}</div>
+                                  <div className="text-sm text-gray-400 line-clamp-3 max-w-md">
+                                    {movie.description.length > 100
+                                      ? movie.description.substring(0, 100) + '...'
+                                      : movie.description}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <Badge variant="secondary" className="bg-purple-600 text-white">
+                                    {movie.genre}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 text-gray-300">{movie.director}</td>
+                                <td className="px-6 py-4 text-gray-300">
+                                  <div className="flex items-center">
+                                    <Clock className="w-4 h-4 mr-1 text-gray-400" />
+                                    {movie.durationMinutes} min
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-300">
+                                  <div className="flex items-center">
+                                    <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+                                    {adminService.formatDate(movie.releaseDate)}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-300">
+                                  <div className="flex items-center">
+                                    <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
+                                    {adminService.formatCurrency(movie.priceBase)}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      onClick={() => handleEdit(movie)}
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Edit3 className="w-4 h-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleDelete(movie.id)}
+                                      size="sm"
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination - NEW UI with OLD logic */}
+                      {movies.totalPages > 1 && (
+                        <div className="bg-gray-700 px-6 py-4 border-t border-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => handlePageChange(0)}
+                                disabled={currentPage === 0}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <ArrowLeft className="w-4 h-4 mr-1" />
+                                First
+                              </Button>
+                              <Button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 0}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Previous
+                              </Button>
+                            </div>
+
+                            <div className="text-sm text-gray-300">
+                              Page {currentPage + 1} of {movies.totalPages} • {movies.totalElements} total movies
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage >= movies.totalPages - 1}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Next
+                              </Button>
+                              <Button
+                                onClick={() => handlePageChange(movies.totalPages - 1)}
+                                disabled={currentPage >= movies.totalPages - 1}
+                                variant="outline"
+                                size="sm"
+                                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-600 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Last
+                                <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
+      </main>
     </div>
   );
 };
 
-// Styles (similar structure to previous admin pages)
-const containerStyle: React.CSSProperties = {
-  padding: '2rem',
-  backgroundColor: '#f5f5f5',
-  minHeight: '100vh',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #f3f3f3',
-  borderTop: '4px solid #e50914',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '2rem',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '2rem',
-  fontWeight: 'bold',
-  color: '#333',
-  margin: 0,
-};
-
-const addButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-  fontSize: '0.9rem',
-};
-
-const searchSectionStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  marginBottom: '2rem',
-  alignItems: 'center',
-};
-
-const searchInputStyle: React.CSSProperties = {
-  flex: 1,
-  padding: '0.8rem',
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  fontSize: '1rem',
-};
-
-const searchButtonStyle: React.CSSProperties = {
-  backgroundColor: '#4caf50',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const clearButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-};
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1000,
-};
-
-const modalStyle: React.CSSProperties = {
-  backgroundColor: 'white',
-  borderRadius: '12px',
-  padding: '0',
-  width: '90%',
-  maxWidth: '600px',
-  maxHeight: '90vh',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-};
-
-const modalHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1.5rem 2rem',
-  borderBottom: '1px solid #eee',
-  backgroundColor: '#f8f9fa',
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  fontSize: '1.5rem',
-  cursor: 'pointer',
-  color: '#666',
-  padding: '0.2rem 0.5rem',
-};
-
-const formStyle: React.CSSProperties = {
-  padding: '2rem',
-  overflow: 'auto',
-};
-
-const formRowStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '1rem',
-  marginBottom: '1rem',
-};
-
-const formGroupStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  marginBottom: '1rem',
-};
-
-const labelStyle: React.CSSProperties = {
-  marginBottom: '0.5rem',
-  fontWeight: 'bold',
-  color: '#333',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '0.8rem',
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  fontSize: '1rem',
-};
-
-const textareaStyle: React.CSSProperties = {
-  ...inputStyle,
-  resize: 'vertical' as const,
-  minHeight: '100px',
-};
-
-const formActionsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  justifyContent: 'flex-end',
-  marginTop: '2rem',
-};
-
-const cancelButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const saveButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.8rem 1.5rem',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const errorMessageStyle: React.CSSProperties = {
-  color: '#f44336',
-  backgroundColor: '#ffebee',
-  padding: '1rem',
-  borderRadius: '8px',
-  marginBottom: '2rem',
-};
-
-const moviesListStyle: React.CSSProperties = {
-  backgroundColor: 'white',
-  borderRadius: '12px',
-  overflow: 'hidden',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-};
-
-const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse' as const,
-};
-
-const tableHeaderRowStyle: React.CSSProperties = {
-  backgroundColor: '#f8f9fa',
-};
-
-const tableHeaderStyle: React.CSSProperties = {
-  padding: '1rem',
-  textAlign: 'left' as const,
-  fontWeight: 'bold',
-  color: '#333',
-  borderBottom: '2px solid #dee2e6',
-};
-
-const tableRowStyle: React.CSSProperties = {
-  borderBottom: '1px solid #dee2e6',
-};
-
-const tableCellStyle: React.CSSProperties = {
-  padding: '1rem',
-  verticalAlign: 'top' as const,
-};
-
-const posterImageStyle: React.CSSProperties = {
-  width: '60px',
-  height: '90px',
-  objectFit: 'cover' as const,
-  borderRadius: '4px',
-};
-
-const movieTitleStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-  marginBottom: '0.5rem',
-};
-
-const movieDescriptionStyle: React.CSSProperties = {
-  fontSize: '0.85rem',
-  color: '#666',
-  lineHeight: '1.3',
-};
-
-const actionButtonsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-};
-
-const editButtonStyle: React.CSSProperties = {
-  backgroundColor: '#4caf50',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-};
-
-const deleteButtonStyle: React.CSSProperties = {
-  backgroundColor: '#f44336',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-};
-
-const paginationStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1rem 2rem',
-  backgroundColor: '#f8f9fa',
-  borderTop: '1px solid #dee2e6',
-};
-
-const pageButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: 'white',
-  border: 'none',
-  padding: '0.5rem 1rem',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-};
-
-const pageInfoStyle: React.CSSProperties = {
-  color: '#666',
-  fontSize: '0.9rem',
-};
 
 export default AdminMovies;

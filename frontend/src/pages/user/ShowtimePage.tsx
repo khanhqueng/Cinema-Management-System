@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Star,
+  ArrowLeft,
+  Loader2,
+  DollarSign,
+  Film
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { movieService } from '../../services/movieService';
 import { showtimeService } from '../../services/showtimeService';
 import { theaterService } from '../../services/theaterService';
 import { Movie, Showtime, Theater } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const ShowtimePage: React.FC = () => {
   const { id, theaterId } = useParams<{ id?: string; theaterId?: string }>();
@@ -74,23 +93,44 @@ const ShowtimePage: React.FC = () => {
     fetchData();
   }, [currentId, isTheaterRoute]);
 
+  // NEW loading UI (modern design)
   if (loading) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading showtimes...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading showtimes...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // NEW error UI (modern design)
   if (error || (!movie && !theater)) {
     return (
-      <div style={errorContainerStyle}>
-        <h2>Showtimes Not Available</h2>
-        <p>{error || `Unable to load showtimes for this ${isTheaterRoute ? 'theater' : 'movie'}.`}</p>
-        <Link to={isTheaterRoute ? "/theaters" : "/movies"} style={backButtonStyle}>
-          Back to {isTheaterRoute ? "Theaters" : "Movies"}
-        </Link>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <h2 className="text-2xl font-bold text-white mb-4">Showtimes Not Available</h2>
+                <p className="text-gray-400 mb-6">
+                  {error || `Unable to load showtimes for this ${isTheaterRoute ? 'theater' : 'movie'}.`}
+                </p>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to={isTheaterRoute ? "/theaters" : "/movies"}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to {isTheaterRoute ? "Theaters" : "Movies"}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -99,511 +139,270 @@ const ShowtimePage: React.FC = () => {
   const selectedShowtimes = selectedDate ? groupedShowtimes[selectedDate] || [] : [];
 
   return (
-    <div style={containerStyle}>
-      {/* Header Section */}
-      <div style={headerSectionStyle}>
-        <div style={breadcrumbStyle}>
-          {isTheaterRoute ? (
-            <>
-              <Link to="/theaters" style={breadcrumbLinkStyle}>Theaters</Link>
-              <span style={breadcrumbSeparatorStyle}>/</span>
-              <span style={currentPageStyle}>Showtimes</span>
-            </>
-          ) : (
-            <>
-              <Link to="/movies" style={breadcrumbLinkStyle}>Movies</Link>
-              <span style={breadcrumbSeparatorStyle}>/</span>
-              <Link to={`/movies/${movie?.id}`} style={breadcrumbLinkStyle}>{movie?.title}</Link>
-              <span style={breadcrumbSeparatorStyle}>/</span>
-              <span style={currentPageStyle}>Showtimes</span>
-            </>
+    <div className="min-h-screen bg-gray-950">
+      {/* Header Section - NEW UI with OLD data */}
+      <section className="bg-gray-900 py-8 border-b border-gray-800">
+        <div className="container mx-auto px-4">
+          {/* Breadcrumb */}
+          <nav className="mb-6">
+            {isTheaterRoute ? (
+              <div className="flex items-center space-x-2 text-gray-400">
+                <Link to="/theaters" className="hover:text-white transition-colors">Theaters</Link>
+                <span className="text-gray-600">/</span>
+                <span className="text-white">Showtimes</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-gray-400">
+                <Link to="/movies" className="hover:text-white transition-colors">Movies</Link>
+                <span className="text-gray-600">/</span>
+                <Link to={`/movies/${movie?.id}`} className="hover:text-white transition-colors">{movie?.title}</Link>
+                <span className="text-gray-600">/</span>
+                <span className="text-white">Showtimes</span>
+              </div>
+            )}
+          </nav>
+
+          {/* Theater Info */}
+          {isTheaterRoute && theater ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-start space-x-6"
+            >
+              <div className="w-32 h-48 bg-gray-800 rounded-lg flex items-center justify-center">
+                <Film className="w-12 h-12 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white mb-4">{theater.name}</h1>
+                <div className="flex items-center space-x-4 mb-4">
+                  <Badge variant="secondary" className="bg-red-600 text-white hover:bg-red-700">
+                    {theater.theaterType}
+                  </Badge>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Users className="w-4 h-4" />
+                    <span>{theater.capacity} seats</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ) : movie && (
+            /* Movie Info */
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-start space-x-6"
+            >
+              <img
+                src={movie.posterUrl || `https://via.placeholder.com/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`}
+                alt={movie.title}
+                className="w-32 h-48 object-cover rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://via.placeholder.com/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`;
+                }}
+              />
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white mb-4">{movie.title}</h1>
+                <div className="flex items-center space-x-4 mb-4">
+                  <Badge variant="secondary" className="bg-red-600 text-white hover:bg-red-700">
+                    {movie.genre}
+                  </Badge>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Clock className="w-4 h-4" />
+                    <span>{movie.formattedDuration}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <Film className="w-4 h-4" />
+                    <span>Directed by {movie.director}</span>
+                  </div>
+                  {movie.averageRating > 0 && (
+                    <div className="flex items-center space-x-2 text-gray-300">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-semibold">
+                        {movieService.formatRating(movie.averageRating)}
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        ({movie.reviewCount} review{movie.reviewCount !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           )}
         </div>
-
-        {isTheaterRoute && theater ? (
-          <div style={movieInfoStyle}>
-            <div style={theaterIconContainerStyle}>
-              <span style={theaterIconStyle}>🎬</span>
-            </div>
-            <div style={movieDetailsStyle}>
-              <h1 style={titleStyle}>{theater.name}</h1>
-              <div style={movieMetaStyle}>
-                <span style={genreStyle}>{theater.theaterType}</span>
-                <span style={durationStyle}>{theater.capacity} seats</span>
-              </div>
-            </div>
-          </div>
-        ) : movie && (
-          <div style={movieInfoStyle}>
-            <img
-              src={movie.posterUrl || `https://via.placeholder.com/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`}
-              alt={movie.title}
-              style={posterStyle}
-            />
-            <div style={movieDetailsStyle}>
-              <h1 style={titleStyle}>{movie.title}</h1>
-              <div style={movieMetaStyle}>
-                <span style={genreStyle}>{movie.genre}</span>
-                <span style={durationStyle}>{movie.formattedDuration}</span>
-                <span style={directorStyle}>Directed by {movie.director}</span>
-                {movie.averageRating > 0 && (
-                  <span style={ratingStyle}>
-                    ★ {movieService.formatRating(movie.averageRating)} ({movie.reviewCount} reviews)
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      </section>
 
       {/* Content Section */}
-      <div style={contentSectionStyle}>
-        <div style={contentContainerStyle}>
-          <h2 style={sectionTitleStyle}>Select Showtime</h2>
+      <main className="py-12 bg-gray-950">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-white mb-8">Select Showtime</h2>
 
-          {availableDates.length === 0 ? (
-            <div style={noShowtimesStyle}>
-              <h3>No Showtimes Available</h3>
-              <p>
-                There are currently no showtimes scheduled for this {isTheaterRoute ? 'theater' : 'movie'}.
-              </p>
-              {isTheaterRoute ? (
-                <Link to="/theaters" style={backButtonStyle}>
-                  Back to Theaters
-                </Link>
-              ) : (
-                <Link to={`/movies/${movie?.id}`} style={backButtonStyle}>
-                  Back to Movie Details
-                </Link>
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Date Selector */}
-              <div style={dateSelectorStyle}>
-                <h3 style={dateHeaderStyle}>Select Date:</h3>
-                <div style={dateListStyle}>
-                  {availableDates.map(date => (
-                    <button
-                      key={date}
-                      onClick={() => setSelectedDate(date)}
-                      style={selectedDate === date ? selectedDateButtonStyle : dateButtonStyle}
-                    >
-                      <div style={dateDisplayStyle}>
-                        <div style={dayNameStyle}>
+            {availableDates.length === 0 ? (
+              <Card className="bg-gray-900 border-gray-800">
+                <CardContent className="p-12 text-center">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-4">No Showtimes Available</h3>
+                  <p className="text-gray-400 mb-6">
+                    There are currently no showtimes scheduled for this {isTheaterRoute ? 'theater' : 'movie'}.
+                  </p>
+                  <Button asChild className="bg-red-600 hover:bg-red-700">
+                    {isTheaterRoute ? (
+                      <Link to="/theaters">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Theaters
+                      </Link>
+                    ) : (
+                      <Link to={`/movies/${movie?.id}`}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Movie Details
+                      </Link>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Date Selector */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="mb-8"
+                >
+                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-red-500" />
+                    Select Date:
+                  </h3>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {availableDates.map(date => (
+                      <Button
+                        key={date}
+                        onClick={() => setSelectedDate(date)}
+                        variant={selectedDate === date ? "default" : "outline"}
+                        className={`min-w-[80px] h-20 flex-col space-y-1 ${
+                          selectedDate === date
+                            ? "bg-red-600 hover:bg-red-700 text-white border-red-600"
+                            : "bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+                        }`}
+                      >
+                        <div className="text-xs font-medium">
                           {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
                         </div>
-                        <div style={dayNumberStyle}>
+                        <div className="text-lg font-bold">
                           {new Date(date).getDate()}
                         </div>
-                        <div style={monthStyle}>
+                        <div className="text-xs">
                           {new Date(date).toLocaleDateString('en-US', { month: 'short' })}
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      </Button>
+                    ))}
+                  </div>
+                </motion.div>
 
-              {/* Showtimes for Selected Date */}
-              <div style={showtimesContainerStyle}>
-                <h3 style={showtimesHeaderStyle}>
-                  Showtimes for {new Date(selectedDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </h3>
+                {/* Showtimes for Selected Date */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                  className="mb-8"
+                >
+                  <h3 className="text-xl font-semibold text-white mb-6 flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-red-500" />
+                    Showtimes for {new Date(selectedDate).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </h3>
 
-                <div style={showtimesGridStyle}>
-                  {selectedShowtimes.map(showtime => {
-                    const availabilityInfo = showtimeService.getAvailabilityStatus(showtime);
-                    const isUpcoming = showtimeService.isShowtimeUpcoming(showtime);
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {selectedShowtimes.map((showtime, index) => {
+                      const availabilityInfo = showtimeService.getAvailabilityStatus(showtime);
+                      const isUpcoming = showtimeService.isShowtimeUpcoming(showtime);
 
-                    return (
-                      <div key={showtime.id} style={showtimeCardStyle}>
-                        <div style={showtimeHeaderStyle}>
-                          <div style={timeStyle}>
-                            {showtimeService.formatShowTime(showtime)}
-                          </div>
-                          <div style={theaterNameStyle}>
-                            {isTheaterRoute ? showtime.movieTitle : showtime.theaterName}
-                          </div>
-                        </div>
+                      return (
+                        <motion.div
+                          key={showtime.id}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: index * 0.1 }}
+                        >
+                          <Card className="bg-gray-800 border-gray-700 hover:border-red-500 transition-colors duration-300">
+                            <CardContent className="p-6">
+                              {/* Showtime Header */}
+                              <div className="mb-4">
+                                <div className="text-2xl font-bold text-white mb-2">
+                                  {showtimeService.formatShowTime(showtime)}
+                                </div>
+                                <div className="text-gray-300 font-medium flex items-center">
+                                  <MapPin className="w-4 h-4 mr-2" />
+                                  {isTheaterRoute ? showtime.movieTitle : showtime.theaterName}
+                                </div>
+                              </div>
 
-                        <div style={showtimeInfoStyle}>
-                          <div style={theaterTypeStyle}>
-                            Theater ({showtime.theaterCapacity} seats)
-                          </div>
-                          <div style={priceStyle}>
-                            {showtimeService.formatPrice(showtime.price)}
-                          </div>
-                        </div>
+                              {/* Showtime Info */}
+                              <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center text-yellow-500 font-semibold">
+                                  <Users className="w-4 h-4 mr-1" />
+                                  Theater ({showtime.theaterCapacity} seats)
+                                </div>
+                                <div className="flex items-center text-green-500 font-bold text-lg">
+                                  <DollarSign className="w-4 h-4 mr-1" />
+                                  {showtimeService.formatPrice(showtime.price)}
+                                </div>
+                              </div>
 
-                        <div style={availabilityInfoStyle}>
-                          <span
-                            style={{
-                              ...availabilityStyle,
-                              backgroundColor: availabilityInfo.color
-                            }}
-                          >
-                            {availabilityInfo.label}
-                          </span>
-                          <span style={seatsInfoStyle}>
-                            {showtime.availableSeats}/{showtime.theaterCapacity} seats
-                          </span>
-                        </div>
+                              {/* Availability Info */}
+                              <div className="flex justify-between items-center mb-6">
+                                <Badge
+                                  className="text-white font-medium"
+                                  style={{ backgroundColor: availabilityInfo.color }}
+                                >
+                                  {availabilityInfo.label}
+                                </Badge>
+                                <div className="text-gray-400 text-sm flex items-center">
+                                  <Users className="w-4 h-4 mr-1" />
+                                  {showtime.availableSeats}/{showtime.theaterCapacity} seats
+                                </div>
+                              </div>
 
-                        <div style={showtimeActionsStyle}>
-                          {isUpcoming && (showtime.bookable ?? true) && showtime.availableSeats > 0 ? (
-                            <Link
-                              to={`/booking/${showtime.id}`}
-                              style={bookButtonStyle}
-                            >
-                              Book Tickets
-                            </Link>
-                          ) : (
-                            <button style={disabledButtonStyle} disabled>
-                              {!isUpcoming ? 'Past Showtime' : 'Not Available'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                              {/* Action Button */}
+                              <div>
+                                {isUpcoming && (showtime.bookable ?? true) && showtime.availableSeats > 0 ? (
+                                  <Button asChild className="w-full bg-red-600 hover:bg-red-700">
+                                    <Link to={`/booking/${showtime.id}`}>
+                                      Book Tickets
+                                    </Link>
+                                  </Button>
+                                ) : (
+                                  <Button disabled className="w-full bg-gray-600 text-gray-300 cursor-not-allowed">
+                                    {!isUpcoming ? 'Past Showtime' : 'Not Available'}
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
             </>
           )}
+          </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  backgroundColor: '#111',
-  color: '#fff',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #333',
-  borderTop: '4px solid #e50914',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const errorContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  textAlign: 'center',
-};
-
-const headerSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  padding: '2rem 0',
-};
-
-const breadcrumbStyle: React.CSSProperties = {
-  padding: '0 2rem',
-  marginBottom: '1rem',
-  fontSize: '0.9rem',
-};
-
-const breadcrumbLinkStyle: React.CSSProperties = {
-  color: '#ccc',
-  textDecoration: 'none',
-};
-
-const breadcrumbSeparatorStyle: React.CSSProperties = {
-  margin: '0 0.5rem',
-  color: '#666',
-};
-
-const currentPageStyle: React.CSSProperties = {
-  color: '#fff',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '2rem',
-  padding: '0 2rem',
-  alignItems: 'flex-start',
-};
-
-const posterStyle: React.CSSProperties = {
-  width: '120px',
-  height: '180px',
-  objectFit: 'cover',
-  borderRadius: '8px',
-};
-
-const movieDetailsStyle: React.CSSProperties = {
-  flex: 1,
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '2rem',
-  fontWeight: 'bold',
-  margin: '0 0 1rem 0',
-};
-
-const movieMetaStyle: React.CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '1rem',
-  alignItems: 'center',
-};
-
-const genreStyle: React.CSSProperties = {
-  backgroundColor: '#1976d2',
-  color: '#fff',
-  padding: '0.3rem 0.8rem',
-  borderRadius: '12px',
-  fontSize: '0.8rem',
-};
-
-const durationStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-};
-
-const directorStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-  fontStyle: 'italic',
-};
-
-const ratingStyle: React.CSSProperties = {
-  color: '#ffc107',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const contentSectionStyle: React.CSSProperties = {
-  padding: '2rem 0',
-};
-
-const contentContainerStyle: React.CSSProperties = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 2rem',
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '1.8rem',
-  fontWeight: 'bold',
-  marginBottom: '2rem',
-  color: '#fff',
-};
-
-const noShowtimesStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: '3rem 0',
-};
-
-const dateSelectorStyle: React.CSSProperties = {
-  marginBottom: '3rem',
-};
-
-const dateHeaderStyle: React.CSSProperties = {
-  fontSize: '1.2rem',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const dateListStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  overflowX: 'auto',
-  padding: '0.5rem 0',
-};
-
-const dateButtonStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: '2px solid #666',
-  borderRadius: '12px',
-  padding: '1rem',
-  color: '#ccc',
-  cursor: 'pointer',
-  minWidth: '80px',
-  transition: 'all 0.3s',
-};
-
-const selectedDateButtonStyle: React.CSSProperties = {
-  ...dateButtonStyle,
-  borderColor: '#e50914',
-  backgroundColor: '#e50914',
-  color: '#fff',
-};
-
-const dateDisplayStyle: React.CSSProperties = {
-  textAlign: 'center',
-};
-
-const dayNameStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-};
-
-const dayNumberStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  margin: '0.2rem 0',
-};
-
-const monthStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-};
-
-const showtimesContainerStyle: React.CSSProperties = {
-  marginBottom: '2rem',
-};
-
-const showtimesHeaderStyle: React.CSSProperties = {
-  fontSize: '1.3rem',
-  marginBottom: '1.5rem',
-  color: '#fff',
-};
-
-const showtimesGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-  gap: '1.5rem',
-};
-
-const showtimeCardStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  borderRadius: '12px',
-  padding: '1.5rem',
-  border: '1px solid #555',
-  transition: 'transform 0.2s, box-shadow 0.2s',
-};
-
-const showtimeHeaderStyle: React.CSSProperties = {
-  marginBottom: '1rem',
-};
-
-const timeStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  color: '#fff',
-  marginBottom: '0.5rem',
-};
-
-const theaterNameStyle: React.CSSProperties = {
-  fontSize: '1rem',
-  color: '#ccc',
-  fontWeight: '500',
-};
-
-const showtimeInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '1rem',
-};
-
-const theaterTypeStyle: React.CSSProperties = {
-  color: '#ffc107',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const priceStyle: React.CSSProperties = {
-  color: '#4caf50',
-  fontSize: '1rem',
-  fontWeight: 'bold',
-};
-
-const availabilityInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '1rem',
-};
-
-const availabilityStyle: React.CSSProperties = {
-  padding: '0.3rem 0.8rem',
-  borderRadius: '12px',
-  color: '#fff',
-  fontSize: '0.8rem',
-  fontWeight: 'bold',
-};
-
-const seatsInfoStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-};
-
-const showtimeActionsStyle: React.CSSProperties = {
-  marginTop: '1rem',
-};
-
-const bookButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.8rem 1.5rem',
-  textDecoration: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  display: 'inline-block',
-  textAlign: 'center',
-  width: '100%',
-  transition: 'background-color 0.2s',
-};
-
-const disabledButtonStyle: React.CSSProperties = {
-  backgroundColor: '#666',
-  color: '#999',
-  padding: '0.8rem 1.5rem',
-  border: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  width: '100%',
-  cursor: 'not-allowed',
-};
-
-const backButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.8rem 1.5rem',
-  textDecoration: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  display: 'inline-block',
-};
-
-const theaterIconContainerStyle: React.CSSProperties = {
-  width: '120px',
-  height: '180px',
-  backgroundColor: '#333',
-  borderRadius: '8px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const theaterIconStyle: React.CSSProperties = {
-  fontSize: '3rem',
-};
 
 export default ShowtimePage;

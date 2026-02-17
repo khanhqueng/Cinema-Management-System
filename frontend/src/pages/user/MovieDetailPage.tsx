@@ -1,7 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  Calendar,
+  Clock,
+  Star,
+  Play,
+  ArrowLeft,
+  User,
+  Tag,
+  DollarSign,
+  Loader2
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { movieService } from '../../services/movieService';
 import { Movie } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const MovieDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,405 +51,269 @@ const MovieDetailPage: React.FC = () => {
     fetchMovie();
   }, [id]);
 
+  // NEW loading UI (modern design)
   if (loading) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading movie details...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading movie details...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // NEW error UI (modern design)
   if (error || !movie) {
     return (
-      <div style={errorContainerStyle}>
-        <h2>Movie Not Found</h2>
-        <p>{error || 'The requested movie could not be found.'}</p>
-        <Link to="/movies" style={backButtonStyle}>
-          Back to Movies
-        </Link>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <h2 className="text-2xl font-bold text-white mb-4">Movie Not Found</h2>
+                <p className="text-gray-400 mb-6">{error || 'The requested movie could not be found.'}</p>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to="/movies">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Movies
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      {/* Hero Section */}
-      <div style={heroSectionStyle}>
-        <div style={heroBackgroundStyle}>
+    <div className="min-h-screen bg-gray-950">
+      {/* Hero Section - NEW UI with OLD data */}
+      <section className="relative h-[80vh] overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
           <img
             src={movie.posterUrl || `https://via.placeholder.com/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`}
             alt={movie.title}
-            style={heroImageStyle}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://via.placeholder.com/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`;
+            }}
           />
-          <div style={heroOverlayStyle}></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent" />
         </div>
 
-        <div style={heroContentStyle}>
-          <div style={movieMetaStyle}>
-            <Link to="/movies" style={breadcrumbStyle}>Movies</Link>
-            <span style={breadcrumbSeparatorStyle}>/</span>
-            <span style={currentPageStyle}>{movie.title}</span>
-          </div>
+        {/* Hero Content */}
+        <div className="relative container mx-auto px-4 h-full flex items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="max-w-2xl pt-16"
+          >
+            {/* Breadcrumb */}
+            <div className="mb-4">
+              <Link to="/movies" className="text-gray-400 hover:text-white transition-colors">
+                Movies
+              </Link>
+              <span className="text-gray-600 mx-2">/</span>
+              <span className="text-white">{movie.title}</span>
+            </div>
 
-          <h1 style={titleStyle}>{movie.title}</h1>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+              {movie.title}
+            </h1>
 
-          <div style={movieInfoStyle}>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>Director:</span>
-              <span>{movie.director}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>Genre:</span>
-              <span style={genreStyle}>{movie.genre}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>Duration:</span>
-              <span>{movie.formattedDuration}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>Release Date:</span>
-              <span>{new Date(movie.releaseDate).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}</span>
-            </div>
-            <div style={infoRowStyle}>
-              <span style={labelStyle}>Price:</span>
-              <span style={priceStyle}>{movieService.formatPrice(movie.priceBase)}</span>
-            </div>
-            {movie.averageRating > 0 && (
-              <div style={ratingRowStyle}>
-                <span style={labelStyle}>Rating:</span>
-                <div style={ratingContainerStyle}>
-                  <span style={starsStyle}>
-                    {movieService.getStarRating(movie.averageRating)}
+            {/* Movie Info */}
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center space-x-6 text-gray-300">
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span className="text-gray-400">Director:</span>
+                  <span className="font-medium">{movie.director}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-6 text-gray-300">
+                <div className="flex items-center space-x-2">
+                  <Tag className="w-4 h-4" />
+                  <span className="text-gray-400">Genre:</span>
+                  <Badge variant="secondary" className="bg-red-600 text-white hover:bg-red-700">
+                    {movie.genre}
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{movie.formattedDuration}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-6 text-gray-300">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-gray-400">Release:</span>
+                  <span>{new Date(movie.releaseDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="text-green-500 font-bold text-lg">
+                    {movieService.formatPrice(movie.priceBase)}
                   </span>
-                  <span style={ratingValueStyle}>
-                    {movieService.formatRating(movie.averageRating)}/5.0
-                  </span>
+                </div>
+              </div>
+
+              {movie.averageRating > 0 && (
+                <div className="flex items-center space-x-4 text-gray-300">
+                  <div className="flex items-center space-x-2">
+                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <span className="font-semibold text-lg">
+                      {movieService.formatRating(movie.averageRating)}/5.0
+                    </span>
+                  </div>
                   {movie.reviewCount > 0 && (
-                    <span style={reviewCountStyle}>
+                    <span className="text-gray-400 text-sm">
                       ({movie.reviewCount} review{movie.reviewCount !== 1 ? 's' : ''})
                     </span>
                   )}
                 </div>
-              </div>
-            )}
-            {movie.currentlyShowing && (
-              <div style={statusBadgeStyle}>Currently Showing</div>
-            )}
-          </div>
+              )}
+
+              {movie.currentlyShowing && (
+                <Badge className="bg-red-600 text-white hover:bg-red-700">
+                  Currently Showing
+                </Badge>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-4">
+              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+                <Link to={`/movies/${movie.id}/showtimes`}>
+                  <Play className="w-5 h-5 mr-2" />
+                  Book Tickets
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-white hover:!text-black"
+                onClick={() => window.history.back()}
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Movies
+              </Button>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
 
       {/* Content Section */}
-      <div style={contentSectionStyle}>
-        <div style={contentContainerStyle}>
-          {/* Movie Description */}
-          <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Synopsis</h2>
-            <p style={descriptionStyle}>
-              {movie.description || 'No description available for this movie.'}
-            </p>
-          </section>
+      <main className="py-20 bg-gray-900">
+        <div className="container mx-auto px-4">
+          {/* Synopsis */}
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-16"
+          >
+            <h2 className="text-3xl font-bold text-white mb-6">Synopsis</h2>
+            <Card className="bg-gray-800 border-gray-700">
+              <CardContent className="p-8">
+                <p className="text-gray-300 text-lg leading-relaxed max-w-4xl">
+                  {movie.description || 'No description available for this movie.'}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.section>
 
-          {/* Action Buttons */}
-          <section style={actionsSectionStyle}>
-            <Link
-              to={`/movies/${movie.id}/showtimes`}
-              style={primaryButtonStyle}
-            >
-              View Showtimes & Book Tickets
-            </Link>
-            <button style={secondaryButtonStyle} onClick={() => window.history.back()}>
-              Back to Movies
-            </button>
-          </section>
+          {/* Movie Details Grid */}
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-16"
+          >
+            <h2 className="text-3xl font-bold text-white mb-6">Movie Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <User className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Director</h3>
+                  </div>
+                  <p className="text-gray-300">{movie.director}</p>
+                </CardContent>
+              </Card>
 
-          {/* Additional Movie Information */}
-          <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Movie Details</h2>
-            <div style={detailsGridStyle}>
-              <div style={detailItemStyle}>
-                <strong>Director:</strong> {movie.director}
-              </div>
-              <div style={detailItemStyle}>
-                <strong>Genre:</strong> {movie.genre}
-              </div>
-              <div style={detailItemStyle}>
-                <strong>Duration:</strong> {movie.formattedDuration}
-              </div>
-              <div style={detailItemStyle}>
-                <strong>Release Date:</strong> {new Date(movie.releaseDate).toLocaleDateString()}
-              </div>
-              <div style={detailItemStyle}>
-                <strong>Base Price:</strong> {movieService.formatPrice(movie.priceBase)}
-              </div>
-              <div style={detailItemStyle}>
-                <strong>Status:</strong> {movie.currentlyShowing ? 'Now Showing' : 'Coming Soon'}
-              </div>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Tag className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Genre</h3>
+                  </div>
+                  <p className="text-gray-300">{movie.genre}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Clock className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Duration</h3>
+                  </div>
+                  <p className="text-gray-300">{movie.formattedDuration}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Calendar className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Release Date</h3>
+                  </div>
+                  <p className="text-gray-300">{new Date(movie.releaseDate).toLocaleDateString()}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <DollarSign className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Base Price</h3>
+                  </div>
+                  <p className="text-green-500 font-bold text-lg">{movieService.formatPrice(movie.priceBase)}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Play className="w-5 h-5 text-red-500" />
+                    <h3 className="font-semibold text-white">Status</h3>
+                  </div>
+                  <p className="text-gray-300">
+                    {movie.currentlyShowing ? 'Now Showing' : 'Coming Soon'}
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          </section>
+          </motion.section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  backgroundColor: '#000',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  color: '#fff',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #333',
-  borderTop: '4px solid #e50914',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const errorContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  color: '#fff',
-  textAlign: 'center',
-};
-
-const heroSectionStyle: React.CSSProperties = {
-  position: 'relative',
-  minHeight: '70vh',
-  display: 'flex',
-  alignItems: 'center',
-};
-
-const heroBackgroundStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  overflow: 'hidden',
-};
-
-const heroImageStyle: React.CSSProperties = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover',
-  filter: 'brightness(0.4)',
-};
-
-const heroOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'linear-gradient(to right, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 70%, transparent)',
-};
-
-const heroContentStyle: React.CSSProperties = {
-  position: 'relative',
-  zIndex: 2,
-  padding: '0 2rem',
-  maxWidth: '800px',
-  color: '#fff',
-};
-
-const movieMetaStyle: React.CSSProperties = {
-  marginBottom: '1rem',
-  fontSize: '0.9rem',
-};
-
-const breadcrumbStyle: React.CSSProperties = {
-  color: '#ccc',
-  textDecoration: 'none',
-};
-
-const breadcrumbSeparatorStyle: React.CSSProperties = {
-  margin: '0 0.5rem',
-  color: '#666',
-};
-
-const currentPageStyle: React.CSSProperties = {
-  color: '#fff',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: '3rem',
-  fontWeight: 'bold',
-  margin: '0 0 1.5rem 0',
-  lineHeight: '1.2',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.8rem',
-};
-
-const infoRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'center',
-};
-
-const ratingRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  alignItems: 'center',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-  minWidth: '100px',
-  color: '#ccc',
-};
-
-const genreStyle: React.CSSProperties = {
-  background: '#1976d2',
-  color: '#fff',
-  padding: '0.2rem 0.8rem',
-  borderRadius: '12px',
-  fontSize: '0.8rem',
-};
-
-const priceStyle: React.CSSProperties = {
-  color: '#4caf50',
-  fontWeight: 'bold',
-  fontSize: '1.1rem',
-};
-
-const ratingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.8rem',
-};
-
-const starsStyle: React.CSSProperties = {
-  color: '#ffc107',
-  fontSize: '1.2rem',
-};
-
-const ratingValueStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-  fontSize: '1.1rem',
-};
-
-const reviewCountStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-};
-
-const statusBadgeStyle: React.CSSProperties = {
-  alignSelf: 'flex-start',
-  background: '#e50914',
-  color: '#fff',
-  padding: '0.5rem 1rem',
-  borderRadius: '6px',
-  fontWeight: 'bold',
-  textTransform: 'uppercase',
-  fontSize: '0.8rem',
-};
-
-const contentSectionStyle: React.CSSProperties = {
-  backgroundColor: '#111',
-  padding: '3rem 0',
-};
-
-const contentContainerStyle: React.CSSProperties = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 2rem',
-  color: '#fff',
-};
-
-const sectionStyle: React.CSSProperties = {
-  marginBottom: '3rem',
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const descriptionStyle: React.CSSProperties = {
-  fontSize: '1.1rem',
-  lineHeight: '1.7',
-  color: '#ccc',
-  maxWidth: '800px',
-};
-
-const actionsSectionStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  marginBottom: '3rem',
-  flexWrap: 'wrap',
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  background: '#e50914',
-  color: '#fff',
-  padding: '1rem 2rem',
-  textDecoration: 'none',
-  borderRadius: '6px',
-  fontWeight: 'bold',
-  fontSize: '1rem',
-  textAlign: 'center',
-  transition: 'background 0.2s',
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  background: 'transparent',
-  color: '#fff',
-  padding: '1rem 2rem',
-  border: '2px solid #666',
-  borderRadius: '6px',
-  fontWeight: 'bold',
-  fontSize: '1rem',
-  cursor: 'pointer',
-  transition: 'all 0.2s',
-};
-
-const backButtonStyle: React.CSSProperties = {
-  ...primaryButtonStyle,
-  display: 'inline-block',
-};
-
-const detailsGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-  gap: '1rem',
-  maxWidth: '800px',
-};
-
-const detailItemStyle: React.CSSProperties = {
-  padding: '1rem',
-  background: '#222',
-  borderRadius: '6px',
-  color: '#ccc',
-};
 
 export default MovieDetailPage;

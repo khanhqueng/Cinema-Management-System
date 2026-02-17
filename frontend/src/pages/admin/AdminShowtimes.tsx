@@ -1,8 +1,35 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import {
+  Clock,
+  Film,
+  Building2,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  Save,
+  Loader2,
+  AlertCircle,
+  Calendar,
+  DollarSign,
+  Users,
+  ArrowLeft,
+  ArrowRight,
+  Activity,
+  CheckCircle
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import adminService, { CreateShowtimeRequest, UpdateShowtimeRequest } from '../../services/adminService';
 import { movieService } from '../../services/movieService';
 import { theaterService } from '../../services/theaterService';
 import { Movie, Theater, Showtime, PageResponse } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const AdminShowtimes: React.FC = () => {
   const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(null);

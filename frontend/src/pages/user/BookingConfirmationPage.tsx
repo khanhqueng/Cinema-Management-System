@@ -1,7 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
+import { motion } from 'motion/react';
+import {
+  CheckCircle2,
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  DollarSign,
+  Film,
+  Ticket,
+  QrCode,
+  ArrowLeft,
+  Eye,
+  X,
+  Loader2,
+  AlertCircle,
+  Star,
+  Info
+} from 'lucide-react';
+
+// OLD API services (keep 100% logic) - UNCHANGED
 import { bookingService } from '../../services/bookingService';
 import { BookingDto, BookingWithSeatsResponse, Booking } from '../../types';
+
+// NEW UI components
+import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const BookingConfirmationPage: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -48,23 +74,43 @@ const BookingConfirmationPage: React.FC = () => {
     fetchBookingData();
   }, [bookingId, bookingData]);
 
+  // NEW loading UI (modern design)
   if (loading) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading booking confirmation...</p>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-green-500 mx-auto mb-4" />
+              <p className="text-gray-300 text-lg">Loading booking confirmation...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // NEW error UI (modern design)
   if (error || !booking) {
     return (
-      <div style={errorContainerStyle}>
-        <h2>Booking Not Found</h2>
-        <p>{error || 'Unable to load booking details.'}</p>
-        <Link to="/movies" style={backButtonStyle}>
-          Back to Movies
-        </Link>
+      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4">Booking Not Found</h2>
+                <p className="text-gray-400 mb-6">{error || 'Unable to load booking details.'}</p>
+                <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Link to="/movies">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Movies
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -125,194 +171,285 @@ const BookingConfirmationPage: React.FC = () => {
   const canCancel = bookingService.isBookingCancellable(createLegacyBooking(booking));
 
   return (
-    <div style={containerStyle}>
-      {/* Success Header */}
-      <div style={successHeaderStyle}>
-        <div style={successIconStyle}>✓</div>
-        <h1 style={successTitleStyle}>Booking Confirmed!</h1>
-        <p style={successSubtitleStyle}>
-          Your tickets have been successfully booked. Check your email for the confirmation.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-950">
+      {/* Success Header - NEW UI */}
+      <section className="bg-gradient-to-r from-green-900 to-green-800 py-16 text-center">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-6">
+              <CheckCircle2 className="w-12 h-12 text-white" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Booking Confirmed!</h1>
+            <p className="text-lg text-green-100 max-w-2xl mx-auto">
+              Your tickets have been successfully booked. Check your email for the confirmation.
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Booking Details */}
-      <div style={contentSectionStyle}>
-        <div style={contentContainerStyle}>
-          <div style={confirmationLayoutStyle}>
+      <main className="py-12 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
             {/* Left Side - Booking Details */}
-            <div style={detailsSectionStyle}>
-              <div style={sectionHeaderStyle}>
-                <h2 style={sectionTitleStyle}>Booking Details</h2>
-                <div style={bookingStatusStyle}>
-                  <span
-                    style={{
-                      ...statusBadgeStyle,
-                      backgroundColor: bookingService.getBookingStatusColor(getBookingStatus(booking) as any)
-                    }}
-                  >
-                    {bookingService.getBookingStatusDisplay(getBookingStatus(booking) as any)}
-                  </span>
-                </div>
-              </div>
-
-              <div style={detailsCardStyle}>
-                <div style={detailRowStyle}>
-                  <span style={labelStyle}>Booking Reference:</span>
-                  <span style={valueStyle}>
-                    {bookingService.formatBookingReference(booking.bookingReference)}
-                  </span>
-                </div>
-                <div style={detailRowStyle}>
-                  <span style={labelStyle}>Booking Date:</span>
-                  <span style={valueStyle}>
-                    {bookingService.formatBookingDate(booking.createdAt)}
-                  </span>
-                </div>
-                <div style={detailRowStyle}>
-                  <span style={labelStyle}>Total Amount:</span>
-                  <span style={totalPriceStyle}>
-                    {bookingService.formatPrice(getTotalPrice(booking))}
-                  </span>
-                </div>
-              </div>
-
-              {/* Movie Information */}
-              <div style={movieSectionStyle}>
-                <h3 style={subsectionTitleStyle}>Movie Information</h3>
-                <div style={movieInfoStyle}>
-                  <img
-                    src={booking.showtime?.moviePosterUrl || (booking.showtime as any)?.movie?.posterUrl || `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(booking.showtime?.movieTitle || 'Movie')}`}
-                    alt={booking.showtime?.movieTitle || 'Movie'}
-                    style={moviePosterStyle}
-                  />
-                  <div style={movieDetailsStyle}>
-                    <h4 style={movieTitleStyle}>{booking.showtime?.movieTitle || (booking.showtime as any)?.movie?.title || 'Unknown Movie'}</h4>
-                    <div style={movieMetaStyle}>
-                      <span style={genreStyle}>{(booking.showtime as any)?.movie?.genre || 'Genre'}</span>
-                      <span style={durationStyle}>{(booking.showtime as any)?.movie?.formattedDuration || `${booking.showtime?.movieDurationMinutes || 0}min`}</span>
+            <div className="lg:col-span-2 space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Booking Details Header */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-8">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-2xl font-bold text-white flex items-center">
+                        <Ticket className="w-6 h-6 mr-2 text-green-500" />
+                        Booking Details
+                      </h2>
+                      <Badge
+                        style={{ backgroundColor: bookingService.getBookingStatusColor(getBookingStatus(booking) as any) }}
+                        className="text-white font-medium"
+                      >
+                        {bookingService.getBookingStatusDisplay(getBookingStatus(booking) as any)}
+                      </Badge>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Showtime Information */}
-              <div style={showtimeSectionStyle}>
-                <h3 style={subsectionTitleStyle}>Showtime Information</h3>
-                <div style={showtimeInfoStyle}>
-                  <div style={detailRowStyle}>
-                    <span style={labelStyle}>Theater:</span>
-                    <span style={valueStyle}>
-                      {booking.showtime?.theaterName || (booking.showtime as any)?.theater?.name || 'Unknown Theater'}
-                      ({booking.showtime?.theaterCapacity || 0} seats)
-                    </span>
-                  </div>
-                  <div style={detailRowStyle}>
-                    <span style={labelStyle}>Date & Time:</span>
-                    <span style={valueStyle}>
-                      {booking.showtime?.showDatetime ?
-                        new Date(booking.showtime.showDatetime).toLocaleString('vi-VN', {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'Date not available'}
-                    </span>
-                  </div>
-                  <div style={detailRowStyle}>
-                    <span style={labelStyle}>Seats:</span>
-                    <span style={valueStyle}>
-                      {bookingService.getSeatDisplayString(getSeatBookingsData(booking, seatBookings))}
-                    </span>
-                  </div>
-                  <div style={detailRowStyle}>
-                    <span style={labelStyle}>Number of Seats:</span>
-                    <span style={valueStyle}>{booking.seatsBooked}</span>
-                  </div>
-                </div>
-              </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                        <span className="text-gray-400">Booking Reference:</span>
+                        <span className="text-white font-medium">
+                          {bookingService.formatBookingReference(booking.bookingReference)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                        <span className="text-gray-400">Booking Date:</span>
+                        <span className="text-white font-medium">
+                          {bookingService.formatBookingDate(booking.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-3">
+                        <span className="text-gray-400">Total Amount:</span>
+                        <span className="text-green-500 font-bold text-lg flex items-center">
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          {bookingService.formatPrice(getTotalPrice(booking))}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Movie Information */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-8">
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                      <Film className="w-5 h-5 mr-2 text-red-500" />
+                      Movie Information
+                    </h3>
+                    <div className="flex items-start space-x-4">
+                      <img
+                        src={booking.showtime?.moviePosterUrl || (booking.showtime as any)?.movie?.posterUrl || `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(booking.showtime?.movieTitle || 'Movie')}`}
+                        alt={booking.showtime?.movieTitle || 'Movie'}
+                        className="w-20 h-30 object-cover rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(booking.showtime?.movieTitle || 'Movie')}`;
+                        }}
+                      />
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-white mb-2">
+                          {booking.showtime?.movieTitle || (booking.showtime as any)?.movie?.title || 'Unknown Movie'}
+                        </h4>
+                        <div className="space-y-2">
+                          <Badge variant="secondary" className="bg-blue-600 text-white">
+                            {(booking.showtime as any)?.movie?.genre || 'Genre'}
+                          </Badge>
+                          <p className="text-gray-400 flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {(booking.showtime as any)?.movie?.formattedDuration || `${booking.showtime?.movieDurationMinutes || 0}min`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Showtime Information */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-8">
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2 text-yellow-500" />
+                      Showtime Information
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                        <span className="text-gray-400 flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Theater:
+                        </span>
+                        <span className="text-white font-medium">
+                          {booking.showtime?.theaterName || (booking.showtime as any)?.theater?.name || 'Unknown Theater'}
+                          ({booking.showtime?.theaterCapacity || 0} seats)
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                        <span className="text-gray-400 flex items-center">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Date & Time:
+                        </span>
+                        <span className="text-white font-medium">
+                          {booking.showtime?.showDatetime ?
+                            new Date(booking.showtime.showDatetime).toLocaleString('vi-VN', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Date not available'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                        <span className="text-gray-400 flex items-center">
+                          <Users className="w-4 h-4 mr-2" />
+                          Seats:
+                        </span>
+                        <span className="text-white font-medium">
+                          {bookingService.getSeatDisplayString(getSeatBookingsData(booking, seatBookings))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-3">
+                        <span className="text-gray-400">Number of Seats:</span>
+                        <span className="text-white font-medium">{booking.seatsBooked}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Right Side - Actions and Instructions */}
-            <div style={actionsSectionStyle}>
-              <div style={actionsCardStyle}>
-                <h3 style={actionsTitleStyle}>Quick Actions</h3>
+            <div className="lg:col-span-1 space-y-6">
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="space-y-6"
+              >
+                {/* Quick Actions */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center">
+                      <Star className="w-5 h-5 mr-2 text-yellow-500" />
+                      Quick Actions
+                    </h3>
+                    <div className="space-y-3">
+                      {booking.showtime?.id && (
+                        <Button asChild variant="outline" className="w-full !bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white">
+                          <Link to={`/movies/${getMovieId(booking) || booking.showtime.id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Movie Details
+                          </Link>
+                        </Button>
+                      )}
 
-                <div style={actionButtonsStyle}>
-                  {booking.showtime?.id && (
-                    <Link
-                      to={`/movies/${getMovieId(booking) || booking.showtime.id}`}
-                      style={actionButtonStyle}
-                    >
-                      View Movie Details
-                    </Link>
-                  )}
+                      {isUpcoming && booking.showtime?.id && (
+                        <Button asChild variant="outline" className="w-full !bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white">
+                          <Link to={`/movies/${getMovieId(booking) || booking.showtime.id}/showtimes`}>
+                            <Calendar className="w-4 h-4 mr-2" />
+                            View Other Showtimes
+                          </Link>
+                        </Button>
+                      )}
 
-                  {isUpcoming && booking.showtime?.id && (
-                    <Link
-                      to={`/movies/${getMovieId(booking) || booking.showtime.id}/showtimes`}
-                      style={actionButtonStyle}
-                    >
-                      View Other Showtimes
-                    </Link>
-                  )}
+                      {canCancel && (
+                        <Button
+                          onClick={() => handleCancelBooking()}
+                          variant="destructive"
+                          className="w-full"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel Booking
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {canCancel && (
-                    <button
-                      onClick={() => handleCancelBooking()}
-                      style={cancelButtonStyle}
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
-                </div>
-              </div>
+                {/* Important Information */}
+                <Card className="bg-blue-900 border-blue-700">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center">
+                      <Info className="w-5 h-5 mr-2" />
+                      Important Information
+                    </h3>
+                    <div className="space-y-3 text-sm text-blue-100">
+                      <div>
+                        <strong className="text-white">Arrival Time:</strong> Please arrive at least 15 minutes before showtime.
+                      </div>
+                      <div>
+                        <strong className="text-white">Ticket Collection:</strong> Show your booking reference at the theater or use our mobile app.
+                      </div>
+                      <div>
+                        <strong className="text-white">Cancellation:</strong> Bookings can be cancelled up to 2 hours before showtime.
+                      </div>
+                      <div>
+                        <strong className="text-white">Contact:</strong> For assistance, please contact our customer support.
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Important Information */}
-              <div style={infoCardStyle}>
-                <h3 style={infoTitleStyle}>Important Information</h3>
-                <div style={infoListStyle}>
-                  <div style={infoItemStyle}>
-                    <strong>Arrival Time:</strong> Please arrive at least 15 minutes before showtime.
-                  </div>
-                  <div style={infoItemStyle}>
-                    <strong>Ticket Collection:</strong> Show your booking reference at the theater or use our mobile app.
-                  </div>
-                  <div style={infoItemStyle}>
-                    <strong>Cancellation:</strong> Bookings can be cancelled up to 2 hours before showtime.
-                  </div>
-                  <div style={infoItemStyle}>
-                    <strong>Contact:</strong> For assistance, please contact our customer support.
-                  </div>
-                </div>
-              </div>
-
-              {/* QR Code Placeholder */}
-              <div style={qrCodeSectionStyle}>
-                <h3 style={qrCodeTitleStyle}>Digital Ticket</h3>
-                <div style={qrCodePlaceholderStyle}>
-                  <div style={qrCodeStyle}>QR</div>
-                  <p style={qrCodeTextStyle}>
-                    Show this reference at the theater:<br />
-                    <strong>{bookingService.formatBookingReference(booking.bookingReference)}</strong>
-                  </p>
-                </div>
-              </div>
+                {/* QR Code / Digital Ticket */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-6 text-center">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-center">
+                      <QrCode className="w-5 h-5 mr-2" />
+                      Digital Ticket
+                    </h3>
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center">
+                        <QrCode className="w-12 h-12 text-gray-800" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-400 text-sm mb-2">
+                          Show this reference at the theater:
+                        </p>
+                        <p className="text-white font-bold">
+                          {bookingService.formatBookingReference(booking.bookingReference)}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </div>
 
           {/* Bottom Actions */}
-          <div style={bottomActionsStyle}>
-            <Link to="/bookings/my-bookings" style={secondaryButtonStyle}>
-              View My Bookings
-            </Link>
-            <Link to="/movies" style={primaryButtonStyle}>
-              Book More Movies
-            </Link>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center pt-8 border-t border-gray-700"
+          >
+            <Button asChild variant="outline" size="lg" className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white">
+              <Link to="/bookings/my-bookings">
+                <Ticket className="w-4 h-4 mr-2" />
+                View My Bookings
+              </Link>
+            </Button>
+            <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+              <Link to="/movies">
+                <Film className="w-4 h-4 mr-2" />
+                Book More Movies
+              </Link>
+            </Button>
+          </motion.div>
         </div>
-      </div>
+      </main>
     </div>
   );
 
@@ -338,361 +475,5 @@ const BookingConfirmationPage: React.FC = () => {
   }
 };
 
-// Styles
-const containerStyle: React.CSSProperties = {
-  minHeight: '100vh',
-  backgroundColor: '#111',
-  color: '#fff',
-};
-
-const loadingContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-};
-
-const spinnerStyle: React.CSSProperties = {
-  border: '4px solid #333',
-  borderTop: '4px solid #4caf50',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  animation: 'spin 1s linear infinite',
-};
-
-const errorContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  minHeight: '60vh',
-  gap: '1rem',
-  textAlign: 'center',
-};
-
-const successHeaderStyle: React.CSSProperties = {
-  backgroundColor: '#1b5e20',
-  padding: '3rem 0',
-  textAlign: 'center',
-};
-
-const successIconStyle: React.CSSProperties = {
-  fontSize: '4rem',
-  color: '#4caf50',
-  marginBottom: '1rem',
-};
-
-const successTitleStyle: React.CSSProperties = {
-  fontSize: '2.5rem',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const successSubtitleStyle: React.CSSProperties = {
-  fontSize: '1.1rem',
-  color: '#c8e6c9',
-  maxWidth: '600px',
-  margin: '0 auto',
-};
-
-const contentSectionStyle: React.CSSProperties = {
-  padding: '3rem 0',
-};
-
-const contentContainerStyle: React.CSSProperties = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 2rem',
-};
-
-const confirmationLayoutStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '2fr 1fr',
-  gap: '3rem',
-  marginBottom: '3rem',
-};
-
-const detailsSectionStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2rem',
-};
-
-const sectionHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '1.8rem',
-  fontWeight: 'bold',
-  color: '#fff',
-};
-
-const bookingStatusStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-};
-
-const statusBadgeStyle: React.CSSProperties = {
-  padding: '0.5rem 1rem',
-  borderRadius: '20px',
-  color: '#fff',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const detailsCardStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const detailRowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '1rem',
-  paddingBottom: '1rem',
-  borderBottom: '1px solid #333',
-};
-
-const labelStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-};
-
-const valueStyle: React.CSSProperties = {
-  color: '#fff',
-  fontSize: '1rem',
-  fontWeight: '500',
-};
-
-const totalPriceStyle: React.CSSProperties = {
-  color: '#4caf50',
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-};
-
-const movieSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const subsectionTitleStyle: React.CSSProperties = {
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const movieInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1.5rem',
-  alignItems: 'flex-start',
-};
-
-const moviePosterStyle: React.CSSProperties = {
-  width: '80px',
-  height: '120px',
-  objectFit: 'cover',
-  borderRadius: '8px',
-};
-
-const movieDetailsStyle: React.CSSProperties = {
-  flex: 1,
-};
-
-const movieTitleStyle: React.CSSProperties = {
-  fontSize: '1.3rem',
-  fontWeight: 'bold',
-  marginBottom: '0.5rem',
-  color: '#fff',
-};
-
-const movieMetaStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.3rem',
-};
-
-const genreStyle: React.CSSProperties = {
-  color: '#1976d2',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-};
-
-const durationStyle: React.CSSProperties = {
-  color: '#ccc',
-  fontSize: '0.9rem',
-};
-
-
-const showtimeSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const showtimeInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.5rem',
-};
-
-const actionsSectionStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2rem',
-};
-
-const actionsCardStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const actionsTitleStyle: React.CSSProperties = {
-  fontSize: '1.2rem',
-  fontWeight: 'bold',
-  marginBottom: '1.5rem',
-  color: '#fff',
-};
-
-const actionButtonsStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-};
-
-const actionButtonStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  color: '#fff',
-  textDecoration: 'none',
-  padding: '1rem',
-  borderRadius: '8px',
-  textAlign: 'center',
-  fontWeight: '500',
-  transition: 'background-color 0.2s',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '0.9rem',
-};
-
-const cancelButtonStyle: React.CSSProperties = {
-  ...actionButtonStyle,
-  backgroundColor: '#d32f2f',
-};
-
-const infoCardStyle: React.CSSProperties = {
-  backgroundColor: '#1a237e',
-  borderRadius: '12px',
-  padding: '2rem',
-};
-
-const infoTitleStyle: React.CSSProperties = {
-  fontSize: '1.1rem',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const infoListStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.8rem',
-};
-
-const infoItemStyle: React.CSSProperties = {
-  fontSize: '0.85rem',
-  lineHeight: '1.4',
-  color: '#e3f2fd',
-};
-
-const qrCodeSectionStyle: React.CSSProperties = {
-  backgroundColor: '#222',
-  borderRadius: '12px',
-  padding: '2rem',
-  textAlign: 'center',
-};
-
-const qrCodeTitleStyle: React.CSSProperties = {
-  fontSize: '1.1rem',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  color: '#fff',
-};
-
-const qrCodePlaceholderStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: '1rem',
-};
-
-const qrCodeStyle: React.CSSProperties = {
-  width: '80px',
-  height: '80px',
-  backgroundColor: '#fff',
-  color: '#333',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '8px',
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
-};
-
-const qrCodeTextStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  color: '#ccc',
-  lineHeight: '1.4',
-};
-
-const bottomActionsStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  justifyContent: 'center',
-  paddingTop: '2rem',
-  borderTop: '1px solid #333',
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  backgroundColor: '#333',
-  color: '#fff',
-  textDecoration: 'none',
-  padding: '1rem 2rem',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  textAlign: 'center',
-  transition: 'background-color 0.2s',
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  textDecoration: 'none',
-  padding: '1rem 2rem',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  textAlign: 'center',
-  transition: 'background-color 0.2s',
-};
-
-const backButtonStyle: React.CSSProperties = {
-  backgroundColor: '#e50914',
-  color: '#fff',
-  padding: '0.8rem 1.5rem',
-  textDecoration: 'none',
-  borderRadius: '8px',
-  fontWeight: 'bold',
-  display: 'inline-block',
-};
 
 export default BookingConfirmationPage;
