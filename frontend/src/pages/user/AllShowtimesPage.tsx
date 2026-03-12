@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   Calendar,
   Clock,
@@ -17,25 +17,27 @@ import {
   Loader2,
   AlertCircle,
   Eye,
-  Ticket
-} from 'lucide-react';
+  Ticket,
+} from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
-import { showtimeService } from '../../services/showtimeService';
-import { Showtime, PageResponse } from '../../types';
+import { showtimeService } from "../../services/showtimeService";
+import { Showtime, PageResponse } from "../../types";
 
 // NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 
 const AllShowtimesPage: React.FC = () => {
-  const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(null);
+  const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchShowtimes();
@@ -50,8 +52,8 @@ const AllShowtimesPage: React.FC = () => {
       const params: any = {
         page: currentPage,
         size: 12,
-        sortBy: 'showDatetime',
-        sortDir: 'asc'
+        sortBy: "showDatetime",
+        sortDir: "asc",
       };
 
       // Add date filter if selected
@@ -62,8 +64,8 @@ const AllShowtimesPage: React.FC = () => {
       const response = await showtimeService.getAllShowtimes(params);
       setShowtimes(response);
     } catch (err: any) {
-      console.error('Error fetching showtimes:', err);
-      setError('Failed to load showtimes');
+      console.error("Error fetching showtimes:", err);
+      setError("Failed to load showtimes");
     } finally {
       setLoading(false);
     }
@@ -77,15 +79,27 @@ const AllShowtimesPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await showtimeService.searchShowtimes({
-        query: searchQuery,
-        page: currentPage,
-        size: 12
+      const response = await showtimeService.getAllShowtimes({
+        page: 0,
+        size: 200,
+        sortBy: "showDatetime",
+        sortDir: "asc",
       });
-      setShowtimes(response);
+      // Filter client-side by movie title or theater name
+      const q = searchQuery.trim().toLowerCase();
+      const filtered = response.content.filter(
+        (s) =>
+          s.movieTitle.toLowerCase().includes(q) ||
+          s.theaterName.toLowerCase().includes(q),
+      );
+      setShowtimes({
+        ...response,
+        content: filtered,
+        totalElements: filtered.length,
+      });
     } catch (err: any) {
-      console.error('Error searching showtimes:', err);
-      setError('Failed to search showtimes');
+      console.error("Error searching showtimes:", err);
+      setError("Failed to search showtimes");
     } finally {
       setLoading(false);
     }
@@ -97,8 +111,8 @@ const AllShowtimesPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedDate('');
-    setSearchQuery('');
+    setSelectedDate("");
+    setSearchQuery("");
     setCurrentPage(0);
     fetchShowtimes();
   };
@@ -108,13 +122,29 @@ const AllShowtimesPage: React.FC = () => {
     const showTime = new Date(showDatetime);
 
     if (showTime < now) {
-      return <Badge variant="secondary" className="bg-gray-600 text-white">Past</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-gray-600 text-white">
+          Past
+        </Badge>
+      );
     } else if (showTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-      return <Badge variant="secondary" className="bg-red-600 text-white">Today</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-red-600 text-white">
+          Today
+        </Badge>
+      );
     } else if (showTime.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
-      return <Badge variant="secondary" className="bg-orange-600 text-white">This Week</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-orange-600 text-white">
+          This Week
+        </Badge>
+      );
     } else {
-      return <Badge variant="secondary" className="bg-green-600 text-white">Upcoming</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-green-600 text-white">
+          Upcoming
+        </Badge>
+      );
     }
   };
 
@@ -126,8 +156,17 @@ const AllShowtimesPage: React.FC = () => {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push({
-        value: date.toISOString().split('T')[0],
-        label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+        value: date.toISOString().split("T")[0],
+        label:
+          i === 0
+            ? "Today"
+            : i === 1
+              ? "Tomorrow"
+              : date.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                }),
       });
     }
 
@@ -163,7 +202,9 @@ const AllShowtimesPage: React.FC = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
               <Clock className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">All Showtimes</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              All Showtimes
+            </h1>
             <p className="text-lg text-indigo-100 max-w-2xl mx-auto">
               Discover all movie showtimes across our theaters
             </p>
@@ -197,7 +238,7 @@ const AllShowtimesPage: React.FC = () => {
                         placeholder="Search movies or theaters..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                         className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       />
                     </div>
@@ -210,15 +251,18 @@ const AllShowtimesPage: React.FC = () => {
                       Filter by Date
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {getNextDates().map(date => (
+                      {getNextDates().map((date) => (
                         <Button
                           key={date.value}
                           onClick={() => handleDateFilter(date.value)}
-                          variant={selectedDate === date.value ? "default" : "outline"}
+                          variant={
+                            selectedDate === date.value ? "default" : "outline"
+                          }
                           size="sm"
-                          className={selectedDate === date.value ?
-                            "bg-indigo-600 hover:bg-indigo-700" :
-                            "border-gray-600 text-white hover:bg-gray-700"
+                          className={
+                            selectedDate === date.value
+                              ? "bg-indigo-600 hover:bg-indigo-700"
+                              : "border-gray-600 bg-gray-800 text-white hover:text-yellow-50 hover:bg-gray-700"
                           }
                         >
                           {date.label}
@@ -230,18 +274,27 @@ const AllShowtimesPage: React.FC = () => {
                   {/* Actions */}
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Button onClick={handleSearch} className="bg-indigo-600 hover:bg-indigo-700">
+                      <Button
+                        onClick={handleSearch}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
                         <Search className="w-4 h-4 mr-2" />
                         Search
                       </Button>
                       {(searchQuery || selectedDate) && (
-                        <Button onClick={clearFilters} variant="outline" className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white">
+                        <Button
+                          onClick={clearFilters}
+                          variant="outline"
+                          className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                        >
                           Clear
                         </Button>
                       )}
                     </div>
                     <p className="text-sm text-gray-400">
-                      {showtimes ? `${showtimes.totalElements} showtimes found` : 'Loading...'}
+                      {showtimes
+                        ? `${showtimes.totalElements} showtimes found`
+                        : "Loading..."}
                     </p>
                   </div>
                 </div>
@@ -273,14 +326,16 @@ const AllShowtimesPage: React.FC = () => {
                     <Card className="bg-gray-900 border-gray-800">
                       <CardContent className="p-12 text-center">
                         <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-4">No Showtimes Found</h3>
+                        <h3 className="text-xl font-semibold text-white mb-4">
+                          No Showtimes Found
+                        </h3>
                         <p className="text-gray-400 mb-8">
                           {searchQuery || selectedDate
-                            ? 'Try adjusting your filters to see more results.'
-                            : 'No showtimes are currently available.'}
+                            ? "Try adjusting your filters to see more results."
+                            : "No showtimes are currently available."}
                         </p>
                         <Button
-                          onClick={() => window.location.href = '/movies'}
+                          onClick={() => (window.location.href = "/movies")}
                           className="bg-indigo-600 hover:bg-indigo-700"
                         >
                           <Film className="w-5 h-5 mr-2" />
@@ -376,13 +431,29 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
     const now = new Date();
 
     if (showDate < now) {
-      return <Badge variant="secondary" className="bg-gray-600 text-white">Past</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-gray-600 text-white">
+          Past
+        </Badge>
+      );
     } else if (showDate.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-      return <Badge variant="secondary" className="bg-red-600 text-white">Today</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-red-600 text-white">
+          Today
+        </Badge>
+      );
     } else if (showDate.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
-      return <Badge variant="secondary" className="bg-orange-600 text-white">This Week</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-orange-600 text-white">
+          This Week
+        </Badge>
+      );
     } else {
-      return <Badge variant="secondary" className="bg-green-600 text-white">Upcoming</Badge>;
+      return (
+        <Badge variant="secondary" className="bg-green-600 text-white">
+          Upcoming
+        </Badge>
+      );
     }
   };
 
@@ -404,11 +475,11 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-white mb-1 truncate">
-              {showtime.movieTitle || 'Unknown Movie'}
+              {showtime.movieTitle || "Unknown Movie"}
             </h3>
             <div className="flex items-center text-gray-400 text-sm mb-2">
               <Building2 className="w-4 h-4 mr-1" />
-              {showtime.theaterName || 'Unknown Theater'}
+              {showtime.theaterName || "Unknown Theater"}
             </div>
             {showtime.movieDurationMinutes && (
               <div className="flex items-center text-gray-400 text-sm">
@@ -425,10 +496,10 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
             <div className="flex items-center text-white">
               <Calendar className="w-4 h-4 mr-2 text-indigo-400" />
               <span className="font-medium">
-                {showDate.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric'
+                {showDate.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
                 })}
               </span>
             </div>
@@ -439,42 +510,51 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
             <div className="flex items-center text-white">
               <Clock className="w-4 h-4 mr-2 text-indigo-400" />
               <span className="font-bold text-lg">
-                {showDate.toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
+                {showDate.toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
                 })}
               </span>
             </div>
             <div className="flex items-center text-green-400">
               <DollarSign className="w-4 h-4 mr-1" />
               <span className="font-bold">
-                {showtime.price?.toLocaleString('en-US')} VND
+                {showtime.price?.toLocaleString("en-US")} VND
               </span>
             </div>
           </div>
 
-          {showtime.availableSeats !== undefined && showtime.theaterCapacity && (
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center text-gray-400">
-                <Users className="w-4 h-4 mr-1" />
-                Available Seats
+          {showtime.availableSeats !== undefined &&
+            showtime.theaterCapacity && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-gray-400">
+                  <Users className="w-4 h-4 mr-1" />
+                  Available Seats
+                </div>
+                <span
+                  className={`font-bold ${showtime.availableSeats > 0 ? "text-green-400" : "text-red-400"}`}
+                >
+                  {showtime.availableSeats} / {showtime.theaterCapacity}
+                </span>
               </div>
-              <span className={`font-bold ${showtime.availableSeats > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {showtime.availableSeats} / {showtime.theaterCapacity}
-              </span>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Action Button */}
         <div className="mt-6 pt-4 border-t border-gray-700">
           <Button
             asChild
-            className={`w-full ${isPast ? 'bg-gray-600 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+            className={`w-full ${isPast ? "bg-gray-600 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
             disabled={isPast}
           >
-            <Link to={isPast ? '#' : `/movies/${showtime.movieId}/showtimes/${showtime.id}/booking`}>
+            <Link
+              to={
+                isPast
+                  ? "#"
+                  : `/movies/${showtime.movieId}/showtimes/${showtime.id}/booking`
+              }
+            >
               {isPast ? (
                 <>
                   <Eye className="w-4 h-4 mr-2" />

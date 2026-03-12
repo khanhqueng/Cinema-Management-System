@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   User as UserIcon,
   Mail,
@@ -12,24 +12,19 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Film
-} from 'lucide-react';
+  Film,
+} from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
-import { User } from '../../types';
-import { UserGenrePreference } from '../../types/genres';
-import GenreSelector from '../../components/GenreSelector';
-import { authService } from '../../services/authService';
+import GenreSelector from "../../components/GenreSelector";
+import { authService } from "../../services/authService";
 
 // NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 
 const UserProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [userPreferences, setUserPreferences] = useState<UserGenrePreference[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -38,9 +33,9 @@ const UserProfilePage: React.FC = () => {
 
   // Profile form data
   const [profileData, setProfileData] = useState({
-    fullName: '',
-    phone: '',
-    email: ''
+    fullName: "",
+    phone: "",
+    email: "",
   });
 
   useEffect(() => {
@@ -52,26 +47,19 @@ const UserProfilePage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Load user basic info
-      const userData = await authService.getCurrentUser();
+      // Load user basic info from localStorage (no API call needed)
+      const userData = authService.getCurrentUserFromStorage();
 
       if (userData) {
-        setUser(userData);
         setProfileData({
-          fullName: userData.fullName || '',
-          phone: userData.phone || '',
-          email: userData.email || ''
+          fullName: userData.fullName || "",
+          phone: userData.phone || "",
+          email: userData.email || "",
         });
       }
-
-      // Load user genre preferences (this would need to be implemented)
-      // const preferences = await userService.getUserGenrePreferences();
-      // setUserPreferences(preferences);
-      // setSelectedGenres(preferences.map(p => p.genre));
-
     } catch (err: any) {
-      setError('Failed to load user profile');
-      console.error('Error loading user profile:', err);
+      setError("Failed to load user profile");
+      console.error("Error loading user profile:", err);
     } finally {
       setLoading(false);
     }
@@ -86,10 +74,10 @@ const UserProfilePage: React.FC = () => {
       // Update basic profile info
       // await userService.updateProfile(profileData);
 
-      setSuccess('Profile updated successfully!');
+      setSuccess("Profile updated successfully!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      setError(err.response?.data?.message || "Failed to update profile");
     } finally {
       setUpdating(false);
     }
@@ -103,10 +91,10 @@ const UserProfilePage: React.FC = () => {
       // Update genre preferences
       // await userService.updateGenrePreferences(selectedGenres);
 
-      setSuccess('Movie preferences updated successfully!');
+      setSuccess("Movie preferences updated successfully!");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update preferences');
+      setError(err.response?.data?.message || "Failed to update preferences");
     } finally {
       setUpdating(false);
     }
@@ -115,13 +103,13 @@ const UserProfilePage: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProfileData({
       ...profileData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handleLogout = () => {
     authService.logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   // NEW loading UI (modern design)
@@ -129,7 +117,7 @@ const UserProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-950 pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
               <p className="text-gray-300 text-lg">Loading your profile...</p>
@@ -143,7 +131,7 @@ const UserProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header Section - NEW UI */}
-      <section className="bg-gradient-to-r from-blue-900 to-blue-800 py-16 text-center">
+      <section className="bg-linear-to-r from-blue-900 to-blue-800 py-16 text-center">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -153,7 +141,9 @@ const UserProfilePage: React.FC = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
               <UserIcon className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">My Profile</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              My Profile
+            </h1>
             <p className="text-lg text-blue-100 max-w-2xl mx-auto">
               Manage your account settings and movie preferences
             </p>
@@ -177,7 +167,7 @@ const UserProfilePage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-red-900/50 border border-red-600 text-red-300 p-4 rounded-lg flex items-center"
               >
-                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 mr-2 shrink-0" />
                 {error}
               </motion.div>
             )}
@@ -189,7 +179,7 @@ const UserProfilePage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-green-900/50 border border-green-600 text-green-300 p-4 rounded-lg flex items-center"
               >
-                <CheckCircle2 className="w-5 h-5 mr-2 flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 mr-2 shrink-0" />
                 {success}
               </motion.div>
             )}
@@ -205,15 +195,22 @@ const UserProfilePage: React.FC = () => {
                   <div className="flex items-center mb-6">
                     <Settings className="w-6 h-6 text-blue-500 mr-3" />
                     <div>
-                      <h2 className="text-2xl font-bold text-white">Account Information</h2>
-                      <p className="text-gray-400">Update your basic account details</p>
+                      <h2 className="text-2xl font-bold text-white">
+                        Account Information
+                      </h2>
+                      <p className="text-gray-400">
+                        Update your basic account details
+                      </p>
                     </div>
                   </div>
 
                   <form onSubmit={handleProfileUpdate} className="space-y-6">
                     {/* Full Name Input */}
                     <div className="space-y-2">
-                      <label htmlFor="fullName" className="text-sm font-medium text-gray-300 flex items-center">
+                      <label
+                        htmlFor="fullName"
+                        className="text-sm font-medium text-gray-300 flex items-center"
+                      >
                         <UserIcon className="w-4 h-4 mr-2" />
                         Full Name
                       </label>
@@ -231,7 +228,10 @@ const UserProfilePage: React.FC = () => {
 
                     {/* Email Input */}
                     <div className="space-y-2">
-                      <label htmlFor="email" className="text-sm font-medium text-gray-300 flex items-center">
+                      <label
+                        htmlFor="email"
+                        className="text-sm font-medium text-gray-300 flex items-center"
+                      >
                         <Mail className="w-4 h-4 mr-2" />
                         Email Address
                       </label>
@@ -243,14 +243,20 @@ const UserProfilePage: React.FC = () => {
                         disabled
                         className="w-full px-4 py-3 bg-gray-600/30 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
                       />
-                      <p className="text-gray-500 text-xs">Email cannot be changed</p>
+                      <p className="text-gray-500 text-xs">
+                        Email cannot be changed
+                      </p>
                     </div>
 
                     {/* Phone Input */}
                     <div className="space-y-2">
-                      <label htmlFor="phone" className="text-sm font-medium text-gray-300 flex items-center">
+                      <label
+                        htmlFor="phone"
+                        className="text-sm font-medium text-gray-300 flex items-center"
+                      >
                         <Phone className="w-4 h-4 mr-2" />
-                        Phone Number <span className="text-gray-500 ml-1">(optional)</span>
+                        Phone Number{" "}
+                        <span className="text-gray-500 ml-1">(optional)</span>
                       </label>
                       <input
                         type="tel"
@@ -299,8 +305,13 @@ const UserProfilePage: React.FC = () => {
                   <div className="flex items-center mb-6">
                     <Heart className="w-6 h-6 text-red-500 mr-3" />
                     <div>
-                      <h2 className="text-2xl font-bold text-white">Movie Preferences</h2>
-                      <p className="text-gray-400">Update your favorite movie genres to get better recommendations</p>
+                      <h2 className="text-2xl font-bold text-white">
+                        Movie Preferences
+                      </h2>
+                      <p className="text-gray-400">
+                        Update your favorite movie genres to get better
+                        recommendations
+                      </p>
                     </div>
                   </div>
 
@@ -349,7 +360,9 @@ const UserProfilePage: React.FC = () => {
                   <div className="flex items-center mb-6">
                     <Settings className="w-6 h-6 text-yellow-500 mr-3" />
                     <div>
-                      <h2 className="text-2xl font-bold text-white">Account Actions</h2>
+                      <h2 className="text-2xl font-bold text-white">
+                        Account Actions
+                      </h2>
                       <p className="text-gray-400">Manage your account</p>
                     </div>
                   </div>
@@ -357,7 +370,7 @@ const UserProfilePage: React.FC = () => {
                   <Button
                     onClick={handleLogout}
                     variant="outline"
-                    className="!bg-gray-800 !border-red-600 !text-red-400 hover:!bg-red-600 hover:!text-white"
+                    className="bg-gray-800! border-red-600! text-red-400! hover:bg-red-600! hover:text-white!"
                     size="lg"
                   >
                     <LogOut className="w-5 h-5 mr-2" />

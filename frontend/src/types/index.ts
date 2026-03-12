@@ -20,6 +20,9 @@ export interface Movie {
   posterUrl?: string;
   priceBase: number;
   createdAt: string;
+  poster: string;
+  rating: number;
+  duration: number;
   // Computed fields from backend
   currentlyShowing: boolean;
   formattedDuration: string;
@@ -54,10 +57,10 @@ export interface Theater {
 }
 
 export enum TheaterType {
-  STANDARD = 'STANDARD',
-  VIP = 'VIP',
-  IMAX = 'IMAX',
-  DOLBY = 'DOLBY'
+  STANDARD = "STANDARD",
+  VIP = "VIP",
+  IMAX = "IMAX",
+  DOLBY = "DOLBY",
 }
 
 // Showtime types - Updated to match backend ShowtimeDto
@@ -110,10 +113,10 @@ export interface Seat {
 }
 
 export enum SeatType {
-  STANDARD = 'STANDARD',
-  VIP = 'VIP',
-  COUPLE = 'COUPLE',
-  WHEELCHAIR = 'WHEELCHAIR'
+  STANDARD = "STANDARD",
+  VIP = "VIP",
+  COUPLE = "COUPLE",
+  WHEELCHAIR = "WHEELCHAIR",
 }
 
 export interface SeatInfo {
@@ -196,10 +199,10 @@ export interface Booking {
 }
 
 export enum BookingStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED'
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  CANCELLED = "CANCELLED",
+  COMPLETED = "COMPLETED",
 }
 
 export interface SeatBooking {

@@ -194,6 +194,13 @@ public class SeatService {
         // Clear existing seats
         List<Seat> existingSeats = seatRepository.findByTheaterOrderByRowLetterAscSeatNumberAsc(theater);
         if (!existingSeats.isEmpty()) {
+            if (seatBookingRepository.countBySeatIn(existingSeats) > 0) {
+                throw new com.example.cinema.exception.BusinessRuleViolationException(
+                    "Cannot reinitialize seats for theater '" + theater.getName() +
+                    "' because some seats have existing bookings. " +
+                    "Please cancel all related bookings before reinitializing."
+                );
+            }
             seatRepository.deleteAll(existingSeats);
         }
 

@@ -81,6 +81,12 @@ public interface SeatBookingRepository extends JpaRepository<SeatBooking, Long> 
     List<SeatBooking> findUserSeatsForShowtime(@Param("userId") Long userId, @Param("showtimeId") Long showtimeId);
 
     /**
+     * Check if any seat from a list has associated bookings
+     */
+    @Query("SELECT COUNT(sb) FROM SeatBooking sb WHERE sb.seat IN :seats")
+    long countBySeatIn(@Param("seats") List<Seat> seats);
+
+    /**
      * Cancel all seat bookings for a booking
      */
     @Query("UPDATE SeatBooking sb SET sb.status = 'CANCELLED', sb.updatedAt = CURRENT_TIMESTAMP WHERE sb.booking.id = :bookingId")

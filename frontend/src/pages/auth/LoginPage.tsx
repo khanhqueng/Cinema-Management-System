@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   Eye,
   EyeOff,
@@ -10,23 +10,20 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  Film
-} from 'lucide-react';
+  Film,
+} from "lucide-react";
 
-// OLD API services (keep 100% logic) - UNCHANGED
-import { authService } from '../../services/authService';
-import { LoginRequest } from '../../types';
+import { authService } from "../../services/authService";
+import { LoginRequest } from "../../types";
 
-// NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<LoginRequest>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +43,16 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      await authService.login(formData);
-      navigate('/');
+      const { user } = await authService.login(formData);
+
+      // Navigate based on user role
+      if (user.role === "ADMIN") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -59,7 +62,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gray-950 flex items-center justify-center relative overflow-hidden">
       {/* Background Elements - NEW UI */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 to-gray-950" />
+        <div className="absolute inset-0 bg-linear-to-br from-red-900/20 to-gray-950" />
         <div className="absolute top-0 left-0 w-72 h-72 bg-red-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl" />
       </div>
@@ -105,7 +108,9 @@ const LoginPage: React.FC = () => {
               {/* Header */}
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">Sign In</h2>
-                <p className="text-gray-400">Welcome back! Please sign in to continue</p>
+                <p className="text-gray-400">
+                  Welcome back! Please sign in to continue
+                </p>
               </div>
 
               {/* Form */}
@@ -117,14 +122,17 @@ const LoginPage: React.FC = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     className="bg-red-900/50 border border-red-600 text-red-300 p-4 rounded-lg flex items-center"
                   >
-                    <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 mr-2 shrink-0" />
                     {error}
                   </motion.div>
                 )}
 
                 {/* Email Input */}
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-gray-300 flex items-center">
+                  <label
+                    htmlFor="email"
+                    className="text-sm font-medium text-gray-300 flex items-center"
+                  >
                     <Mail className="w-4 h-4 mr-2" />
                     Email Address
                   </label>
@@ -143,13 +151,16 @@ const LoginPage: React.FC = () => {
 
                 {/* Password Input */}
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-gray-300 flex items-center">
+                  <label
+                    htmlFor="password"
+                    className="text-sm font-medium text-gray-300 flex items-center"
+                  >
                     <Lock className="w-4 h-4 mr-2" />
                     Password
                   </label>
                   <div className="relative">
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       id="password"
                       name="password"
                       value={formData.password}
@@ -164,9 +175,15 @@ const LoginPage: React.FC = () => {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -180,12 +197,24 @@ const LoginPage: React.FC = () => {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="sr-only"
                     />
-                    <div className={`w-5 h-5 border-2 border-gray-600 rounded mr-3 flex items-center justify-center transition-colors ${
-                      rememberMe ? 'bg-red-600 border-red-600' : 'bg-transparent'
-                    }`}>
+                    <div
+                      className={`w-5 h-5 border-2 border-gray-600 rounded mr-3 flex items-center justify-center transition-colors ${
+                        rememberMe
+                          ? "bg-red-600 border-red-600"
+                          : "bg-transparent"
+                      }`}
+                    >
                       {rememberMe && (
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        <svg
+                          className="w-3 h-3 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       )}
                     </div>
@@ -223,7 +252,7 @@ const LoginPage: React.FC = () => {
               {/* Footer */}
               <div className="text-center mt-8 pt-6 border-t border-gray-700">
                 <p className="text-gray-400">
-                  New to Cinema?{' '}
+                  New to Cinema?{" "}
                   <Link
                     to="/register"
                     className="text-red-400 hover:text-red-300 font-medium transition-colors"

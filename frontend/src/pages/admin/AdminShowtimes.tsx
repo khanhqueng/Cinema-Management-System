@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import {
   Clock,
   Film,
@@ -13,26 +13,23 @@ import {
   AlertCircle,
   Calendar,
   DollarSign,
-  Users,
   ArrowLeft,
   ArrowRight,
-  Activity,
-  CheckCircle
-} from 'lucide-react';
-
-// OLD API services (keep 100% logic) - UNCHANGED
-import adminService, { CreateShowtimeRequest, UpdateShowtimeRequest } from '../../services/adminService';
-import { movieService } from '../../services/movieService';
-import { theaterService } from '../../services/theaterService';
-import { Movie, Theater, Showtime, PageResponse } from '../../types';
-
-// NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+} from "lucide-react";
+import adminService, {
+  CreateShowtimeRequest,
+} from "../../services/adminService";
+import { movieService } from "../../services/movieService";
+import { theaterService } from "../../services/theaterService";
+import { showtimeService } from "../../services/showtimeService";
+import { Movie, Theater, Showtime, PageResponse } from "../../types";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
 
 const AdminShowtimes: React.FC = () => {
-  const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(null);
+  const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(
+    null
+  );
   const [movies, setMovies] = useState<Movie[]>([]);
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,55 +39,56 @@ const AdminShowtimes: React.FC = () => {
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: 0,
     theaterId: 0,
-    showDatetime: '',
-    price: 0
+    showDatetime: "",
+    price: 0,
   });
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     fetchInitialData();
-  }, []);
-
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchShowtimes();
-  }, [currentPage]);
+  }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchInitialData = async () => {
     try {
       const [moviesResponse, theatersResponse] = await Promise.all([
-        movieService.getAllMovies({ page: 0, size: 100, sortBy: 'title', sortDir: 'asc' }),
-        theaterService.getAllTheaters({ page: 0, size: 100, sortBy: 'name', sortDir: 'asc' })
+        movieService.getAllMovies({
+          page: 0,
+          size: 100,
+          sortBy: "title",
+          sortDir: "asc",
+        }),
+        theaterService.getAllTheaters({
+          page: 0,
+          size: 100,
+          sortBy: "name",
+          sortDir: "asc",
+        }),
       ]);
-
       setMovies(moviesResponse.content);
       setTheaters(theatersResponse.content);
       fetchShowtimes();
     } catch (err) {
-      console.error('Error fetching initial data:', err);
-      setError('Failed to load initial data');
+      console.error("Error fetching initial data:", err);
+      setError("Failed to load initial data");
     }
   };
 
   const fetchShowtimes = async () => {
     try {
       setLoading(true);
-      // Use direct API call since we don't have dedicated showtime service
-      const response = await fetch(`/api/showtimes?page=${currentPage}&size=10&sortBy=showDatetime&sortDir=desc`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+      const data = await showtimeService.getAllShowtimes({
+        page: currentPage,
+        size: 10,
+        sortBy: "showDatetime",
+        sortDir: "desc",
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setShowtimes(data);
-      } else {
-        throw new Error('Failed to fetch showtimes');
-      }
+      setShowtimes(data);
     } catch (err) {
-      console.error('Error fetching showtimes:', err);
-      setError('Failed to load showtimes');
+      console.error("Error fetching showtimes:", err);
+      setError("Failed to load showtimes");
     } finally {
       setLoading(false);
     }
@@ -101,19 +99,18 @@ const AdminShowtimes: React.FC = () => {
     try {
       if (editingShowtime) {
         await adminService.updateShowtime(editingShowtime.id, formData);
-        alert('Showtime updated successfully!');
+        alert("Showtime updated successfully!");
       } else {
         await adminService.createShowtime(formData);
-        alert('Showtime created successfully!');
+        alert("Showtime created successfully!");
       }
-
       setShowForm(false);
       setEditingShowtime(null);
       resetForm();
       fetchShowtimes();
     } catch (err) {
-      console.error('Error saving showtime:', err);
-      alert('Failed to save showtime');
+      console.error("Error saving showtime:", err);
+      alert("Failed to save showtime");
     }
   };
 
@@ -123,115 +120,169 @@ const AdminShowtimes: React.FC = () => {
       movieId: showtime.movieId,
       theaterId: showtime.theaterId,
       showDatetime: new Date(showtime.showDatetime).toISOString().slice(0, 16),
-      price: showtime.price
+      price: showtime.price,
     });
     setShowForm(true);
   };
 
   const handleDelete = async (showtimeId: number) => {
-    if (window.confirm('Are you sure you want to delete this showtime? This will also cancel all associated bookings.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this showtime? This will also cancel all associated bookings."
+      )
+    ) {
       try {
         await adminService.deleteShowtime(showtimeId);
-        alert('Showtime deleted successfully!');
+        alert("Showtime deleted successfully!");
         fetchShowtimes();
       } catch (err) {
-        console.error('Error deleting showtime:', err);
-        alert('Failed to delete showtime');
+        console.error("Error deleting showtime:", err);
+        alert("Failed to delete showtime");
       }
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      movieId: 0,
-      theaterId: 0,
-      showDatetime: '',
-      price: 0
-    });
+    setFormData({ movieId: 0, theaterId: 0, showDatetime: "", price: 0 });
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
+  const getMovieTitle = (movieId: number) =>
+    movies.find((m) => m.id === movieId)?.title || "Unknown Movie";
 
-  const getMovieTitle = (movieId: number): string => {
-    const movie = movies.find(m => m.id === movieId);
-    return movie?.title || 'Unknown Movie';
-  };
+  const getTheaterName = (theaterId: number) =>
+    theaters.find((t) => t.id === theaterId)?.name || "Unknown Theater";
 
-  const getTheaterName = (theaterId: number): string => {
-    const theater = theaters.find(t => t.id === theaterId);
-    return theater?.name || 'Unknown Theater';
-  };
-
+  // Loading state
   if (loading && !showtimes) {
     return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle}></div>
-        <p>Loading showtimes...</p>
+      <div className="flex flex-col items-center justify-center min-h-96 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+        <p className="text-gray-400">Loading showtimes...</p>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <h1 style={titleStyle}>Showtime Management</h1>
-        <button
+    <div className="space-y-6">
+      {/* Page Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-600/15 border border-red-500/20 rounded-lg">
+            <Clock className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">
+              Showtime Management
+            </h1>
+            <p className="text-sm text-gray-400">
+              {showtimes?.totalElements ?? 0} total showtimes
+            </p>
+          </div>
+        </div>
+        <Button
           onClick={() => {
             setEditingShowtime(null);
             resetForm();
             setShowForm(true);
           }}
-          style={addButtonStyle}
+          className="bg-red-600 hover:bg-red-700 text-white"
         >
-          + Add New Showtime
-        </button>
-      </div>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Showtime
+        </Button>
+      </motion.div>
 
-      {/* Showtime Form Modal */}
+      {/* Error */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center gap-2 bg-red-900/40 border border-red-600/50 text-red-300 p-4 rounded-lg text-sm"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </motion.div>
+      )}
+
+      {/* Modal Form */}
       {showForm && (
-        <div style={modalOverlayStyle}>
-          <div style={modalStyle}>
-            <div style={modalHeaderStyle}>
-              <h2>{editingShowtime ? 'Edit Showtime' : 'Add New Showtime'}</h2>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-red-400" />
+                <h2 className="text-lg font-semibold text-white">
+                  {editingShowtime ? "Edit Showtime" : "Add New Showtime"}
+                </h2>
+              </div>
               <button
                 onClick={() => setShowForm(false)}
-                style={closeButtonStyle}
+                className="text-gray-400 hover:text-white hover:bg-gray-700 p-1.5 rounded-lg transition-colors"
+                title="Close modal"
               >
-                ×
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} style={formStyle}>
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Movie *</label>
+            {/* Modal Body */}
+            <form
+              onSubmit={handleFormSubmit}
+              className="p-6 overflow-auto space-y-5"
+            >
+              {/* Movie & Theater */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                    <Film className="w-3.5 h-3.5" /> Movie *
+                  </label>
                   <select
                     value={formData.movieId}
-                    onChange={(e) => setFormData({...formData, movieId: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        movieId: parseInt(e.target.value),
+                      })
+                    }
                     required
-                    style={selectStyle}
+                    title="Select movie"
+                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
                   >
                     <option value={0}>Select a movie</option>
-                    {movies.map(movie => (
+                    {movies.map((movie) => (
                       <option key={movie.id} value={movie.id}>
-                        {movie.title} ({adminService.formatDate(movie.releaseDate)})
+                        {movie.title} (
+                        {adminService.formatDate(movie.releaseDate)})
                       </option>
                     ))}
                   </select>
                 </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Theater *</label>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5" /> Theater *
+                  </label>
                   <select
                     value={formData.theaterId}
-                    onChange={(e) => setFormData({...formData, theaterId: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        theaterId: parseInt(e.target.value),
+                      })
+                    }
                     required
-                    style={selectStyle}
+                    title="Select theater"
+                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
                   >
                     <option value={0}>Select a theater</option>
-                    {theaters.map(theater => (
+                    {theaters.map((theater) => (
                       <option key={theater.id} value={theater.id}>
                         {theater.name} (Capacity: {theater.capacity})
                       </option>
@@ -240,131 +291,186 @@ const AdminShowtimes: React.FC = () => {
                 </div>
               </div>
 
-              <div style={formRowStyle}>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Show Date & Time *</label>
+              {/* Date & Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" /> Date & Time *
+                  </label>
                   <input
                     type="datetime-local"
                     value={formData.showDatetime}
-                    onChange={(e) => setFormData({...formData, showDatetime: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, showDatetime: e.target.value })
+                    }
                     required
-                    style={inputStyle}
+                    title="Show date and time"
+                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
                   />
                 </div>
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Price (VND) *</label>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5" /> Price (VND) *
+                  </label>
                   <input
                     type="number"
                     value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price: parseFloat(e.target.value),
+                      })
+                    }
                     required
                     min="0"
                     step="1000"
-                    style={inputStyle}
                     placeholder="e.g., 100000"
+                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
                   />
                 </div>
               </div>
 
-              <div style={formActionsStyle}>
-                <button
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-2">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setShowForm(false)}
-                  style={cancelButtonStyle}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
-                  Cancel
-                </button>
-                <button type="submit" style={saveButtonStyle}>
-                  {editingShowtime ? 'Update' : 'Create'} Showtime
-                </button>
+                  <X className="w-4 h-4 mr-2" /> Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingShowtime ? "Update" : "Create"} Showtime
+                </Button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
 
-      {/* Showtimes List */}
-      {error ? (
-        <div style={errorMessageStyle}>{error}</div>
-      ) : (
-        <>
-          {showtimes && (
-            <div style={showtimesListStyle}>
-              <table style={tableStyle}>
+      {/* Showtimes Table */}
+      {showtimes && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="bg-gray-900 border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr style={tableHeaderRowStyle}>
-                    <th style={tableHeaderStyle}>Movie</th>
-                    <th style={tableHeaderStyle}>Theater</th>
-                    <th style={tableHeaderStyle}>Date & Time</th>
-                    <th style={tableHeaderStyle}>Price</th>
-                    <th style={tableHeaderStyle}>Available Seats</th>
-                    <th style={tableHeaderStyle}>Status</th>
-                    <th style={tableHeaderStyle}>Actions</th>
+                  <tr className="border-b border-gray-700 bg-gray-800/50">
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Movie
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Theater
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Date & Time
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Price
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Seats
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Status
+                    </th>
+                    <th className="text-left px-4 py-3 text-gray-400 font-medium">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {showtimes.content.map(showtime => (
-                    <tr key={showtime.id} style={tableRowStyle}>
-                      <td style={tableCellStyle}>
-                        <div style={movieTitleStyle}>
-                          {showtime.movieTitle || getMovieTitle(showtime.movieId)}
+                <tbody className="divide-y divide-gray-800">
+                  {showtimes.content.map((showtime) => (
+                    <tr
+                      key={showtime.id}
+                      className="hover:bg-gray-800/40 transition-colors"
+                    >
+                      {/* Movie */}
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white">
+                          {showtime.movieTitle ||
+                            getMovieTitle(showtime.movieId)}
                         </div>
-                        <div style={movieDetailStyle}>
-                          Duration: {showtime.movieDurationMinutes || 'N/A'} min
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={theaterNameStyle}>
-                          {showtime.theaterName || getTheaterName(showtime.theaterId)}
-                        </div>
-                        <div style={theaterDetailStyle}>
-                          Capacity: {showtime.theaterCapacity || 'N/A'}
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {showtime.movieDurationMinutes || "N/A"} min
                         </div>
                       </td>
-                      <td style={tableCellStyle}>
-                        <div style={dateTimeStyle}>
+
+                      {/* Theater */}
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white">
+                          {showtime.theaterName ||
+                            getTheaterName(showtime.theaterId)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          Cap: {showtime.theaterCapacity || "N/A"}
+                        </div>
+                      </td>
+
+                      {/* Date & Time */}
+                      <td className="px-4 py-3">
+                        <div className="text-white font-medium">
                           {adminService.formatDateTime(showtime.showDatetime)}
                         </div>
-                        <div style={relativeTimeStyle}>
+                        <div className="text-xs text-gray-500 mt-0.5">
                           {getRelativeTime(showtime.showDatetime)}
                         </div>
                       </td>
-                      <td style={tableCellStyle}>
-                        <div style={priceStyle}>
+
+                      {/* Price */}
+                      <td className="px-4 py-3">
+                        <span className="text-red-400 font-semibold">
                           {adminService.formatCurrency(showtime.price)}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={seatsStyle}>
-                          <span style={availableSeatsStyle}>{showtime.availableSeats}</span>
-                          <span style={seatsLabelStyle}>/ {showtime.theaterCapacity || 'N/A'}</span>
-                        </div>
-                        <div style={occupancyStyle}>
-                          {getOccupancyDisplay(showtime.availableSeats, showtime.theaterCapacity)}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <span style={{
-                          ...statusBadgeStyle,
-                          backgroundColor: getShowtimeStatusColor(showtime.showDatetime)
-                        }}>
-                          {getShowtimeStatus(showtime.showDatetime)}
                         </span>
                       </td>
-                      <td style={tableCellStyle}>
-                        <div style={actionButtonsStyle}>
+
+                      {/* Seats */}
+                      <td className="px-4 py-3">
+                        <div className="text-white font-semibold">
+                          {showtime.availableSeats}
+                          <span className="text-gray-500 font-normal text-xs ml-1">
+                            / {showtime.theaterCapacity || "N/A"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {getOccupancyDisplay(
+                            showtime.availableSeats,
+                            showtime.theaterCapacity
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <StatusBadge dateTimeString={showtime.showDatetime} />
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleEdit(showtime)}
-                            style={editButtonStyle}
                             disabled={isPast(showtime.showDatetime)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Edit"
                           >
-                            Edit
+                            <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(showtime.id)}
-                            style={deleteButtonStyle}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Delete"
                           >
-                            Delete
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -372,143 +478,104 @@ const AdminShowtimes: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-
-              {/* Pagination */}
-              {showtimes.totalPages > 1 && (
-                <div style={paginationStyle}>
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                    style={pageButtonStyle}
-                  >
-                    Previous
-                  </button>
-
-                  <span style={pageInfoStyle}>
-                    Page {currentPage + 1} of {showtimes.totalPages}
-                    ({showtimes.totalElements} total showtimes)
-                  </span>
-
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= showtimes.totalPages - 1}
-                    style={pageButtonStyle}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
             </div>
-          )}
-        </>
+
+            {/* Pagination */}
+            {showtimes.totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800 bg-gray-800/30">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Previous
+                </Button>
+                <span className="text-sm text-gray-400">
+                  Page{" "}
+                  <span className="text-white font-medium">
+                    {currentPage + 1}
+                  </span>{" "}
+                  of{" "}
+                  <span className="text-white font-medium">
+                    {showtimes.totalPages}
+                  </span>
+                  <span className="text-gray-600 ml-2">
+                    ({showtimes.totalElements} total)
+                  </span>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage >= showtimes.totalPages - 1}
+                  className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                >
+                  Next <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </Card>
+        </motion.div>
       )}
     </div>
   );
 };
 
+// Status Badge component
+function StatusBadge({ dateTimeString }: { dateTimeString: string }) {
+  const status = getShowtimeStatus(dateTimeString);
+  const styles: Record<string, string> = {
+    Past: "bg-gray-700/50 text-gray-400 border-gray-600/50",
+    Today: "bg-red-600/20 text-red-400 border-red-500/30",
+    "This Week": "bg-orange-600/20 text-orange-400 border-orange-500/30",
+    Upcoming: "bg-green-600/20 text-green-400 border-green-500/30",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+        styles[status] ?? styles["Past"]
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
 // Helper functions
 const getRelativeTime = (dateTimeString: string): string => {
-  const now = new Date();
-  const showTime = new Date(dateTimeString);
-  const diffInMs = showTime.getTime() - now.getTime();
-  const diffInHours = Math.round(diffInMs / (1000 * 60 * 60));
-
-  if (diffInHours < -24) {
+  const diffInHours = Math.round(
+    (new Date(dateTimeString).getTime() - Date.now()) / (1000 * 60 * 60)
+  );
+  if (diffInHours < -24)
     return `${Math.abs(Math.round(diffInHours / 24))} days ago`;
-  } else if (diffInHours < 0) {
-    return `${Math.abs(diffInHours)} hours ago`;
-  } else if (diffInHours < 24) {
-    return `in ${diffInHours} hours`;
-  } else {
-    return `in ${Math.round(diffInHours / 24)} days`;
-  }
+  if (diffInHours < 0) return `${Math.abs(diffInHours)} hours ago`;
+  if (diffInHours < 24) return `in ${diffInHours} hours`;
+  return `in ${Math.round(diffInHours / 24)} days`;
 };
 
 const getShowtimeStatus = (dateTimeString: string): string => {
-  const now = new Date();
-  const showTime = new Date(dateTimeString);
-
-  if (showTime < now) {
-    return 'Past';
-  } else if (showTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-    return 'Today';
-  } else if (showTime.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
-    return 'This Week';
-  } else {
-    return 'Upcoming';
-  }
+  const now = Date.now();
+  const showTime = new Date(dateTimeString).getTime();
+  if (showTime < now) return "Past";
+  if (showTime - now < 24 * 60 * 60 * 1000) return "Today";
+  if (showTime - now < 7 * 24 * 60 * 60 * 1000) return "This Week";
+  return "Upcoming";
 };
 
-const getShowtimeStatusColor = (dateTimeString: string): string => {
-  const status = getShowtimeStatus(dateTimeString);
-  switch (status) {
-    case 'Past':
-      return '#666';
-    case 'Today':
-      return '#e50914';
-    case 'This Week':
-      return '#ff9800';
-    case 'Upcoming':
-      return '#4caf50';
-    default:
-      return '#666';
-  }
+const getOccupancyDisplay = (
+  availableSeats: number,
+  totalCapacity: number
+): string => {
+  if (!totalCapacity) return "N/A";
+  const rate = Math.round(
+    ((totalCapacity - availableSeats) / totalCapacity) * 100
+  );
+  return `${rate}% booked`;
 };
 
-const getOccupancyDisplay = (availableSeats: number, totalCapacity: number): string => {
-  if (!totalCapacity) return 'N/A';
-  const occupancyRate = Math.round(((totalCapacity - availableSeats) / totalCapacity) * 100);
-  return `${occupancyRate}% booked`;
-};
-
-const isPast = (dateTimeString: string): boolean => {
-  return new Date(dateTimeString) < new Date();
-};
-
-// Styles (reuse existing styles)
-const containerStyle: React.CSSProperties = { padding: '2rem', backgroundColor: '#f5f5f5', minHeight: '100vh' };
-const loadingContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: '1rem' };
-const spinnerStyle: React.CSSProperties = { border: '4px solid #f3f3f3', borderTop: '4px solid #e50914', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite' };
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' };
-const titleStyle: React.CSSProperties = { fontSize: '2rem', fontWeight: 'bold', color: '#333', margin: 0 };
-const addButtonStyle: React.CSSProperties = { backgroundColor: '#e50914', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' };
-const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalStyle: React.CSSProperties = { backgroundColor: 'white', borderRadius: '12px', padding: '0', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' };
-const modalHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', borderBottom: '1px solid #eee', backgroundColor: '#f8f9fa' };
-const closeButtonStyle: React.CSSProperties = { background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#666', padding: '0.2rem 0.5rem' };
-const formStyle: React.CSSProperties = { padding: '2rem', overflow: 'auto' };
-const formRowStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' };
-const formGroupStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', marginBottom: '1rem' };
-const labelStyle: React.CSSProperties = { marginBottom: '0.5rem', fontWeight: 'bold', color: '#333' };
-const inputStyle: React.CSSProperties = { padding: '0.8rem', border: '1px solid #ddd', borderRadius: '8px', fontSize: '1rem' };
-const selectStyle: React.CSSProperties = { ...inputStyle, backgroundColor: 'white' };
-const formActionsStyle: React.CSSProperties = { display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' };
-const cancelButtonStyle: React.CSSProperties = { backgroundColor: '#666', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
-const saveButtonStyle: React.CSSProperties = { backgroundColor: '#e50914', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
-const errorMessageStyle: React.CSSProperties = { color: '#f44336', backgroundColor: '#ffebee', padding: '1rem', borderRadius: '8px', marginBottom: '2rem' };
-const showtimesListStyle: React.CSSProperties = { backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse' as const };
-const tableHeaderRowStyle: React.CSSProperties = { backgroundColor: '#f8f9fa' };
-const tableHeaderStyle: React.CSSProperties = { padding: '1rem', textAlign: 'left' as const, fontWeight: 'bold', color: '#333', borderBottom: '2px solid #dee2e6' };
-const tableRowStyle: React.CSSProperties = { borderBottom: '1px solid #dee2e6' };
-const tableCellStyle: React.CSSProperties = { padding: '1rem', verticalAlign: 'top' as const };
-const movieTitleStyle: React.CSSProperties = { fontWeight: 'bold', marginBottom: '0.2rem' };
-const movieDetailStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#666' };
-const theaterNameStyle: React.CSSProperties = { fontWeight: 'bold', marginBottom: '0.2rem' };
-const theaterDetailStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#666' };
-const dateTimeStyle: React.CSSProperties = { fontWeight: 'bold', marginBottom: '0.2rem' };
-const relativeTimeStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#666' };
-const priceStyle: React.CSSProperties = { fontWeight: 'bold', color: '#e50914', fontSize: '1.1rem' };
-const seatsStyle: React.CSSProperties = { display: 'flex', alignItems: 'baseline', marginBottom: '0.2rem' };
-const availableSeatsStyle: React.CSSProperties = { fontSize: '1.5rem', fontWeight: 'bold', color: '#333' };
-const seatsLabelStyle: React.CSSProperties = { fontSize: '0.9rem', color: '#666', marginLeft: '0.2rem' };
-const occupancyStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#666' };
-const statusBadgeStyle: React.CSSProperties = { color: 'white', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' };
-const actionButtonsStyle: React.CSSProperties = { display: 'flex', gap: '0.5rem' };
-const editButtonStyle: React.CSSProperties = { backgroundColor: '#4caf50', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' };
-const deleteButtonStyle: React.CSSProperties = { backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' };
-const paginationStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' };
-const pageButtonStyle: React.CSSProperties = { backgroundColor: '#e50914', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' };
-const pageInfoStyle: React.CSSProperties = { color: '#666', fontSize: '0.9rem' };
+const isPast = (dateTimeString: string): boolean =>
+  new Date(dateTimeString) < new Date();
 
 export default AdminShowtimes;

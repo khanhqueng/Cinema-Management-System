@@ -1,36 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   LayoutDashboard,
   Film,
   Building2,
   Clock,
   Ticket,
-  Users,
-  TrendingUp,
   BarChart3,
   Loader2,
   AlertCircle,
   RefreshCw,
-  Calendar,
   Target,
-  Activity
-} from 'lucide-react';
+  Activity,
+} from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
-import adminService, { MovieStats, ShowtimeStats, TheaterStats, TheaterUtilization } from '../../services/adminService';
+import adminService, {
+  MovieStats,
+  ShowtimeStats,
+  TheaterStats,
+  TheaterUtilization,
+} from "../../services/adminService";
 
 // NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+
+// Maps utilization rate to Tailwind background color class
+const getUtilizationBarClass = (rate: number): string => {
+  if (rate >= 80) return "bg-red-500";
+  if (rate >= 60) return "bg-orange-500";
+  if (rate >= 40) return "bg-yellow-500";
+  return "bg-green-500";
+};
+
+// Maps utilization rate to nearest Tailwind width class (steps of 10)
+const getUtilizationWidthClass = (rate: number): string => {
+  const clamped = Math.min(Math.max(Math.round(rate / 10) * 10, 0), 100);
+  const map: Record<number, string> = {
+    0: "w-0",
+    10: "w-1/10",
+    20: "w-1/5",
+    30: "w-3/10",
+    40: "w-2/5",
+    50: "w-1/2",
+    60: "w-3/5",
+    70: "w-7/10",
+    80: "w-4/5",
+    90: "w-9/10",
+    100: "w-full",
+  };
+  return map[clamped] ?? "w-0";
+};
 
 const AdminDashboard: React.FC = () => {
   const [movieStats, setMovieStats] = useState<MovieStats | null>(null);
-  const [showtimeStats, setShowtimeStats] = useState<ShowtimeStats | null>(null);
+  const [showtimeStats, setShowtimeStats] = useState<ShowtimeStats | null>(
+    null
+  );
   const [theaterStats, setTheaterStats] = useState<TheaterStats | null>(null);
-  const [theaterUtilization, setTheaterUtilization] = useState<TheaterUtilization[]>([]);
+  const [theaterUtilization, setTheaterUtilization] = useState<
+    TheaterUtilization[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +75,7 @@ const AdminDashboard: React.FC = () => {
           adminService.getMovieStats(),
           adminService.getShowtimeStats(),
           adminService.getTheaterStats(),
-          adminService.getTheaterUtilization()
+          adminService.getTheaterUtilization(),
         ]);
 
         setMovieStats(movies);
@@ -50,8 +83,8 @@ const AdminDashboard: React.FC = () => {
         setTheaterStats(theaters);
         setTheaterUtilization(utilization);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -65,7 +98,7 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-950 pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
               <p className="text-gray-300 text-lg">Loading dashboard...</p>
@@ -81,13 +114,16 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-950 pt-24 pb-16">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-4">Error</h2>
                 <p className="text-gray-400 mb-6">{error}</p>
-                <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700">
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh
                 </Button>
@@ -102,7 +138,7 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header Section - NEW UI */}
-      <section className="bg-gradient-to-r from-slate-900 to-gray-800 py-16 text-center">
+      <section className="bg-linear-to-r from-slate-900 to-gray-800 py-16 text-center">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -112,7 +148,9 @@ const AdminDashboard: React.FC = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
               <LayoutDashboard className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Admin Dashboard</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Admin Dashboard
+            </h1>
             <p className="text-lg text-gray-200 max-w-2xl mx-auto">
               Cinema management overview
             </p>
@@ -124,7 +162,6 @@ const AdminDashboard: React.FC = () => {
       <main className="py-12 bg-gray-950">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="space-y-12">
-
             {/* Quick Actions */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -143,11 +180,16 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Card className="bg-gray-800 border-gray-700 hover:border-red-500 transition-all duration-300">
                     <CardContent className="p-6">
-                      <Link to="/admin/movies" className="flex flex-col items-center space-y-4 text-center">
+                      <Link
+                        to="/admin/movies"
+                        className="flex flex-col items-center space-y-4 text-center"
+                      >
                         <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center">
                           <Film className="w-6 h-6 text-white" />
                         </div>
-                        <span className="text-white font-semibold">Manage Movies</span>
+                        <span className="text-white font-semibold">
+                          Manage Movies
+                        </span>
                       </Link>
                     </CardContent>
                   </Card>
@@ -160,11 +202,16 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Card className="bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300">
                     <CardContent className="p-6">
-                      <Link to="/admin/theaters" className="flex flex-col items-center space-y-4 text-center">
+                      <Link
+                        to="/admin/theaters"
+                        className="flex flex-col items-center space-y-4 text-center"
+                      >
                         <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
                           <Building2 className="w-6 h-6 text-white" />
                         </div>
-                        <span className="text-white font-semibold">Manage Theaters</span>
+                        <span className="text-white font-semibold">
+                          Manage Theaters
+                        </span>
                       </Link>
                     </CardContent>
                   </Card>
@@ -177,11 +224,16 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Card className="bg-gray-800 border-gray-700 hover:border-green-500 transition-all duration-300">
                     <CardContent className="p-6">
-                      <Link to="/admin/showtimes" className="flex flex-col items-center space-y-4 text-center">
+                      <Link
+                        to="/admin/showtimes"
+                        className="flex flex-col items-center space-y-4 text-center"
+                      >
                         <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
                           <Clock className="w-6 h-6 text-white" />
                         </div>
-                        <span className="text-white font-semibold">Manage Showtimes</span>
+                        <span className="text-white font-semibold">
+                          Manage Showtimes
+                        </span>
                       </Link>
                     </CardContent>
                   </Card>
@@ -194,11 +246,16 @@ const AdminDashboard: React.FC = () => {
                 >
                   <Card className="bg-gray-800 border-gray-700 hover:border-yellow-500 transition-all duration-300">
                     <CardContent className="p-6">
-                      <Link to="/admin/bookings" className="flex flex-col items-center space-y-4 text-center">
+                      <Link
+                        to="/admin/bookings"
+                        className="flex flex-col items-center space-y-4 text-center"
+                      >
                         <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
                           <Ticket className="w-6 h-6 text-white" />
                         </div>
-                        <span className="text-white font-semibold">View Bookings</span>
+                        <span className="text-white font-semibold">
+                          View Bookings
+                        </span>
                       </Link>
                     </CardContent>
                   </Card>
@@ -217,7 +274,6 @@ const AdminDashboard: React.FC = () => {
                 Statistics Overview
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
                 {/* Movie Stats */}
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -233,20 +289,36 @@ const AdminDashboard: React.FC = () => {
                       {movieStats && (
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Total Movies:</span>
-                            <span className="text-white font-bold text-lg">{movieStats.totalMovies}</span>
+                            <span className="text-gray-400 text-sm">
+                              Total Movies:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {movieStats.totalMovies}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Currently Showing:</span>
-                            <span className="text-white font-bold text-lg">{movieStats.currentlyShowing}</span>
+                            <span className="text-gray-400 text-sm">
+                              Currently Showing:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {movieStats.currentlyShowing}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Upcoming:</span>
-                            <span className="text-white font-bold text-lg">{movieStats.upcoming}</span>
+                            <span className="text-gray-400 text-sm">
+                              Upcoming:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {movieStats.upcoming}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Total Genres:</span>
-                            <span className="text-white font-bold text-lg">{movieStats.totalGenres}</span>
+                            <span className="text-gray-400 text-sm">
+                              Total Genres:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {movieStats.totalGenres}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -263,26 +335,42 @@ const AdminDashboard: React.FC = () => {
                   <Card className="bg-gray-800 border-gray-700">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-                        <h3 className="text-xl font-bold text-white">Theaters</h3>
+                        <h3 className="text-xl font-bold text-white">
+                          Theaters
+                        </h3>
                         <Building2 className="w-8 h-8 text-blue-500" />
                       </div>
                       {theaterStats && (
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Total Theaters:</span>
-                            <span className="text-white font-bold text-lg">{theaterStats.totalTheaters}</span>
+                            <span className="text-gray-400 text-sm">
+                              Total Theaters:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {theaterStats.totalTheaters}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Standard:</span>
-                            <span className="text-white font-bold text-lg">{theaterStats.standardTheaters}</span>
+                            <span className="text-gray-400 text-sm">
+                              Standard:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {theaterStats.standardTheaters}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-gray-400 text-sm">VIP:</span>
-                            <span className="text-white font-bold text-lg">{theaterStats.vipTheaters}</span>
+                            <span className="text-white font-bold text-lg">
+                              {theaterStats.vipTheaters}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Total Capacity:</span>
-                            <span className="text-white font-bold text-lg">{theaterStats.totalCapacity}</span>
+                            <span className="text-gray-400 text-sm">
+                              Total Capacity:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {theaterStats.totalCapacity}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -299,22 +387,36 @@ const AdminDashboard: React.FC = () => {
                   <Card className="bg-gray-800 border-gray-700">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-                        <h3 className="text-xl font-bold text-white">Showtimes</h3>
+                        <h3 className="text-xl font-bold text-white">
+                          Showtimes
+                        </h3>
                         <Clock className="w-8 h-8 text-green-500" />
                       </div>
                       {showtimeStats && (
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Total Showtimes:</span>
-                            <span className="text-white font-bold text-lg">{showtimeStats.totalShowtimes}</span>
+                            <span className="text-gray-400 text-sm">
+                              Total Showtimes:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {showtimeStats.totalShowtimes}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Upcoming:</span>
-                            <span className="text-white font-bold text-lg">{showtimeStats.upcomingShowtimes}</span>
+                            <span className="text-gray-400 text-sm">
+                              Upcoming:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {showtimeStats.upcomingShowtimes}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-sm">Available Seats:</span>
-                            <span className="text-white font-bold text-lg">{showtimeStats.totalAvailableSeats}</span>
+                            <span className="text-gray-400 text-sm">
+                              Available Seats:
+                            </span>
+                            <span className="text-white font-bold text-lg">
+                              {showtimeStats.totalAvailableSeats}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -351,10 +453,13 @@ const AdminDashboard: React.FC = () => {
                       <Card className="bg-gray-800 border-gray-700">
                         <CardContent className="p-6">
                           <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-bold text-white">{theater.name}</h4>
+                            <h4 className="text-lg font-bold text-white">
+                              {theater.name}
+                            </h4>
                             <Badge
-                              style={{ backgroundColor: adminService.getUtilizationColor(utilizationRate) }}
-                              className="text-white font-medium"
+                              className={`text-white font-medium ${getUtilizationBarClass(
+                                utilizationRate
+                              )}`}
                             >
                               {utilizationRate}%
                             </Badge>
@@ -362,19 +467,21 @@ const AdminDashboard: React.FC = () => {
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Capacity:</span>
-                              <span className="text-gray-300">{theater.capacity} seats</span>
+                              <span className="text-gray-300">
+                                {theater.capacity} seats
+                              </span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Booked:</span>
-                              <span className="text-gray-300">{theater.totalBookedSeats} seats</span>
+                              <span className="text-gray-300">
+                                {theater.totalBookedSeats} seats
+                              </span>
                             </div>
                             <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
                               <div
-                                className="h-2 rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${utilizationRate}%`,
-                                  backgroundColor: adminService.getUtilizationColor(utilizationRate)
-                                }}
+                                className={`h-2 rounded-full transition-all duration-300 ${getUtilizationWidthClass(
+                                  utilizationRate
+                                )} ${getUtilizationBarClass(utilizationRate)}`}
                               />
                             </div>
                           </div>

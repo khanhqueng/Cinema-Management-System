@@ -1,10 +1,5 @@
-import api from './api';
-import {
-  Movie,
-  Theater,
-  TheaterType,
-  PageResponse
-} from '../types';
+import api from "./api";
+import { Movie, Theater, TheaterType } from "../types";
 
 // Admin-specific request types
 export interface CreateMovieRequest {
@@ -24,6 +19,8 @@ export interface CreateTheaterRequest {
   name: string;
   capacity: number;
   theaterType: TheaterType;
+  rows?: number;
+  seatsPerRow?: number;
 }
 
 export interface UpdateTheaterRequest extends Partial<CreateTheaterRequest> {}
@@ -78,7 +75,7 @@ export const adminService = {
   // ========== MOVIE ADMIN OPERATIONS ==========
 
   async createMovie(movie: CreateMovieRequest): Promise<Movie> {
-    const response = await api.post('/movies', movie);
+    const response = await api.post("/movies", movie);
     return response.data;
   },
 
@@ -92,18 +89,28 @@ export const adminService = {
   },
 
   async getMovieStats(): Promise<MovieStats> {
-    const response = await api.get('/movies/stats');
+    const response = await api.get("/movies/stats");
     return response.data;
   },
 
   // ========== THEATER ADMIN OPERATIONS ==========
 
   async createTheater(theater: CreateTheaterRequest): Promise<Theater> {
-    const response = await api.post('/theaters', theater);
+    // Derive capacity from seat layout when creating
+    const capacity =
+      theater.capacity || (theater.rows ?? 10) * (theater.seatsPerRow ?? 12);
+    const response = await api.post("/theaters", {
+      name: theater.name,
+      capacity,
+      theaterType: theater.theaterType,
+    });
     return response.data;
   },
 
-  async updateTheater(id: number, theater: UpdateTheaterRequest): Promise<Theater> {
+  async updateTheater(
+    id: number,
+    theater: UpdateTheaterRequest,
+  ): Promise<Theater> {
     const response = await api.put(`/theaters/${id}`, theater);
     return response.data;
   },
@@ -113,28 +120,31 @@ export const adminService = {
   },
 
   async getTheaterStats(): Promise<TheaterStats> {
-    const response = await api.get('/theaters/stats');
+    const response = await api.get("/theaters/stats");
     return response.data;
   },
 
   async getTheaterUtilization(): Promise<TheaterUtilization[]> {
-    const response = await api.get('/theaters/utilization');
+    const response = await api.get("/theaters/utilization");
     return response.data;
   },
 
   async getTheaterTypes(): Promise<TheaterType[]> {
-    const response = await api.get('/theaters/types');
+    const response = await api.get("/theaters/types");
     return response.data;
   },
 
   // ========== SHOWTIME ADMIN OPERATIONS ==========
 
   async createShowtime(showtime: CreateShowtimeRequest): Promise<any> {
-    const response = await api.post('/showtimes', showtime);
+    const response = await api.post("/showtimes", showtime);
     return response.data;
   },
 
-  async updateShowtime(id: number, showtime: UpdateShowtimeRequest): Promise<any> {
+  async updateShowtime(
+    id: number,
+    showtime: UpdateShowtimeRequest,
+  ): Promise<any> {
     const response = await api.put(`/showtimes/${id}`, showtime);
     return response.data;
   },
@@ -144,7 +154,7 @@ export const adminService = {
   },
 
   async getShowtimeStats(): Promise<ShowtimeStats> {
-    const response = await api.get('/showtimes/stats');
+    const response = await api.get("/showtimes/stats");
     return response.data;
   },
 
@@ -153,23 +163,36 @@ export const adminService = {
     return response.data;
   },
 
+  // ========== SEAT ADMIN OPERATIONS ==========
+
+  async initializeTheaterSeats(
+    theaterId: number,
+    rows: number,
+    seatsPerRow: number,
+  ): Promise<void> {
+    await api.post(`/seats/theater/${theaterId}/initialize`, {
+      rows,
+      seatsPerRow,
+    });
+  },
+
   // ========== UTILITY FUNCTIONS ==========
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(amount);
   },
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
+    return date.toLocaleDateString("vi-VN");
   },
 
   formatDateTime(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
+    return date.toLocaleString("vi-VN");
   },
 
   calculateUtilizationRate(totalBookedSeats: number, capacity: number): number {
@@ -186,28 +209,28 @@ export const adminService = {
   getTheaterTypeDisplay(type: TheaterType): string {
     switch (type) {
       case TheaterType.STANDARD:
-        return 'Thường';
+        return "Thường";
       case TheaterType.VIP:
-        return 'VIP';
+        return "VIP";
       case TheaterType.IMAX:
-        return 'IMAX';
+        return "IMAX";
       case TheaterType.DOLBY:
-        return 'Dolby';
+        return "Dolby";
       default:
-        return 'Thường';
+        return "Thường";
     }
   },
 
   // Status color helpers
   getStatusColor(isActive: boolean): string {
-    return isActive ? '#4caf50' : '#f44336';
+    return isActive ? "#4caf50" : "#f44336";
   },
 
   getUtilizationColor(rate: number): string {
-    if (rate >= 80) return '#4caf50'; // Green - High utilization
-    if (rate >= 50) return '#ff9800'; // Orange - Medium utilization
-    return '#f44336'; // Red - Low utilization
-  }
+    if (rate >= 80) return "#4caf50"; // Green - High utilization
+    if (rate >= 50) return "#ff9800"; // Orange - Medium utilization
+    return "#f44336"; // Red - Low utilization
+  },
 };
 
 export default adminService;

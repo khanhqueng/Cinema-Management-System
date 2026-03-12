@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { authService } from '../../services/authService';
-import styles from './Header.module.css';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { authService } from "../../services/authService";
+import styles from "./Header.module.css";
 
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isAuthenticated = authService.isAuthenticated();
+  const isAdmin = authService.isAdmin();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = () => {
     authService.logout();
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   const toggleMobileMenu = () => {
@@ -32,7 +33,9 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className={`${styles.netflixHeader} ${isScrolled ? styles.scrolled : ''}`}>
+    <header
+      className={`${styles.netflixHeader} ${isScrolled ? styles.scrolled : ""}`}
+    >
       <nav className={styles.netflixNav}>
         {/* Logo */}
         <div className={styles.netflixNavLeft}>
@@ -45,7 +48,9 @@ const Header: React.FC = () => {
             <li>
               <Link
                 to="/"
-                className={`${styles.navLink} ${isActiveLink('/') ? styles.active : ''}`}
+                className={`${styles.navLink} ${
+                  isActiveLink("/") ? styles.active : ""
+                }`}
               >
                 Home
               </Link>
@@ -53,7 +58,9 @@ const Header: React.FC = () => {
             <li>
               <Link
                 to="/movies"
-                className={`${styles.navLink} ${isActiveLink('/movies') ? styles.active : ''}`}
+                className={`${styles.navLink} ${
+                  isActiveLink("/movies") ? styles.active : ""
+                }`}
               >
                 Movies
               </Link>
@@ -61,7 +68,9 @@ const Header: React.FC = () => {
             <li>
               <Link
                 to="/theaters"
-                className={`${styles.navLink} ${isActiveLink('/theaters') ? styles.active : ''}`}
+                className={`${styles.navLink} ${
+                  isActiveLink("/theaters") ? styles.active : ""
+                }`}
               >
                 Theaters
               </Link>
@@ -69,20 +78,40 @@ const Header: React.FC = () => {
             <li>
               <Link
                 to="/recommendations"
-                className={`${styles.navLink} ${isActiveLink('/recommendations') ? styles.active : ''}`}
+                className={`${styles.navLink} ${
+                  isActiveLink("/recommendations") ? styles.active : ""
+                }`}
               >
                 For You
               </Link>
             </li>
             {isAuthenticated && (
-              <li>
-                <Link
-                  to="/bookings"
-                  className={`${styles.navLink} ${isActiveLink('/bookings') ? styles.active : ''}`}
-                >
-                  My Bookings
-                </Link>
-              </li>
+              <>
+                <li>
+                  <Link
+                    to="/bookings"
+                    className={`${styles.navLink} ${
+                      isActiveLink("/bookings") ? styles.active : ""
+                    }`}
+                  >
+                    My Bookings
+                  </Link>
+                </li>
+                {isAdmin && (
+                  <li>
+                    <Link
+                      to="/admin"
+                      className={`${styles.navLink} ${
+                        location.pathname.startsWith("/admin")
+                          ? styles.active
+                          : ""
+                      }`}
+                    >
+                      Admin
+                    </Link>
+                  </li>
+                )}
+              </>
             )}
           </ul>
         </div>
@@ -100,8 +129,13 @@ const Header: React.FC = () => {
               </div>
               <div className={styles.dropdownMenu}>
                 <button onClick={handleLogout} className={styles.logoutBtn}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.59L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
                   </svg>
                   Sign Out
                 </button>
@@ -119,7 +153,11 @@ const Header: React.FC = () => {
           )}
 
           {/* Mobile Menu Button */}
-          <button className={styles.mobileMenuBtn} onClick={toggleMobileMenu}>
+          <button
+            aria-label="Toggle mobile menu"
+            className={styles.mobileMenuBtn}
+            onClick={toggleMobileMenu}
+          >
             <span></span>
             <span></span>
             <span></span>
@@ -127,37 +165,75 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.open : ''}`}>
+        <div
+          className={`${styles.mobileMenu} ${
+            isMobileMenuOpen ? styles.open : ""
+          }`}
+        >
           <ul className={styles.mobileNavLinks}>
             <li>
-              <Link to="/" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <Link
+                to="/"
+                className={styles.mobileNavLink}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 Home
               </Link>
             </li>
             <li>
-              <Link to="/movies" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <Link
+                to="/movies"
+                className={styles.mobileNavLink}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 Movies
               </Link>
             </li>
             <li>
-              <Link to="/theaters" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <Link
+                to="/theaters"
+                className={styles.mobileNavLink}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 Theaters
               </Link>
             </li>
             <li>
-              <Link to="/recommendations" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+              <Link
+                to="/recommendations"
+                className={styles.mobileNavLink}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 For You
               </Link>
             </li>
             {isAuthenticated ? (
               <>
                 <li>
-                  <Link to="/bookings" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link
+                    to="/bookings"
+                    className={styles.mobileNavLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     My Bookings
                   </Link>
                 </li>
+                {isAdmin && (
+                  <li>
+                    <Link
+                      to="/admin"
+                      className={styles.mobileNavLink}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Admin Dashboard
+                    </Link>
+                  </li>
+                )}
                 <li>
-                  <button onClick={handleLogout} className={`${styles.mobileNavLink} ${styles.logout}`}>
+                  <button
+                    onClick={handleLogout}
+                    className={`${styles.mobileNavLink} ${styles.logout}`}
+                  >
                     Sign Out
                   </button>
                 </li>
@@ -165,12 +241,20 @@ const Header: React.FC = () => {
             ) : (
               <>
                 <li>
-                  <Link to="/login" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link
+                    to="/login"
+                    className={styles.mobileNavLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     Sign In
                   </Link>
                 </li>
                 <li>
-                  <Link to="/register" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link
+                    to="/register"
+                    className={styles.mobileNavLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     Sign Up
                   </Link>
                 </li>
