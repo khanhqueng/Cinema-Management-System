@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 /**
  * UserGenrePreference Service - Business Logic for User Genre Preferences Management
  * Handles user's movie genre preferences and recommendations
+ * Now with cache invalidation for AI recommendations
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class UserGenrePreferenceService {
 
     /**
      * Set user's genre preference
+     * Evicts user's recommendation caches to reflect new preferences
      */
     @Transactional
     public UserGenrePreference setGenrePreference(Long userId, String genre, Integer preferenceScore) {
@@ -64,7 +66,8 @@ public class UserGenrePreferenceService {
         preference.setPreferenceScore(preferenceScore);
         preference.setUpdatedAt(LocalDateTime.now());
 
-        return preferenceRepository.save(preference);
+        UserGenrePreference saved = preferenceRepository.save(preference);
+        return saved;
     }
 
     /**

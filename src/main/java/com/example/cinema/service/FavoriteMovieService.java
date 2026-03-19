@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 /**
  * FavoriteMovie Service - Business Logic for Favorite Movies Management
  * Handles user's favorite movies operations
+ * Now with cache invalidation for AI recommendations
  */
 @Service
 @RequiredArgsConstructor
@@ -30,9 +31,11 @@ public class FavoriteMovieService {
     private final FavoriteMovieRepository favoriteMovieRepository;
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
+    private final CacheManagementService cacheManagementService;
 
     /**
      * Add movie to user's favorites
+     * Evicts user's recommendation caches to reflect new preferences
      */
     @Transactional
     public FavoriteMovie addToFavorites(Long userId, Long movieId) {
@@ -52,11 +55,17 @@ public class FavoriteMovieService {
                 .movie(movie)
                 .build();
 
-        return favoriteMovieRepository.save(favoriteMovie);
+        FavoriteMovie saved = favoriteMovieRepository.save(favoriteMovie);
+
+        // Evict user's recommendation caches
+        cacheManagementService.evictUserRecommendationCaches(userId);
+
+        return saved;
     }
 
     /**
      * Remove movie from user's favorites
+     * Evicts user's recommendation caches to reflect updated preferences
      */
     @Transactional
     public void removeFromFavorites(Long userId, Long movieId) {
@@ -67,6 +76,9 @@ public class FavoriteMovieService {
                 .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
 
         favoriteMovieRepository.deleteByUserAndMovie(user, movie);
+
+        // Evict user's recommendation caches
+        cacheManagementService.evictUserRecommendationCaches(userId);
     }
 
     /**

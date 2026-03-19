@@ -5,15 +5,22 @@ import com.theokanning.openai.embedding.EmbeddingResult;
 import com.theokanning.openai.service.OpenAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import static com.example.cinema.config.CacheConfig.*;
 
 /**
  * Embedding Service - Generates vector embeddings using OpenAI
- * Handles text-to-vector conversion for movie content and user preferences
+ *
+ * Cache key strategy:
+ * - generateMovieEmbedding: key = movieId + content hash
+ *   → Khi title/genre/director thay đổi, hash thay đổi → cache miss → tự regenerate
+ * - generateUserPreferenceEmbedding: key = userId + preferences version
+ *   → Khi user đổi preferences/favorites → version tăng → cache miss → tự regenerate
  */
 @Service
 @RequiredArgsConstructor
@@ -24,9 +31,21 @@ public class EmbeddingService {
     private static final String EMBEDDING_MODEL = "text-embedding-ada-002";
 
     /**
-     * Generate embedding vector for a single text
-     * Uses OpenAI's text-embedding-ada-002 model (1536 dimensions)
+     * Generate raw text embedding - ĐÂY LÀ ĐIỂM GỌI OPENAI DUY NHẤT.
+     *
+     * Cache tại đây để tránh gọi OpenAI cho cùng một đoạn text:
+     *   - generateMovieEmbedding() → gọi method này → cache hit nếu text giống nhau
+     *   - semanticMovieSearch()    → gọi method này → cache hit nếu query giống nhau
+     *
+     * Cache key = contentHash(text) - stable hash của text đã clean
+     * TTL: 30 ngày (movie embeddings ổn định) - chọn TTL dài nhất phù hợp
+     *
+     * NOTE: generateMovieEmbedding và generateUserPreferenceEmbedding có cache riêng
+     * ở tầng cao hơn với key có ngữ nghĩa (movieId, userId). Cache tại đây là
+     * safety net cho bất kỳ call nào đến generateEmbedding trực tiếp.
      */
+    @Cacheable(value = MOVIE_EMBEDDINGS_CACHE,
+               key = "'text:' + T(com.example.cinema.service.EmbeddingService).contentHash(#text, '', '')")
     @Retryable(
         retryFor = {Exception.class},
         maxAttempts = 3,
@@ -68,10 +87,20 @@ public class EmbeddingService {
     }
 
     /**
-     * Generate embedding for a movie based on its content
-     * Combines title, description, genre, and director for comprehensive representation
+     * Generate embedding cho một bộ phim.
+     *
+     * Cache key = movieId + hash(title + genre + director)
+     * → Khi nội dung phim thay đổi, hash thay đổi → cache key mới → cache miss
+     *    → OpenAI được gọi lại → embedding mới được sinh và cache
+     * → Key cũ trong Redis sẽ TTL-expire sau 30 ngày (không chiếm memory vĩnh viễn)
+     *
+     * KHÔNG dùng text.hashCode() vì:
+     *   1. Java hashCode() không stable giữa các JVM restart
+     *   2. Không encode được movieId → hai phim khác nhau có cùng text sẽ bị collision
      */
-    public List<Double> generateMovieEmbedding(String title, String description, String genre, String director) {
+    @Cacheable(value = MOVIE_EMBEDDINGS_CACHE,
+               key = "'movie:' + #movieId + ':v' + T(com.example.cinema.service.EmbeddingService).contentHash(#title, #genre, #director)")
+    public List<Double> generateMovieEmbedding(Long movieId, String title, String description, String genre, String director) {
         // Create comprehensive text representation of the movie
         StringBuilder movieText = new StringBuilder();
 
@@ -102,10 +131,19 @@ public class EmbeddingService {
     }
 
     /**
-     * Generate embedding for user preferences based on selected genres
-     * Creates a preference vector representing user's movie tastes
+     * Generate embedding cho preferences của user.
+     *
+     * Cache key = userId + prefVersion + favVersion
+     * prefVersion = hash(sorted list of "genre:score") → thay đổi khi user đổi preference
+     * favVersion  = hash(sorted list of favorite movieIds) → thay đổi khi user thêm/xóa favorite
+     *
+     * → Cache tự miss khi sở thích user thay đổi, KHÔNG cần @CacheEvict thủ công
+     * TTL 7 ngày: nếu user không hoạt động 7 ngày thì embedding cũ cũng không còn giá trị
      */
-    public List<Double> generateUserPreferenceEmbedding(List<String> preferredGenres, List<String> favoriteMovieTitles) {
+    @Cacheable(value = USER_PREFERENCE_EMBEDDING_CACHE,
+               key = "'user:' + #userId + ':pref' + #prefVersion + ':fav' + #favVersion")
+    public List<Double> generateUserPreferenceEmbedding(Long userId, int prefVersion, int favVersion,
+                                                        List<String> preferredGenres, List<String> favoriteMovieTitles) {
         StringBuilder preferenceText = new StringBuilder();
 
         if (preferredGenres != null && !preferredGenres.isEmpty()) {
@@ -189,8 +227,42 @@ public class EmbeddingService {
 
         return text
                 .trim()
-                .replaceAll("\\s+", " ")  // Replace multiple whitespace with single space
-                .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "") // Remove control characters
-                .substring(0, Math.min(text.length(), 8000)); // Limit length to avoid API limits
+                .replaceAll("\\s+", " ")
+                .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "")
+                .substring(0, Math.min(text.length(), 8000));
+    }
+
+    /**
+     * Tạo stable hash từ các field nội dung phim dùng làm cache key version.
+     * Dùng SHA-based approach thay vì Java hashCode() vì:
+     *   - Java hashCode() không stable giữa các JVM restart
+     *   - Cần deterministic hash để cache key nhất quán
+     *
+     * Trả về 8 ký tự hex đầu của hash → đủ ngắn cho Redis key, đủ unique.
+     */
+    public static String contentHash(String title, String genre, String director) {
+        String raw = (title == null ? "" : title.toLowerCase().trim())
+                   + "|" + (genre == null ? "" : genre.toLowerCase().trim())
+                   + "|" + (director == null ? "" : director.toLowerCase().trim());
+        // Dùng hashCode với seed cố định (không phụ thuộc JVM seed)
+        int h = 0;
+        for (char c : raw.toCharArray()) {
+            h = 31 * h + c;
+        }
+        return String.format("%08x", h & 0xFFFFFFFFL);
+    }
+
+    /**
+     * Tạo version int từ danh sách preferences của user dùng làm cache key version.
+     * Sorted trước khi hash → thứ tự không ảnh hưởng.
+     */
+    public static int prefListVersion(List<String> items) {
+        if (items == null || items.isEmpty()) return 0;
+        List<String> sorted = items.stream().sorted().toList();
+        int h = 0;
+        for (String s : sorted) {
+            h = 31 * h + s.toLowerCase().trim().hashCode();
+        }
+        return h & 0x7FFFFFFF; // positive int
     }
 }

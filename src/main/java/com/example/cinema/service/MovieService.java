@@ -16,12 +16,14 @@ import java.util.Optional;
 /**
  * Movie Service - Business Logic for Movie Management
  * Handles all movie-related business operations
+ * Now with cache invalidation for AI recommendations
  */
 @Service
 @RequiredArgsConstructor
 public class MovieService {
 
     private final MovieRepository movieRepository;
+    private final CacheManagementService cacheManagementService;
 
     /**
      * Get all movies with pagination
@@ -96,9 +98,12 @@ public class MovieService {
 
     /**
      * Create new movie
+     * Phim mới → search và stats cần refresh
      */
     public Movie createMovie(Movie movie) {
-        return movieRepository.save(movie);
+        Movie savedMovie = movieRepository.save(movie);
+        cacheManagementService.onMovieAdded();
+        return savedMovie;
     }
 
     /**
@@ -122,6 +127,7 @@ public class MovieService {
 
     /**
      * Update movie or throw exception
+     * Evicts movie-related caches to ensure recommendations stay fresh
      */
     public Movie updateMovieOrThrow(Long id, Movie movieDetails) {
         Movie movie = getMovieByIdOrThrow(id);
@@ -135,7 +141,12 @@ public class MovieService {
         movie.setPosterUrl(movieDetails.getPosterUrl());
         movie.setPriceBase(movieDetails.getPriceBase());
 
-        return movieRepository.save(movie);
+        Movie savedMovie = movieRepository.save(movie);
+
+        // Nội dung phim thay đổi → embedding cũ và similar-movies không còn chính xác
+        cacheManagementService.onMovieContentChanged(id);
+
+        return savedMovie;
     }
 
     /**
@@ -156,6 +167,7 @@ public class MovieService {
     public void deleteMovieOrThrow(Long id) {
         Movie movie = getMovieByIdOrThrow(id);
         movieRepository.delete(movie);
+        cacheManagementService.onMovieDeleted(id);
     }
 
     /**

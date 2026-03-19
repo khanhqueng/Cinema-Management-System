@@ -4,15 +4,19 @@ import com.example.cinema.entity.Movie;
 import com.example.cinema.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.cinema.config.CacheConfig.*;
+
 /**
  * Movie Embedding Service - Manages AI embeddings for movies
  * Handles generation and storage of movie embeddings for AI recommendations
+ * With intelligent caching for performance optimization
  */
 @Service
 @RequiredArgsConstructor
@@ -24,14 +28,16 @@ public class MovieEmbeddingService {
 
     /**
      * Generate and save embedding for a single movie
+     * Gọi embeddingService với movieId + contentHash → cache key stable
      */
     @Transactional
     public Movie generateAndSaveMovieEmbedding(Movie movie) {
         try {
             log.info("Generating embedding for movie: {} (ID: {})", movie.getTitle(), movie.getId());
 
-            // Generate embedding using OpenAI
+            // Generate embedding using OpenAI - truyền movieId để cache key có ngữ nghĩa
             List<Double> embedding = embeddingService.generateMovieEmbedding(
+                movie.getId(),
                 movie.getTitle(),
                 movie.getDescription(),
                 movie.getGenre(),
@@ -98,9 +104,11 @@ public class MovieEmbeddingService {
     }
 
     /**
-     * Regenerate embedding for a movie (useful when movie content changes)
+     * Regenerate embedding for a movie (khi nội dung phim thay đổi)
+     * Evict MOVIE_EMBEDDINGS_CACHE → lần sau generateEmbedding sẽ gọi lại OpenAI
      */
     @Transactional
+    @CacheEvict(value = MOVIE_EMBEDDINGS_CACHE, allEntries = true)
     public Movie regenerateMovieEmbedding(Long movieId) {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new RuntimeException("Movie not found with ID: " + movieId));
@@ -119,6 +127,7 @@ public class MovieEmbeddingService {
 
     /**
      * Get embedding statistics
+     * Không cache - chỉ là 2 câu COUNT/query DB, nhanh và nhẹ
      */
     public EmbeddingStats getEmbeddingStats() {
         long totalMovies = movieRepository.count();
@@ -134,6 +143,8 @@ public class MovieEmbeddingService {
 
     /**
      * Find similar movies using vector similarity
+     * Không cache - đọc embedding từ DB (đã persist sẵn) + tính cosine similarity in-memory
+     * Không gọi OpenAI → không tốn token, không cần cache
      */
     public List<Movie> findSimilarMovies(Movie targetMovie, double similarityThreshold, int limit) {
         if (!hasEmbedding(targetMovie)) {
