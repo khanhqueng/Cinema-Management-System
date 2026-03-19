@@ -6,7 +6,6 @@ import com.example.cinema.entity.FavoriteMovie;
 import com.example.cinema.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -14,7 +13,27 @@ import java.util.stream.Collectors;
 
 /**
  * Recommendation Service - Smart Movie Recommendations
- * Provides personalized movie recommendations based on user preferences and behavior
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * CACHE CHỈ ĐƯỢC ĐẶT Ở 2 ĐIỂM DUY NHẤT CÓ GỌI OPENAI:
+ *
+ *   1. getAIPersonalizedRecommendations()
+ *      → bên trong gọi generateUserPreferenceEmbedding() → OpenAI API
+ *      → cache theo (userId, prefVersion, favVersion) tự miss khi sở thích đổi
+ *
+ *   2. semanticMovieSearch()
+ *      → bên trong gọi generateEmbedding(query) → OpenAI API
+ *      → cache theo (query, date) tự miss sang ngày mới
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * KHÔNG cache:
+ *   - getPersonalizedRecommendations()  → chỉ query DB
+ *   - getSimilarToFavorites()           → chỉ query DB
+ *   - getRecommendationsByGenre()       → chỉ query DB
+ *   - findSimilarMovies()               → đọc embedding từ DB + tính cosine (CPU, không token)
+ *
+ * Lý do: cache DB query thêm complexity mà gain không đáng, DB đã có index.
+ * ─────────────────────────────────────────────────────────────────────
  */
 @Service
 @RequiredArgsConstructor
@@ -29,6 +48,7 @@ public class RecommendationService {
 
     /**
      * Get personalized movie recommendations for user
+     * Không cache - chỉ query DB, không tốn token AI
      */
     public RecommendationResponse getPersonalizedRecommendations(Long userId, int limit) {
         List<Movie> recommendations = new ArrayList<>();
@@ -89,6 +109,7 @@ public class RecommendationService {
 
     /**
      * Get similar movies based on user's favorites
+     * Không cache - chỉ query DB, không tốn token AI
      */
     public RecommendationResponse getSimilarToFavorites(Long userId, int limit) {
         List<FavoriteMovie> userFavorites = favoriteMovieService.getAllUserFavorites(userId);
@@ -158,6 +179,7 @@ public class RecommendationService {
 
     /**
      * Get recommendations by genre
+     * Không cache - chỉ query DB, không tốn token AI
      */
     public RecommendationResponse getRecommendationsByGenre(String genre, int limit) {
         List<Movie> movies = movieRepository.findByGenreIgnoreCase(genre, PageRequest.of(0, limit)).getContent();
@@ -273,6 +295,16 @@ public class RecommendationService {
 
     /**
      * AI-powered recommendations using vector similarity
+     *
+     * KHÔNG cache method này vì:
+     *   - Bên trong đã gọi generateUserPreferenceEmbedding() - method đó đã cache embedding
+     *   - Nếu cache outer result thì khi user đổi preference:
+     *       embedding cache → miss (key đổi) → OpenAI gọi lại ✅
+     *       nhưng outer result cache → vẫn HIT → user thấy recommendation CŨ ❌
+     *
+     * Chi phí thực sự là OpenAI call trong generateUserPreferenceEmbedding().
+     * Method đó đã được cache với key (userId, prefVersion, favVersion).
+     * → Phần tính toán similarity (CPU) chạy lại mỗi request là chấp nhận được.
      */
     public RecommendationResponse getAIPersonalizedRecommendations(Long userId, int limit) {
         try {
@@ -294,9 +326,22 @@ public class RecommendationService {
                     .map(fm -> fm.getMovie().getTitle())
                     .collect(Collectors.toList());
 
-            // Generate user preference embedding
+            // Tính version từ nội dung thực tế của preferences và favorites
+            // → Cache key tự thay đổi khi user cập nhật sở thích, không cần @CacheEvict
+            int prefVersion = EmbeddingService.prefListVersion(
+                preferences.stream()
+                    .map(p -> p.getGenre() + ":" + p.getPreferenceScore())
+                    .collect(Collectors.toList())
+            );
+            int favVersion = EmbeddingService.prefListVersion(
+                favorites.stream()
+                    .map(fm -> String.valueOf(fm.getMovie().getId()))
+                    .collect(Collectors.toList())
+            );
+
+            // Generate user preference embedding với versioned cache key
             List<Double> userPreferenceEmbedding = embeddingService.generateUserPreferenceEmbedding(
-                    preferredGenres, favoriteMovieTitles);
+                    userId, prefVersion, favVersion, preferredGenres, favoriteMovieTitles);
 
             // Convert to float array and search for similar movies
             float[] userEmbeddingArray = embeddingService.convertToFloatArray(userPreferenceEmbedding);
@@ -343,6 +388,8 @@ public class RecommendationService {
 
     /**
      * Find movies similar to a specific movie using AI embeddings
+     * Không cache - đọc embedding từ DB (đã lưu sẵn) + tính cosine in-memory
+     * Không gọi OpenAI → không tốn token
      */
     public RecommendationResponse findSimilarMovies(Long movieId, int limit) {
         try {
@@ -377,6 +424,15 @@ public class RecommendationService {
 
     /**
      * Semantic search for movies using natural language queries
+     *
+     * KHÔNG cache method này vì:
+     *   - generateEmbedding(query) bên trong sẽ được cache trực tiếp ở EmbeddingService
+     *   - Nếu cache outer result với key có date → mỗi ngày tất cả query đều miss
+     *     dù embedding của query không đổi → lãng phí
+     *   - Phần tính cosine similarity (CPU) rất nhanh, không cần cache
+     *
+     * Chi phí thực sự là OpenAI call trong generateEmbedding(query).
+     * → Cache đặt tại generateEmbedding() với key = hash(query text).
      */
     public RecommendationResponse semanticMovieSearch(String query, int limit) {
         try {
