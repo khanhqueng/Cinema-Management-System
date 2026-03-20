@@ -17,6 +17,7 @@ import {
   TheaterPage,
   UserProfilePage,
   RecommendationPage,
+  BookingHistoryPage,
 } from "./pages/user";
 
 // Auth Pages
@@ -94,7 +95,7 @@ function App() {
                       path="/recommendations"
                       element={<RecommendationPage />}
                     />
-                    {/* Future routes for user bookings, etc. */}
+                    <Route path="/bookings" element={<BookingHistoryPage />} />
                   </Routes>
                 </main>
               </div>

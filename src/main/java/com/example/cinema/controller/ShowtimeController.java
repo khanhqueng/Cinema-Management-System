@@ -45,14 +45,22 @@ public class ShowtimeController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "showDatetime") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(required = false) Long movieId,
+            @RequestParam(required = false) Long theaterId,
+            @RequestParam(required = false) String keyword) {
 
         Sort sort = sortDir.equalsIgnoreCase("desc")
             ? Sort.by(sortBy).descending()
             : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<ShowtimeDto> showtimes = showtimeService.getAllShowtimesDto(pageable);
+
+        boolean hasFilters = movieId != null || theaterId != null || (keyword != null && !keyword.isBlank());
+        Page<ShowtimeDto> showtimes = hasFilters
+            ? showtimeService.searchShowtimesDto(movieId, theaterId,
+                keyword != null && !keyword.isBlank() ? keyword.trim() : null, pageable)
+            : showtimeService.getAllShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);
     }

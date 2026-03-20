@@ -173,7 +173,7 @@ const HomePage: React.FC = () => {
             className="w-full h-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).src =
-                "https://via.placeholder.com/1920x1080?text=Movie+Poster";
+                "https://placehold.co/1920x1080?text=Movie+Poster";
             }}
           />
           <div className="absolute inset-0 bg-linear-to-r from-gray-950 via-gray-950/80 to-transparent" />
@@ -291,7 +291,7 @@ const HomePage: React.FC = () => {
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src =
-                                    "https://via.placeholder.com/300x450?text=" +
+                                    "https://placehold.co/300x450?text=" +
                                     encodeURIComponent(movie.title);
                                 }}
                               />

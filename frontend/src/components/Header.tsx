@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Film,
@@ -14,9 +15,20 @@ export function Header() {
   const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith("/admin");
 
-  const isAuthenticated = authService.isAuthenticated();
-  const isAdminRole = authService.isAdmin();
-  const currentUser = authService.getCurrentUserFromStorage();
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    authService.isAuthenticated(),
+  );
+  const [isAdminRole, setIsAdminRole] = useState(authService.isAdmin());
+  const [currentUser, setCurrentUser] = useState(
+    authService.getCurrentUserFromStorage(),
+  );
+
+  // Re-check auth on every route change (catches login / logout)
+  useEffect(() => {
+    setIsAuthenticated(authService.isAuthenticated());
+    setIsAdminRole(authService.isAdmin());
+    setCurrentUser(authService.getCurrentUserFromStorage());
+  }, [location]);
 
   const handleLogout = () => {
     authService.logout();
@@ -61,6 +73,12 @@ export function Header() {
                 active={location.pathname === "/recommendations"}
               >
                 For You
+              </NavLink>
+              <NavLink
+                to="/bookings"
+                active={location.pathname === "/bookings"}
+              >
+                <span className="flex items-center gap-1">My Bookings</span>
               </NavLink>
             </nav>
           )}

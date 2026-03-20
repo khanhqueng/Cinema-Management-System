@@ -98,11 +98,11 @@ const MovieDetailPage: React.FC = () => {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={movie.posterUrl || `https://via.placeholder.com/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`}
+            src={movie.posterUrl || `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`}
             alt={movie.title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://via.placeholder.com/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`;
+              (e.target as HTMLImageElement).src = `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 to-transparent" />

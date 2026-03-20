@@ -489,7 +489,7 @@ const AdminMovies: React.FC = () => {
                         <img
                           src={
                             movie.posterUrl ||
-                            `https://via.placeholder.com/40x60?text=${encodeURIComponent(
+                            `https://placehold.co/40x60?text=${encodeURIComponent(
                               movie.title.slice(0, 2)
                             )}`
                           }

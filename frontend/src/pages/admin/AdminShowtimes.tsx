@@ -15,6 +15,7 @@ import {
   DollarSign,
   ArrowLeft,
   ArrowRight,
+  Search,
 } from "lucide-react";
 import adminService, {
   CreateShowtimeRequest,
@@ -28,7 +29,7 @@ import { Card } from "../../components/ui/card";
 
 const AdminShowtimes: React.FC = () => {
   const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(
-    null
+    null,
   );
   const [movies, setMovies] = useState<Movie[]>([]);
   const [theaters, setTheaters] = useState<Theater[]>([]);
@@ -43,13 +44,20 @@ const AdminShowtimes: React.FC = () => {
     price: 0,
   });
   const [currentPage, setCurrentPage] = useState(0);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [filterMovieId, setFilterMovieId] = useState<number | undefined>(
+    undefined,
+  );
+  const [filterTheaterId, setFilterTheaterId] = useState<number | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     fetchInitialData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchShowtimes();
-  }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, filterMovieId, filterTheaterId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchInitialData = async () => {
     try {
@@ -84,6 +92,9 @@ const AdminShowtimes: React.FC = () => {
         size: 10,
         sortBy: "showDatetime",
         sortDir: "desc",
+        movieId: filterMovieId,
+        theaterId: filterTheaterId,
+        keyword: searchKeyword || undefined,
       });
       setShowtimes(data);
     } catch (err) {
@@ -92,6 +103,19 @@ const AdminShowtimes: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(0);
+    fetchShowtimes();
+  };
+
+  const handleClearFilters = () => {
+    setSearchKeyword("");
+    setFilterMovieId(undefined);
+    setFilterTheaterId(undefined);
+    setCurrentPage(0);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -128,7 +152,7 @@ const AdminShowtimes: React.FC = () => {
   const handleDelete = async (showtimeId: number) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this showtime? This will also cancel all associated bookings."
+        "Are you sure you want to delete this showtime? This will also cancel all associated bookings.",
       )
     ) {
       try {
@@ -207,6 +231,71 @@ const AdminShowtimes: React.FC = () => {
           {error}
         </motion.div>
       )}
+
+      {/* Search & Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <Card className="bg-gray-900 border-gray-800 p-4">
+          <form onSubmit={handleSearch} className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
+              {/* Keyword */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="Search movie or theater..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
+                />
+              </div>
+
+              {/* Theater Filter */}
+              <select
+                value={filterTheaterId ?? ""}
+                onChange={(e) =>
+                  setFilterTheaterId(
+                    e.target.value ? parseInt(e.target.value) : undefined,
+                  )
+                }
+                title="Filter by theater"
+                className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 text-white"
+              >
+                <option value="">All Theaters</option>
+                {theaters.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+                {(searchKeyword || filterMovieId || filterTheaterId) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClearFilters}
+                    className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </form>
+        </Card>
+      </motion.div>
 
       {/* Modal Form */}
       {showForm && (
@@ -444,7 +533,7 @@ const AdminShowtimes: React.FC = () => {
                         <div className="text-xs text-gray-500 mt-0.5">
                           {getOccupancyDisplay(
                             showtime.availableSeats,
-                            showtime.theaterCapacity
+                            showtime.theaterCapacity,
                           )}
                         </div>
                       </td>
@@ -488,7 +577,7 @@ const AdminShowtimes: React.FC = () => {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 0}
-                  className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                  className="border-gray-700 text-gray-900 hover:bg-gray-700"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" /> Previous
                 </Button>
@@ -510,7 +599,7 @@ const AdminShowtimes: React.FC = () => {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage >= showtimes.totalPages - 1}
-                  className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                  className="border-gray-700 text-gray-900 hover:bg-gray-700"
                 >
                   Next <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -546,7 +635,7 @@ function StatusBadge({ dateTimeString }: { dateTimeString: string }) {
 // Helper functions
 const getRelativeTime = (dateTimeString: string): string => {
   const diffInHours = Math.round(
-    (new Date(dateTimeString).getTime() - Date.now()) / (1000 * 60 * 60)
+    (new Date(dateTimeString).getTime() - Date.now()) / (1000 * 60 * 60),
   );
   if (diffInHours < -24)
     return `${Math.abs(Math.round(diffInHours / 24))} days ago`;
@@ -566,11 +655,11 @@ const getShowtimeStatus = (dateTimeString: string): string => {
 
 const getOccupancyDisplay = (
   availableSeats: number,
-  totalCapacity: number
+  totalCapacity: number,
 ): string => {
   if (!totalCapacity) return "N/A";
   const rate = Math.round(
-    ((totalCapacity - availableSeats) / totalCapacity) * 100
+    ((totalCapacity - availableSeats) / totalCapacity) * 100,
   );
   return `${rate}% booked`;
 };

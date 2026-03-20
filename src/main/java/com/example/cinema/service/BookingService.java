@@ -5,6 +5,7 @@ import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.User;
 import com.example.cinema.entity.SeatBooking;
 import com.example.cinema.dto.BookingDto;
+import com.example.cinema.dto.BookingHistoryDto;
 import com.example.cinema.dto.SeatBookingDto;
 import com.example.cinema.dto.SeatLockResponse;
 import com.example.cinema.exception.BusinessRuleViolationException;
@@ -13,6 +14,7 @@ import com.example.cinema.exception.SeatLockException;
 import com.example.cinema.exception.UnauthorizedException;
 import com.example.cinema.exception.ValidationException;
 import com.example.cinema.repository.BookingRepository;
+import com.example.cinema.repository.SeatBookingRepository;
 import com.example.cinema.repository.ShowtimeRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class BookingService {
     private final ShowtimeRepository showtimeRepository;
     private final SeatService seatService;
     private final DistributedLockService distributedLockService;
+    private final SeatBookingRepository seatBookingRepository;
 
     /**
      * Get all bookings with pagination (Admin only)
@@ -81,6 +84,23 @@ public class BookingService {
      */
     public List<Booking> getUserUpcomingBookings(Long userId) {
         return bookingRepository.findUserUpcomingBookings(userId, LocalDateTime.now());
+    }
+
+    /**
+     * Get user's full booking history with seat details.
+     * Optionally filtered by status (null = all).
+     */
+    public Page<BookingHistoryDto> getUserBookingHistory(Long userId,
+                                                         Booking.BookingStatus status,
+                                                         Pageable pageable) {
+        Page<Booking> bookings = (status != null)
+                ? bookingRepository.findByUserIdAndBookingStatusOrderByCreatedAtDesc(userId, status, pageable)
+                : bookingRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+
+        return bookings.map(booking -> {
+            List<SeatBooking> seats = seatBookingRepository.findByBooking(booking);
+            return BookingHistoryDto.fromEntity(booking, seats);
+        });
     }
 
     /**

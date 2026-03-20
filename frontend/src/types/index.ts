@@ -330,3 +330,16 @@ export interface PageResponse<T> {
   numberOfElements: number;
   empty: boolean;
 }
+
+// Booking history DTO — returned by GET /api/bookings/my-bookings/history
+export interface BookingHistoryDto {
+  id: number;
+  bookingReference: string | null;
+  seatsBooked: number;
+  totalAmount: number;
+  bookingStatus: string; // "CONFIRMED" | "CANCELLED"
+  createdAt: string;
+  canCancel: boolean;
+  showtime: ShowtimeDto;
+  seatBookings: SeatBookingDto[];
+}

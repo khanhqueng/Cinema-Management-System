@@ -241,11 +241,11 @@ const BookingPage: React.FC = () => {
             className="flex items-start space-x-4"
           >
             <img
-              src={showtime.moviePosterUrl || `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`}
+              src={showtime.moviePosterUrl || `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`}
               alt={showtime.movieTitle}
               className="w-20 h-30 object-cover rounded-lg"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://via.placeholder.com/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`;
+                (e.target as HTMLImageElement).src = `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`;
               }}
             />
             <div className="flex-1">

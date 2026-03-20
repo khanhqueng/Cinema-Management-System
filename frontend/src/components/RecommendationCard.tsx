@@ -18,7 +18,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   showReason,
   compact = false
 }) => {
-  const placeholderImage = `https://via.placeholder.com/300x450/e2e8f0/64748b?text=${encodeURIComponent(movie.title)}`;
+  const placeholderImage = `https://placehold.co/300x450/e2e8f0/64748b?text=${encodeURIComponent(movie.title)}`;
 
   return (
     <div className={`${styles.recommendationCard} ${compact ? styles.compact : ''}`}>

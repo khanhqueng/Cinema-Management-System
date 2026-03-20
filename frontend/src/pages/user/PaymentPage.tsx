@@ -224,11 +224,11 @@ const PaymentPage: React.FC = () => {
                   {/* Movie Info */}
                   <div className="flex items-center space-x-4 p-4 bg-gray-700 rounded-lg mb-6">
                     <img
-                      src={state.showtime.moviePosterUrl || `https://via.placeholder.com/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`}
+                      src={state.showtime.moviePosterUrl || `https://placehold.co/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`}
                       alt={state.showtime.movieTitle}
                       className="w-15 h-22 object-cover rounded"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://via.placeholder.com/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`;
+                        (e.target as HTMLImageElement).src = `https://placehold.co/80x120/141414/E50914?text=${encodeURIComponent(state.showtime.movieTitle)}`;
                       }}
                     />
                     <div className="flex-1">

@@ -80,6 +80,14 @@ public class ShowtimeService {
     }
 
     /**
+     * Search showtimes with optional filters as DTO
+     */
+    public Page<ShowtimeDto> searchShowtimesDto(Long movieId, Long theaterId, String keyword, Pageable pageable) {
+        Page<Showtime> showtimes = showtimeRepository.searchShowtimes(movieId, theaterId, keyword, pageable);
+        return showtimes.map(this::convertToDto);
+    }
+
+    /**
      * Get all showtimes as DTO with pagination
      */
     public Page<ShowtimeDto> getAllShowtimesDto(Pageable pageable) {

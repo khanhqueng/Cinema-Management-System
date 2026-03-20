@@ -6,9 +6,19 @@ import styles from "./Header.module.css";
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    authService.isAuthenticated(),
+  );
+  const [isAdmin, setIsAdmin] = useState(authService.isAdmin());
   const location = useLocation();
-  const isAuthenticated = authService.isAuthenticated();
-  const isAdmin = authService.isAdmin();
+
+  console.log(isAuthenticated);
+
+  useEffect(() => {
+    // Re-check auth state on every route change
+    setIsAuthenticated(authService.isAuthenticated());
+    setIsAdmin(authService.isAdmin());
+  }, [location]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -122,7 +132,7 @@ const Header: React.FC = () => {
             <div className={styles.userMenu}>
               <div className={styles.userAvatar}>
                 <img
-                  src="https://via.placeholder.com/32x32/E50914/FFFFFF?text=U"
+                  src="https://placehold.co/32x32/E50914/FFFFFF?text=U"
                   alt="User Avatar"
                   className={styles.avatarImage}
                 />

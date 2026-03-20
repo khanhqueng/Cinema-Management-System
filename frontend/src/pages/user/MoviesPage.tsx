@@ -360,7 +360,7 @@ const MoviesPage: React.FC = () => {
                     {/* Poster Section */}
                     <div className="relative aspect-[2/3] overflow-hidden">
                       <img
-                        src={movie.posterUrl || `https://via.placeholder.com/300x450/141414/E50914?text=${encodeURIComponent(movie.title)}`}
+                        src={movie.posterUrl || `https://placehold.co/300x450/141414/E50914?text=${encodeURIComponent(movie.title)}`}
                         alt={movie.title}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                       />

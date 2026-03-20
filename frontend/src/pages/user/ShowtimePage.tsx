@@ -152,7 +152,21 @@ const ShowtimePage: React.FC = () => {
     );
   }
 
-  const availableDates = Object.keys(groupedShowtimes).sort();
+  const isShowtimeBookable = (showtime: Showtime) => {
+    const isUpcoming =
+      showtime.upcoming ?? showtimeService.isShowtimeUpcoming(showtime);
+    return (
+      !showtime.finished &&
+      (showtime.ongoing ||
+        (isUpcoming &&
+          (showtime.bookable ?? true) &&
+          showtime.availableSeats > 0))
+    );
+  };
+
+  const availableDates = Object.keys(groupedShowtimes)
+    .filter((date) => groupedShowtimes[date].some(isShowtimeBookable))
+    .sort();
   const selectedShowtimes = selectedDate
     ? groupedShowtimes[selectedDate] || []
     : [];
@@ -237,13 +251,13 @@ const ShowtimePage: React.FC = () => {
                 <img
                   src={
                     movie.posterUrl ||
-                    `https://via.placeholder.com/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`
+                    `https://placehold.co/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`
                   }
                   alt={movie.title}
                   className="w-32 h-48 object-cover rounded-lg"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
-                      `https://via.placeholder.com/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`;
+                      `https://placehold.co/150x225/141414/E50914?text=${encodeURIComponent(movie.title)}`;
                   }}
                 />
                 <div className="flex-1">
@@ -385,124 +399,128 @@ const ShowtimePage: React.FC = () => {
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {selectedShowtimes.map((showtime, index) => {
-                      const availabilityInfo =
-                        showtimeService.getAvailabilityStatus(showtime);
-                      const isUpcoming =
-                        showtime.upcoming ??
-                        showtimeService.isShowtimeUpcoming(showtime);
+                    {selectedShowtimes
+                      .filter(isShowtimeBookable)
+                      .map((showtime, index) => {
+                        const availabilityInfo =
+                          showtimeService.getAvailabilityStatus(showtime);
+                        const isUpcoming =
+                          showtime.upcoming ??
+                          showtimeService.isShowtimeUpcoming(showtime);
 
-                      return (
-                        <motion.div
-                          key={showtime.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: index * 0.1 }}
-                        >
-                          <Card className="bg-gray-800 border-gray-700 hover:border-red-500 transition-colors duration-300">
-                            <CardContent className="p-6">
-                              {/* Showtime Header */}
-                              <div className="mb-4">
-                                <div className="text-2xl font-bold text-white mb-1">
-                                  {showtimeService.formatShowTime(showtime)}
-                                  {showtime.endDatetime && (
-                                    <span className="text-base text-gray-400 font-normal ml-2">
-                                      →{" "}
-                                      {new Date(
-                                        showtime.endDatetime,
-                                      ).toLocaleTimeString("vi-VN", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        hour12: false,
-                                      })}
-                                    </span>
-                                  )}
+                        return (
+                          <motion.div
+                            key={showtime.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: index * 0.1 }}
+                          >
+                            <Card className="bg-gray-800 border-gray-700 hover:border-red-500 transition-colors duration-300">
+                              <CardContent className="p-6">
+                                {/* Showtime Header */}
+                                <div className="mb-4">
+                                  <div className="text-2xl font-bold text-white mb-1">
+                                    {showtimeService.formatShowTime(showtime)}
+                                    {showtime.endDatetime && (
+                                      <span className="text-base text-gray-400 font-normal ml-2">
+                                        →{" "}
+                                        {new Date(
+                                          showtime.endDatetime,
+                                        ).toLocaleTimeString("vi-VN", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          hour12: false,
+                                        })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-gray-300 font-medium flex items-center">
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    {isTheaterRoute
+                                      ? showtime.movieTitle
+                                      : showtime.theaterName}
+                                  </div>
                                 </div>
-                                <div className="text-gray-300 font-medium flex items-center">
-                                  <MapPin className="w-4 h-4 mr-2" />
-                                  {isTheaterRoute
-                                    ? showtime.movieTitle
-                                    : showtime.theaterName}
-                                </div>
-                              </div>
 
-                              {/* Showtime Info */}
-                              <div className="flex justify-between items-center mb-4">
-                                <div className="flex items-center text-yellow-500 font-semibold">
-                                  <Clock className="w-4 h-4 mr-1" />
-                                  {Math.floor(
-                                    showtime.movieDurationMinutes / 60,
-                                  )}
-                                  h {showtime.movieDurationMinutes % 60}m
+                                {/* Showtime Info */}
+                                <div className="flex justify-between items-center mb-4">
+                                  <div className="flex items-center text-yellow-500 font-semibold">
+                                    <Clock className="w-4 h-4 mr-1" />
+                                    {Math.floor(
+                                      showtime.movieDurationMinutes / 60,
+                                    )}
+                                    h {showtime.movieDurationMinutes % 60}m
+                                  </div>
+                                  <div className="text-green-500 font-bold text-lg">
+                                    {showtimeService.formatPrice(
+                                      showtime.price,
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-green-500 font-bold text-lg">
-                                  {showtimeService.formatPrice(showtime.price)}
-                                </div>
-                              </div>
 
-                              {/* Availability Info */}
-                              <div className="flex justify-between items-center mb-6">
-                                <Badge
-                                  className="text-white font-medium"
-                                  style={{
-                                    backgroundColor: availabilityInfo.color,
-                                  }}
-                                >
-                                  {availabilityInfo.label}
-                                </Badge>
-                                <div className="text-gray-400 text-sm flex items-center">
-                                  <Users className="w-4 h-4 mr-1" />
-                                  {showtime.availableSeats} trống /{" "}
-                                  {showtime.bookedSeats ??
-                                    showtime.theaterCapacity -
-                                      showtime.availableSeats}{" "}
-                                  đã đặt
-                                </div>
-                              </div>
-
-                              {/* Action Button */}
-                              <div>
-                                {showtime.ongoing ? (
-                                  <Button
-                                    disabled
-                                    className="w-full bg-blue-900/50 text-blue-300 cursor-not-allowed"
+                                {/* Availability Info */}
+                                <div className="flex justify-between items-center mb-6">
+                                  <Badge
+                                    className="text-white font-medium"
+                                    style={{
+                                      backgroundColor: availabilityInfo.color,
+                                    }}
                                   >
-                                    <Ticket className="w-4 h-4 mr-2" />
-                                    Đang chiếu
-                                  </Button>
-                                ) : showtime.finished ? (
-                                  <Button
-                                    disabled
-                                    className="w-full bg-gray-700 text-gray-500 cursor-not-allowed"
-                                  >
-                                    Đã kết thúc
-                                  </Button>
-                                ) : isUpcoming &&
-                                  (showtime.bookable ?? true) &&
-                                  showtime.availableSeats > 0 ? (
-                                  <Button
-                                    asChild
-                                    className="w-full bg-red-600 hover:bg-red-700"
-                                  >
-                                    <Link to={`/booking/${showtime.id}`}>
+                                    {availabilityInfo.label}
+                                  </Badge>
+                                  <div className="text-gray-400 text-sm flex items-center">
+                                    <Users className="w-4 h-4 mr-1" />
+                                    {showtime.availableSeats} trống /{" "}
+                                    {showtime.bookedSeats ??
+                                      showtime.theaterCapacity -
+                                        showtime.availableSeats}{" "}
+                                    đã đặt
+                                  </div>
+                                </div>
+
+                                {/* Action Button */}
+                                <div>
+                                  {showtime.ongoing ? (
+                                    <Button
+                                      disabled
+                                      className="w-full bg-blue-900/50 text-blue-300 cursor-not-allowed"
+                                    >
                                       <Ticket className="w-4 h-4 mr-2" />
-                                      Đặt vé
-                                    </Link>
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    disabled
-                                    className="w-full bg-gray-600 text-gray-300 cursor-not-allowed"
-                                  >
-                                    Không còn chỗ
-                                  </Button>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      );
-                    })}
+                                      Đang chiếu
+                                    </Button>
+                                  ) : showtime.finished ? (
+                                    <Button
+                                      disabled
+                                      className="w-full bg-gray-700 text-gray-500 cursor-not-allowed"
+                                    >
+                                      Đã kết thúc
+                                    </Button>
+                                  ) : isUpcoming &&
+                                    (showtime.bookable ?? true) &&
+                                    showtime.availableSeats > 0 ? (
+                                    <Button
+                                      asChild
+                                      className="w-full bg-red-600 hover:bg-red-700"
+                                    >
+                                      <Link to={`/booking/${showtime.id}`}>
+                                        <Ticket className="w-4 h-4 mr-2" />
+                                        Đặt vé
+                                      </Link>
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      disabled
+                                      className="w-full bg-gray-600 text-gray-300 cursor-not-allowed"
+                                    >
+                                      Không còn chỗ
+                                    </Button>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
                   </div>
                 </motion.div>
               </>

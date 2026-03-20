@@ -4,6 +4,7 @@ import com.example.cinema.entity.Booking;
 import com.example.cinema.entity.User;
 import com.example.cinema.service.BookingService;
 import com.example.cinema.service.UserService;
+import com.example.cinema.dto.BookingHistoryDto;
 import com.example.cinema.dto.SeatLockResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +90,32 @@ public class BookingController {
         }
 
         return ResponseEntity.ok(booking);
+    }
+
+    /**
+     * Get user's booking history with seat details (paginated, optional status filter)
+     */
+    @GetMapping("/my-bookings/history")
+    public ResponseEntity<Page<BookingHistoryDto>> getMyBookingHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
+
+        User currentUser = userService.getCurrentUser();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Booking.BookingStatus bookingStatus = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                bookingStatus = Booking.BookingStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // invalid status value — treat as no filter
+            }
+        }
+
+        Page<BookingHistoryDto> history = bookingService.getUserBookingHistory(
+                currentUser.getId(), bookingStatus, pageable);
+        return ResponseEntity.ok(history);
     }
 
     /**

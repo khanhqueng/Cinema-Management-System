@@ -14,6 +14,19 @@ import {
   Target,
   Activity,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 // OLD API services (keep 100% logic) - UNCHANGED
 import adminService, {
@@ -27,6 +40,29 @@ import adminService, {
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+
+const CHART_COLORS = [
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ec4899",
+];
+
+const CustomTooltipContent = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 shadow-lg">
+      <p className="text-gray-300 text-sm font-medium mb-1">{label}</p>
+      {payload.map((entry: any, i: number) => (
+        <p key={i} className="text-sm" style={{ color: entry.color }}>
+          {entry.name}: <span className="font-bold">{entry.value}</span>
+        </p>
+      ))}
+    </div>
+  );
+};
 
 // Maps utilization rate to Tailwind background color class
 const getUtilizationBarClass = (rate: number): string => {
@@ -58,7 +94,7 @@ const getUtilizationWidthClass = (rate: number): string => {
 const AdminDashboard: React.FC = () => {
   const [movieStats, setMovieStats] = useState<MovieStats | null>(null);
   const [showtimeStats, setShowtimeStats] = useState<ShowtimeStats | null>(
-    null
+    null,
   );
   const [theaterStats, setTheaterStats] = useState<TheaterStats | null>(null);
   const [theaterUtilization, setTheaterUtilization] = useState<
@@ -162,6 +198,333 @@ const AdminDashboard: React.FC = () => {
       <main className="py-12 bg-gray-950">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="space-y-12">
+            {/* Charts Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                <BarChart3 className="w-6 h-6 mr-3 text-emerald-500" />
+                Analytics Overview
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Movie Distribution Pie Chart */}
+                {movieStats && (
+                  <Card className="bg-gray-800 border-gray-700">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-bold text-white mb-4">
+                        Movie Status Distribution
+                      </h3>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              {
+                                name: "Currently Showing",
+                                value: movieStats.currentlyShowing,
+                              },
+                              { name: "Upcoming", value: movieStats.upcoming },
+                              {
+                                name: "Others",
+                                value: Math.max(
+                                  0,
+                                  movieStats.totalMovies -
+                                    movieStats.currentlyShowing -
+                                    movieStats.upcoming,
+                                ),
+                              },
+                            ].filter((d) => d.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {[
+                              {
+                                name: "Currently Showing",
+                                value: movieStats.currentlyShowing,
+                              },
+                              { name: "Upcoming", value: movieStats.upcoming },
+                              {
+                                name: "Others",
+                                value: Math.max(
+                                  0,
+                                  movieStats.totalMovies -
+                                    movieStats.currentlyShowing -
+                                    movieStats.upcoming,
+                                ),
+                              },
+                            ]
+                              .filter((d) => d.value > 0)
+                              .map((_, i) => (
+                                <Cell key={i} fill={CHART_COLORS[i]} />
+                              ))}
+                          </Pie>
+                          <Tooltip content={<CustomTooltipContent />} />
+                          <Legend
+                            wrapperStyle={{
+                              color: "#d1d5db",
+                              fontSize: 13,
+                              paddingTop: 10,
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="text-center mt-2">
+                        <span className="text-3xl font-bold text-white">
+                          {movieStats.totalMovies}
+                        </span>
+                        <span className="text-gray-400 text-sm ml-2">
+                          total movies
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Theater Type Pie Chart */}
+                {theaterStats && (
+                  <Card className="bg-gray-800 border-gray-700">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-bold text-white mb-4">
+                        Theater Types
+                      </h3>
+                      <ResponsiveContainer width="100%" height={280}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              {
+                                name: "Standard",
+                                value: theaterStats.standardTheaters,
+                              },
+                              { name: "VIP", value: theaterStats.vipTheaters },
+                            ].filter((d) => d.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            <Cell fill="#3b82f6" />
+                            <Cell fill="#eab308" />
+                          </Pie>
+                          <Tooltip content={<CustomTooltipContent />} />
+                          <Legend
+                            wrapperStyle={{
+                              color: "#d1d5db",
+                              fontSize: 13,
+                              paddingTop: 10,
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="text-center mt-2">
+                        <span className="text-3xl font-bold text-white">
+                          {theaterStats.totalTheaters}
+                        </span>
+                        <span className="text-gray-400 text-sm ml-2">
+                          total theaters
+                        </span>
+                        <span className="text-gray-500 text-sm ml-1">
+                          ({theaterStats.totalCapacity} seats)
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Theater Utilization Bar Chart */}
+                {theaterUtilization.length > 0 && (
+                  <Card className="bg-gray-800 border-gray-700 lg:col-span-2">
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-bold text-white mb-4">
+                        Theater Utilization Rate
+                      </h3>
+                      <ResponsiveContainer width="100%" height={320}>
+                        <BarChart
+                          data={theaterUtilization.map((t) => ({
+                            name: t.name,
+                            "Booked Seats": t.totalBookedSeats,
+                            "Available Seats": Math.max(
+                              0,
+                              t.capacity - t.totalBookedSeats,
+                            ),
+                            rate: adminService.calculateUtilizationRate(
+                              t.totalBookedSeats,
+                              t.capacity,
+                            ),
+                          }))}
+                          margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#374151"
+                          />
+                          <XAxis
+                            dataKey="name"
+                            tick={{ fill: "#9ca3af", fontSize: 12 }}
+                          />
+                          <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} />
+                          <Tooltip content={<CustomTooltipContent />} />
+                          <Legend
+                            wrapperStyle={{ color: "#d1d5db", fontSize: 13 }}
+                          />
+                          <Bar
+                            dataKey="Booked Seats"
+                            stackId="a"
+                            fill="#ef4444"
+                            radius={[0, 0, 0, 0]}
+                          />
+                          <Bar
+                            dataKey="Available Seats"
+                            stackId="a"
+                            fill="#374151"
+                            radius={[4, 4, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Showtimes Overview */}
+                {showtimeStats &&
+                  (() => {
+                    const pastShowtimes = Math.max(
+                      0,
+                      showtimeStats.totalShowtimes -
+                        showtimeStats.upcomingShowtimes,
+                    );
+                    const upcomingPct =
+                      showtimeStats.totalShowtimes > 0
+                        ? Math.round(
+                            (showtimeStats.upcomingShowtimes /
+                              showtimeStats.totalShowtimes) *
+                              100,
+                          )
+                        : 0;
+                    return (
+                      <Card className="bg-gray-800 border-gray-700 lg:col-span-2">
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-bold text-white mb-6">
+                            Showtimes Overview
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Donut chart */}
+                            <div>
+                              <ResponsiveContainer width="100%" height={240}>
+                                <PieChart>
+                                  <Pie
+                                    data={[
+                                      {
+                                        name: "Upcoming",
+                                        value: showtimeStats.upcomingShowtimes,
+                                      },
+                                      { name: "Past", value: pastShowtimes },
+                                    ].filter((d) => d.value > 0)}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={55}
+                                    outerRadius={90}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                    stroke="none"
+                                  >
+                                    <Cell fill="#22c55e" />
+                                    <Cell fill="#4b5563" />
+                                  </Pie>
+                                  <Tooltip content={<CustomTooltipContent />} />
+                                  <Legend
+                                    wrapperStyle={{
+                                      color: "#d1d5db",
+                                      fontSize: 13,
+                                      paddingTop: 8,
+                                    }}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+
+                            {/* Stat cards */}
+                            <div className="flex flex-col justify-center gap-4">
+                              <div className="bg-gray-900 rounded-xl p-4 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-lg bg-green-600/20 flex items-center justify-center">
+                                  <Clock className="w-6 h-6 text-green-400" />
+                                </div>
+                                <div>
+                                  <p className="text-gray-400 text-sm">
+                                    Total Showtimes
+                                  </p>
+                                  <p className="text-white text-2xl font-bold">
+                                    {showtimeStats.totalShowtimes}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-gray-900 rounded-xl p-4 text-center">
+                                  <p className="text-green-400 text-2xl font-bold">
+                                    {showtimeStats.upcomingShowtimes}
+                                  </p>
+                                  <p className="text-gray-400 text-xs mt-1">
+                                    Upcoming
+                                  </p>
+                                </div>
+                                <div className="bg-gray-900 rounded-xl p-4 text-center">
+                                  <p className="text-gray-400 text-2xl font-bold">
+                                    {pastShowtimes}
+                                  </p>
+                                  <p className="text-gray-400 text-xs mt-1">
+                                    Past
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="bg-gray-900 rounded-xl p-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-gray-400 text-sm">
+                                    Upcoming ratio
+                                  </span>
+                                  <span className="text-green-400 font-bold text-sm">
+                                    {upcomingPct}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-700 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full bg-green-500 transition-all duration-500"
+                                    style={{ width: `${upcomingPct}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="bg-gray-900 rounded-xl p-4 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                                  <Ticket className="w-6 h-6 text-blue-400" />
+                                </div>
+                                <div>
+                                  <p className="text-gray-400 text-sm">
+                                    Available Seats
+                                  </p>
+                                  <p className="text-white text-2xl font-bold">
+                                    {showtimeStats.totalAvailableSeats.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+              </div>
+            </motion.div>
+
             {/* Quick Actions */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -436,11 +799,24 @@ const AdminDashboard: React.FC = () => {
                 <Activity className="w-6 h-6 mr-3 text-purple-500" />
                 Theater Utilization
               </h2>
+              {theaterUtilization.length === 0 && (
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-12 text-center">
+                    <Activity className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      No Utilization Data
+                    </h3>
+                    <p className="text-gray-400">
+                      There is no theater utilization data available yet.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {theaterUtilization.map((theater, index) => {
                   const utilizationRate = adminService.calculateUtilizationRate(
                     theater.totalBookedSeats,
-                    theater.capacity
+                    theater.capacity,
                   );
 
                   return (
@@ -458,7 +834,7 @@ const AdminDashboard: React.FC = () => {
                             </h4>
                             <Badge
                               className={`text-white font-medium ${getUtilizationBarClass(
-                                utilizationRate
+                                utilizationRate,
                               )}`}
                             >
                               {utilizationRate}%
@@ -480,7 +856,7 @@ const AdminDashboard: React.FC = () => {
                             <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
                               <div
                                 className={`h-2 rounded-full transition-all duration-300 ${getUtilizationWidthClass(
-                                  utilizationRate
+                                  utilizationRate,
                                 )} ${getUtilizationBarClass(utilizationRate)}`}
                               />
                             </div>
