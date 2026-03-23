@@ -63,6 +63,7 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/movies/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/files/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/theaters/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/showtimes/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()

@@ -62,6 +62,22 @@ spring:
         max-idle: 8
         min-idle: 0
 
+  # File upload size limits
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# Cloudflare R2 Configuration (S3-compatible object storage)
+r2:
+  enabled: ${R2_ENABLED:true}
+  endpoint: ${R2_ENDPOINT:https://335380d2400bebdfc2a8a6b719f842a7.r2.cloudflarestorage.com}
+  access-key-id: ${R2_ACCESS_KEY_ID:ae8f322d79db36ed68639523145eba20}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY:8b35565b12f84f7ee026e616094054f80911eef0773feac4b1ebb41fa9b18ec1}
+  bucket-name: ${R2_BUCKET_NAME:cinema-media}
+  region: ${R2_REGION:auto}
+  public-url: ${R2_PUBLIC_URL:https://pub-465518e03b044f7bad8e5137e9c04351.r2.dev}  # Optional: custom CDN domain
+
 # JWT Configuration (Simplified)
 jwt:
   secret: ${JWT_SECRET:Y2luZW1hLXNpbXBsZS1zZWNyZXQta2V5LWZvci1qd3Q=}
