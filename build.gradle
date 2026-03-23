@@ -55,6 +55,9 @@ dependencies {
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'
 
+	// AWS S3 SDK for Cloudflare R2 (S3-compatible)
+	implementation 'software.amazon.awssdk:s3:2.25.0'
+
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.postgresql:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
