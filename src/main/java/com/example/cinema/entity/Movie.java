@@ -67,6 +67,8 @@ public class Movie {
     private LocalDateTime createdAt;
 
     // AI Vector Embedding for similarity search
+    // Map as text to avoid JDBC array mapping issues with pgvector.
+    // Value format: [0.1,0.2,...]
     @Column(name = "embedding", columnDefinition = "vector(1536)")
     private String embedding;
 

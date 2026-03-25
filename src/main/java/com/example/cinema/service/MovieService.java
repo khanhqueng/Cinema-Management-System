@@ -24,6 +24,7 @@ public class MovieService {
 
     private final MovieRepository movieRepository;
     private final CacheManagementService cacheManagementService;
+    private final MovieEmbeddingOrchestrator movieEmbeddingOrchestrator;
 
     /**
      * Get all movies with pagination
@@ -103,6 +104,10 @@ public class MovieService {
     public Movie createMovie(Movie movie) {
         Movie savedMovie = movieRepository.save(movie);
         cacheManagementService.onMovieAdded();
+
+        // Optional: auto-generate embedding (won't break create flow if OpenAI isn't configured)
+        movieEmbeddingOrchestrator.onMovieCreated(savedMovie);
+
         return savedMovie;
     }
 

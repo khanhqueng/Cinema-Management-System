@@ -35,7 +35,6 @@ public class MovieEmbeddingService {
         try {
             log.info("Generating embedding for movie: {} (ID: {})", movie.getTitle(), movie.getId());
 
-            // Generate embedding using OpenAI - truyền movieId để cache key có ngữ nghĩa
             List<Double> embedding = embeddingService.generateMovieEmbedding(
                 movie.getId(),
                 movie.getTitle(),
@@ -44,13 +43,10 @@ public class MovieEmbeddingService {
                 movie.getDirector()
             );
 
-            // Convert to vector string for database storage
+            // Persist as pgvector text format: [0.1,0.2,...]
             String embeddingString = convertEmbeddingToVectorString(embedding);
-
-            // Update movie with embedding
             movie.setEmbedding(embeddingString);
 
-            // Save to database
             Movie savedMovie = movieRepository.save(movie);
 
             log.info("Successfully generated and saved embedding for movie: {}", movie.getTitle());
@@ -71,21 +67,24 @@ public class MovieEmbeddingService {
     public void generateEmbeddingsForAllMovies() {
         log.info("Starting batch embedding generation for all movies without embeddings");
 
-        List<Movie> moviesWithoutEmbeddings = movieRepository.findMoviesWithoutEmbeddings();
+        List<Long> movieIdsWithoutEmbeddings = movieRepository.findMovieIdsWithoutEmbeddings();
 
-        if (moviesWithoutEmbeddings.isEmpty()) {
+        if (movieIdsWithoutEmbeddings.isEmpty()) {
             log.info("All movies already have embeddings. No processing needed.");
             return;
         }
 
         log.info("Found {} movies without embeddings. Starting generation...",
-                 moviesWithoutEmbeddings.size());
+                 movieIdsWithoutEmbeddings.size());
 
         int successCount = 0;
         int failureCount = 0;
 
-        for (Movie movie : moviesWithoutEmbeddings) {
+        for (Long movieId : movieIdsWithoutEmbeddings) {
             try {
+                Movie movie = movieRepository.findById(movieId)
+                        .orElseThrow(() -> new RuntimeException("Movie not found with ID: " + movieId));
+
                 generateAndSaveMovieEmbedding(movie);
                 successCount++;
 
@@ -94,8 +93,7 @@ public class MovieEmbeddingService {
 
             } catch (Exception e) {
                 failureCount++;
-                log.warn("Failed to generate embedding for movie: {} (ID: {}). Continuing with next movie.",
-                        movie.getTitle(), movie.getId());
+                log.warn("Failed to generate embedding for movieId {}. Continuing with next movie.", movieId);
             }
         }
 
@@ -131,13 +129,14 @@ public class MovieEmbeddingService {
      */
     public EmbeddingStats getEmbeddingStats() {
         long totalMovies = movieRepository.count();
-        long moviesWithEmbeddings = totalMovies - movieRepository.findMoviesWithoutEmbeddings().size();
+        long moviesWithoutEmbeddings = movieRepository.findMovieIdsWithoutEmbeddings().size();
+        long moviesWithEmbeddings = totalMovies - moviesWithoutEmbeddings;
 
         return EmbeddingStats.builder()
                 .totalMovies(totalMovies)
                 .moviesWithEmbeddings(moviesWithEmbeddings)
-                .moviesWithoutEmbeddings(totalMovies - moviesWithEmbeddings)
-                .embeddingCoverage((double) moviesWithEmbeddings / totalMovies * 100)
+                .moviesWithoutEmbeddings(moviesWithoutEmbeddings)
+                .embeddingCoverage(totalMovies == 0 ? 0.0 : (double) moviesWithEmbeddings / totalMovies * 100)
                 .build();
     }
 
@@ -171,18 +170,13 @@ public class MovieEmbeddingService {
 
         for (Movie movie : moviesWithEmbeddings) {
             try {
-                // Parse movie's embedding string directly
                 List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
                 if (movieEmbedding.isEmpty()) continue;
 
                 double similarity = embeddingService.calculateCosineSimilarity(targetEmbedding, movieEmbedding);
-
-                // Always collect results for later filtering with improved thresholds
                 similarityResults.add(new MovieSimilarityResult(movie, similarity));
             } catch (Exception e) {
-                // Skip movies with invalid embeddings
                 log.warn("Failed to process embedding for movie {}: {}", movie.getId(), e.getMessage());
-                continue;
             }
         }
 
@@ -216,9 +210,6 @@ public class MovieEmbeddingService {
         return results;
     }
 
-    /**
-     * Convert List<Double> embedding to PostgreSQL vector format
-     */
     private String convertEmbeddingToVectorString(List<Double> embedding) {
         if (embedding == null || embedding.isEmpty()) {
             throw new IllegalArgumentException("Embedding cannot be null or empty");
@@ -226,26 +217,19 @@ public class MovieEmbeddingService {
 
         StringBuilder sb = new StringBuilder();
         sb.append("[");
-
         for (int i = 0; i < embedding.size(); i++) {
             if (i > 0) sb.append(",");
             sb.append(embedding.get(i));
         }
-
         sb.append("]");
         return sb.toString();
     }
 
-
-    /**
-     * Parse pgvector text format [1.0,2.0,3.0,...] to List<Double>
-     */
     private List<Double> parseVectorText(String vectorText) {
         if (vectorText == null || vectorText.trim().isEmpty()) {
             return new ArrayList<>();
         }
 
-        // Remove brackets and split by comma
         String cleanText = vectorText.trim();
         if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
             cleanText = cleanText.substring(1, cleanText.length() - 1);
@@ -258,7 +242,6 @@ public class MovieEmbeddingService {
             try {
                 result.add(Double.parseDouble(value.trim()));
             } catch (NumberFormatException e) {
-                // Skip invalid values
                 log.warn("Invalid vector value: {}", value);
             }
         }
