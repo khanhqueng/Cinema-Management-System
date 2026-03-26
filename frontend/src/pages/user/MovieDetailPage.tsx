@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   Calendar,
   Clock,
@@ -10,17 +10,17 @@ import {
   User,
   Tag,
   DollarSign,
-  Loader2
-} from 'lucide-react';
+  Loader2,
+} from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
-import { movieService } from '../../services/movieService';
-import { Movie } from '../../types';
+import { movieService } from "../../services/movieService";
+import { Movie } from "../../types";
 
 // NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 
 const MovieDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,18 +31,20 @@ const MovieDetailPage: React.FC = () => {
   useEffect(() => {
     const fetchMovie = async () => {
       if (!id) {
-        setError('Movie ID not provided');
+        setError("Movie ID not provided");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        const movieData = await movieService.getMovieByIdEnhanced(parseInt(id, 10));
+        const movieData = await movieService.getMovieByIdEnhanced(
+          parseInt(id, 10),
+        );
         setMovie(movieData);
       } catch (err) {
-        setError('Failed to load movie details');
-        console.error('Error fetching movie:', err);
+        setError("Failed to load movie details");
+        console.error("Error fetching movie:", err);
       } finally {
         setLoading(false);
       }
@@ -75,8 +77,12 @@ const MovieDetailPage: React.FC = () => {
           <div className="flex items-center justify-center min-h-[400px]">
             <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-8 text-center">
-                <h2 className="text-2xl font-bold text-white mb-4">Movie Not Found</h2>
-                <p className="text-gray-400 mb-6">{error || 'The requested movie could not be found.'}</p>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Movie Not Found
+                </h2>
+                <p className="text-gray-400 mb-6">
+                  {error || "The requested movie could not be found."}
+                </p>
                 <Button asChild className="bg-red-600 hover:bg-red-700">
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -98,11 +104,15 @@ const MovieDetailPage: React.FC = () => {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={movie.posterUrl || `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`}
+            src={
+              movie.posterUrl ||
+              `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`
+            }
             alt={movie.title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`;
+              (e.target as HTMLImageElement).src =
+                `https://placehold.co/1920x1080/141414/E50914?text=${encodeURIComponent(movie.title)}`;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 to-transparent" />
@@ -119,7 +129,10 @@ const MovieDetailPage: React.FC = () => {
           >
             {/* Breadcrumb */}
             <div className="mb-4">
-              <Link to="/movies" className="text-gray-400 hover:text-white transition-colors">
+              <Link
+                to="/movies"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
                 Movies
               </Link>
               <span className="text-gray-600 mx-2">/</span>
@@ -144,7 +157,10 @@ const MovieDetailPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <Tag className="w-4 h-4" />
                   <span className="text-gray-400">Genre:</span>
-                  <Badge variant="secondary" className="bg-red-600 text-white hover:bg-red-700">
+                  <Badge
+                    variant="secondary"
+                    className="bg-red-600 text-white hover:bg-red-700"
+                  >
                     {movie.genre}
                   </Badge>
                 </div>
@@ -158,11 +174,13 @@ const MovieDetailPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4" />
                   <span className="text-gray-400">Release:</span>
-                  <span>{new Date(movie.releaseDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}</span>
+                  <span>
+                    {new Date(movie.releaseDate).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <DollarSign className="w-4 h-4" />
@@ -182,7 +200,8 @@ const MovieDetailPage: React.FC = () => {
                   </div>
                   {movie.reviewCount > 0 && (
                     <span className="text-gray-400 text-sm">
-                      ({movie.reviewCount} review{movie.reviewCount !== 1 ? 's' : ''})
+                      ({movie.reviewCount} review
+                      {movie.reviewCount !== 1 ? "s" : ""})
                     </span>
                   )}
                 </div>
@@ -206,11 +225,12 @@ const MovieDetailPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-white hover:!text-black"
-                onClick={() => window.history.back()}
+                className="bg-gray-800! border-gray-600! text-white! hover:bg-white! hover:text-black!"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Movies
+                <Link to="/movies" className="flex items-center">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Movies
+                </Link>
               </Button>
             </div>
           </motion.div>
@@ -231,7 +251,8 @@ const MovieDetailPage: React.FC = () => {
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-8">
                 <p className="text-gray-300 text-lg leading-relaxed max-w-4xl">
-                  {movie.description || 'No description available for this movie.'}
+                  {movie.description ||
+                    "No description available for this movie."}
                 </p>
               </CardContent>
             </Card>
@@ -244,7 +265,9 @@ const MovieDetailPage: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mb-16"
           >
-            <h2 className="text-3xl font-bold text-white mb-6">Movie Details</h2>
+            <h2 className="text-3xl font-bold text-white mb-6">
+              Movie Details
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-6">
@@ -282,7 +305,9 @@ const MovieDetailPage: React.FC = () => {
                     <Calendar className="w-5 h-5 text-red-500" />
                     <h3 className="font-semibold text-white">Release Date</h3>
                   </div>
-                  <p className="text-gray-300">{new Date(movie.releaseDate).toLocaleDateString()}</p>
+                  <p className="text-gray-300">
+                    {new Date(movie.releaseDate).toLocaleDateString()}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -292,7 +317,9 @@ const MovieDetailPage: React.FC = () => {
                     <DollarSign className="w-5 h-5 text-red-500" />
                     <h3 className="font-semibold text-white">Base Price</h3>
                   </div>
-                  <p className="text-green-500 font-bold text-lg">{movieService.formatPrice(movie.priceBase)}</p>
+                  <p className="text-green-500 font-bold text-lg">
+                    {movieService.formatPrice(movie.priceBase)}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -303,7 +330,7 @@ const MovieDetailPage: React.FC = () => {
                     <h3 className="font-semibold text-white">Status</h3>
                   </div>
                   <p className="text-gray-300">
-                    {movie.currentlyShowing ? 'Now Showing' : 'Coming Soon'}
+                    {movie.currentlyShowing ? "Now Showing" : "Coming Soon"}
                   </p>
                 </CardContent>
               </Card>
@@ -314,6 +341,5 @@ const MovieDetailPage: React.FC = () => {
     </div>
   );
 };
-
 
 export default MovieDetailPage;

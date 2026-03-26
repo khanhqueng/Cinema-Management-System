@@ -42,7 +42,7 @@ export function Header() {
       className="fixed top-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-md border-b border-gray-800"
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
             <div className="bg-linear-to-r from-red-600 to-red-500 p-2 rounded-lg group-hover:shadow-lg group-hover:shadow-red-500/50 transition-all">
@@ -160,11 +160,13 @@ export function Header() {
                 {/* Logout button */}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-red-600 transition-colors text-sm"
+                  className="flex items-center flex-nowrap min-w-0 space-x-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-red-600 transition-colors text-sm"
                   title="Sign Out"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sign Out</span>
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline truncate max-w-20">
+                    Sign Out
+                  </span>
                 </button>
               </>
             ) : (

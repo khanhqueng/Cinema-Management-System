@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -6,11 +6,8 @@ import {
   Clock,
   Film,
   Building2,
-  Star,
-  MapPin,
   Users,
   DollarSign,
-  Filter,
   Search,
   ArrowLeft,
   ArrowRight,
@@ -39,11 +36,7 @@ const AllShowtimesPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchShowtimes();
-  }, [currentPage, selectedDate]);
-
-  const fetchShowtimes = async () => {
+  const fetchShowtimes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -69,7 +62,11 @@ const AllShowtimesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, selectedDate]);
+
+  useEffect(() => {
+    fetchShowtimes();
+  }, [fetchShowtimes]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -117,37 +114,6 @@ const AllShowtimesPage: React.FC = () => {
     fetchShowtimes();
   };
 
-  const getStatusBadge = (showDatetime: string) => {
-    const now = new Date();
-    const showTime = new Date(showDatetime);
-
-    if (showTime < now) {
-      return (
-        <Badge variant="secondary" className="bg-gray-600 text-white">
-          Past
-        </Badge>
-      );
-    } else if (showTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-      return (
-        <Badge variant="secondary" className="bg-red-600 text-white">
-          Today
-        </Badge>
-      );
-    } else if (showTime.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000) {
-      return (
-        <Badge variant="secondary" className="bg-orange-600 text-white">
-          This Week
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="secondary" className="bg-green-600 text-white">
-          Upcoming
-        </Badge>
-      );
-    }
-  };
-
   const getNextDates = () => {
     const dates = [];
     const today = new Date();
@@ -192,7 +158,7 @@ const AllShowtimesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header Section - NEW UI */}
-      <section className="bg-gradient-to-r from-indigo-900 to-purple-800 py-16 text-center">
+      {/* <section className="bg-linear-to-r from-indigo-900 to-purple-800 py-16 text-center">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -210,7 +176,7 @@ const AllShowtimesPage: React.FC = () => {
             </p>
           </motion.div>
         </div>
-      </section>
+      </section> */}
 
       {/* Content Section */}
       <main className="py-12 bg-gray-950">
@@ -224,31 +190,31 @@ const AllShowtimesPage: React.FC = () => {
             {/* Filters Section - NEW UI */}
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
-                  {/* Search */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 flex items-center">
-                      <Search className="w-4 h-4 mr-2" />
-                      Search Movies & Theaters
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input
-                        type="text"
-                        placeholder="Search movies or theaters..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
+                {/* Search Bar on top */}
+                <div className="mb-6">
+                  <label className="text-sm font-medium text-gray-300 flex items-center mb-2">
+                    <Search className="w-4 h-4 mr-2" />
+                    Tìm phim hoặc rạp
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Nhập tên phim hoặc rạp..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
                   </div>
-
+                </div>
+                {/* Row: Date filter (left), Actions (right) */}
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                   {/* Date Filter */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:w-2/3">
                     <label className="text-sm font-medium text-gray-300 flex items-center">
                       <Calendar className="w-4 h-4 mr-2" />
-                      Filter by Date
+                      Chọn ngày
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {getNextDates().map((date) => (
@@ -270,31 +236,30 @@ const AllShowtimesPage: React.FC = () => {
                       ))}
                     </div>
                   </div>
-
                   {/* Actions */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
+                  <div className="space-y-2 md:w-1/3 md:text-right">
+                    <div className="flex flex-row md:justify-end items-center space-x-2">
                       <Button
                         onClick={handleSearch}
                         className="bg-indigo-600 hover:bg-indigo-700"
                       >
                         <Search className="w-4 h-4 mr-2" />
-                        Search
+                        Tìm kiếm
                       </Button>
                       {(searchQuery || selectedDate) && (
                         <Button
                           onClick={clearFilters}
                           variant="outline"
-                          className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+                          className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white!"
                         >
-                          Clear
+                          Xóa bộ lọc
                         </Button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-400 md:text-right">
                       {showtimes
-                        ? `${showtimes.totalElements} showtimes found`
-                        : "Loading..."}
+                        ? `${showtimes.totalElements} lịch chiếu`
+                        : "Đang tải..."}
                     </p>
                   </div>
                 </div>
@@ -310,7 +275,7 @@ const AllShowtimesPage: React.FC = () => {
                 <Card className="bg-red-900/50 border-red-600">
                   <CardContent className="p-6">
                     <div className="flex items-center text-red-300">
-                      <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                      <AlertCircle className="w-5 h-5 mr-2 shrink-0" />
                       {error}
                     </div>
                   </CardContent>
@@ -376,7 +341,7 @@ const AllShowtimesPage: React.FC = () => {
                       onClick={() => setCurrentPage(0)}
                       disabled={currentPage === 0}
                       variant="outline"
-                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white! disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ArrowLeft className="w-4 h-4 mr-1" />
                       First
@@ -385,7 +350,7 @@ const AllShowtimesPage: React.FC = () => {
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 0}
                       variant="outline"
-                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white! disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </Button>
@@ -398,7 +363,7 @@ const AllShowtimesPage: React.FC = () => {
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage >= showtimes.totalPages - 1}
                       variant="outline"
-                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white! disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </Button>
@@ -406,7 +371,7 @@ const AllShowtimesPage: React.FC = () => {
                       onClick={() => setCurrentPage(showtimes.totalPages - 1)}
                       disabled={currentPage >= showtimes.totalPages - 1}
                       variant="outline"
-                      className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white! disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Last
                       <ArrowRight className="w-4 h-4 ml-1" />
@@ -462,7 +427,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
       <CardContent className="p-6 flex flex-col h-full">
         {/* Movie Info */}
         <div className="flex items-start space-x-4 mb-4">
-          <div className="w-16 h-24 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-16 h-24 bg-gray-700 rounded-lg flex items-center justify-center shrink-0">
             {showtime.moviePosterUrl ? (
               <img
                 src={showtime.moviePosterUrl}
@@ -545,14 +510,13 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
         <div className="mt-6 pt-4 border-t border-gray-700">
           <Button
             asChild
-            className={`w-full ${isPast ? "bg-gray-600 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
-            disabled={isPast}
+            className={`w-full ${isPast ? "bg-gray-600 hover:bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"}`}
           >
             <Link
               to={
                 isPast
-                  ? "#"
-                  : `/movies/${showtime.movieId}/showtimes/${showtime.id}/booking`
+                  ? `/movies/${showtime.movieId}`
+                  : `/booking/${showtime.id}`
               }
             >
               {isPast ? (
