@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { motion } from "motion/react";
 import {
   ArrowLeft,
   MapPin,
@@ -12,28 +12,29 @@ import {
   Film,
   Armchair,
   AlertCircle,
-  CheckCircle2
-} from 'lucide-react';
+  CheckCircle2,
+} from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
-import { showtimeService } from '../../services/showtimeService';
-import { bookingService } from '../../services/bookingService';
+import { showtimeService } from "../../services/showtimeService";
+import { bookingService } from "../../services/bookingService";
 import {
   Showtime,
   SeatMapResponse,
   SeatInfo,
   SeatAvailabilityResponse,
-  BookingWithSeatsResponse
-} from '../../types';
+  BookingWithSeatsResponse,
+} from "../../types";
 
 // NEW UI components
-import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 
 const BookingPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showtime, setShowtime] = useState<Showtime | null>(null);
   const [seatMap, setSeatMap] = useState<SeatMapResponse | null>(null);
@@ -42,12 +43,21 @@ const BookingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [priceCheck, setPriceCheck] = useState<SeatAvailabilityResponse | null>(null);
+  const [priceCheck, setPriceCheck] = useState<SeatAvailabilityResponse | null>(
+    null,
+  );
+  const [pendingPayment, setPendingPayment] = useState<{
+    selectedSeats: number[];
+    totalPrice: number;
+    showtime: Showtime;
+    reservedUntil: number;
+  } | null>(null);
+  const [bannerTimeLeft, setBannerTimeLeft] = useState<number>(0);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!showtimeId) {
-        setError('Showtime ID not provided');
+        setError("Showtime ID not provided");
         setLoading(false);
         return;
       }
@@ -58,14 +68,20 @@ const BookingPage: React.FC = () => {
         // Fetch showtime and seat map in parallel
         const [showtimeData, seatMapData] = await Promise.all([
           showtimeService.getShowtimeById(parseInt(showtimeId, 10)),
-          bookingService.getSeatMapForShowtime(parseInt(showtimeId, 10))
+          bookingService.getSeatMapForShowtime(parseInt(showtimeId, 10)),
         ]);
 
         setShowtime(showtimeData);
         setSeatMap(seatMapData);
+
+        // Restore previous seat selection (e.g. user came back from payment via Cancel)
+        const prevSeats = (location.state as any)?.prevSelectedSeats;
+        if (Array.isArray(prevSeats) && prevSeats.length > 0) {
+          setSelectedSeats(prevSeats);
+        }
       } catch (err) {
-        setError('Failed to load showtime or seat information');
-        console.error('Error fetching booking data:', err);
+        setError("Failed to load showtime or seat information");
+        console.error("Error fetching booking data:", err);
       } finally {
         setLoading(false);
       }
@@ -81,12 +97,12 @@ const BookingPage: React.FC = () => {
         try {
           const priceData = await bookingService.calculateSeatPrice(
             parseInt(showtimeId, 10),
-            selectedSeats
+            selectedSeats,
           );
           setPriceCheck(priceData);
           setTotalPrice(priceData.totalPrice);
         } catch (err) {
-          console.error('Error calculating price:', err);
+          console.error("Error calculating price:", err);
         }
       } else {
         setPriceCheck(null);
@@ -99,15 +115,72 @@ const BookingPage: React.FC = () => {
 
   // No cleanup needed since we're not locking seats until "Book Now" is clicked
 
+  // Check localStorage for an active pending payment on this showtime
+  useEffect(() => {
+    if (!showtimeId) return;
+    const raw = localStorage.getItem("pendingPayment");
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as {
+        selectedSeats: number[];
+        showtimeId: number;
+        showtime: Showtime;
+        totalPrice: number;
+      };
+      if (String(parsed.showtimeId) !== showtimeId) return;
+      bookingService
+        .getSeatLockStatus(parsed.showtimeId, parsed.selectedSeats)
+        .then((status) => {
+          if (status.locked && status.remainingMs > 0) {
+            const until = Date.now() + status.remainingMs;
+            // Use actual locked seatIds from API for accurate count
+            const actualSeats =
+              status.seatIds && status.seatIds.length > 0
+                ? status.seatIds
+                : parsed.selectedSeats;
+            setPendingPayment({
+              selectedSeats: actualSeats,
+              totalPrice: parsed.totalPrice,
+              showtime: parsed.showtime,
+              reservedUntil: until,
+            });
+            setBannerTimeLeft(status.remainingMs);
+          } else {
+            localStorage.removeItem("pendingPayment");
+          }
+        })
+        .catch(() => localStorage.removeItem("pendingPayment"));
+    } catch {
+      localStorage.removeItem("pendingPayment");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showtimeId]);
+
+  // Countdown for Resume Payment banner
+  useEffect(() => {
+    if (!pendingPayment) return;
+    setBannerTimeLeft(Math.max(0, pendingPayment.reservedUntil - Date.now()));
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, pendingPayment.reservedUntil - Date.now());
+      setBannerTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        localStorage.removeItem("pendingPayment");
+        setPendingPayment(null);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [pendingPayment]);
+
   const handleSeatToggle = (seatId: number) => {
-    setSelectedSeats(prev => {
+    setSelectedSeats((prev) => {
       if (prev.includes(seatId)) {
         // Deselecting seat - just remove from local state
-        return prev.filter(id => id !== seatId);
+        return prev.filter((id) => id !== seatId);
       } else {
         // Selecting seat - just add to local state
         if (prev.length >= 8) {
-          alert('You can select maximum 8 seats per booking');
+          alert("You can select maximum 8 seats per booking");
           return prev;
         }
         return [...prev, seatId];
@@ -117,7 +190,7 @@ const BookingPage: React.FC = () => {
 
   const handleBooking = async () => {
     if (!showtimeId || selectedSeats.length === 0) {
-      alert('Please select at least one seat');
+      alert("Please select at least one seat");
       return;
     }
 
@@ -128,40 +201,53 @@ const BookingPage: React.FC = () => {
       try {
         const reserveResponse = await bookingService.reserveSeatsForSelection({
           showtimeId: parseInt(showtimeId, 10),
-          seatIds: selectedSeats
+          seatIds: selectedSeats,
         });
 
         // Seats successfully reserved, proceed to payment page
-
       } catch (reserveErr: any) {
         // Handle seat reservation conflicts
         if (reserveErr.response?.status === 409) {
-          alert('Some selected seats are already taken by another user. Please select different seats.');
+          alert(
+            "Some selected seats are already taken by another user. Please select different seats.",
+          );
         } else {
-          alert('Unable to reserve selected seats. Please try again.');
+          alert("Unable to reserve selected seats. Please try again.");
         }
 
         // Refresh seat map and reset selection
-        const updatedSeatMap = await bookingService.getSeatMapForShowtime(parseInt(showtimeId, 10));
+        const updatedSeatMap = await bookingService.getSeatMapForShowtime(
+          parseInt(showtimeId, 10),
+        );
         setSeatMap(updatedSeatMap);
         setSelectedSeats([]);
         return;
       }
 
-      // Step 2: Navigate to payment page with reserved seats
+      // Step 2: Save pending payment state so PaymentPage can recover after reload
+      localStorage.setItem(
+        "pendingPayment",
+        JSON.stringify({
+          selectedSeats,
+          showtimeId: parseInt(showtimeId, 10),
+          showtime,
+          totalPrice,
+        }),
+      );
+
+      // Step 3: Navigate to payment page with reserved seats
       // Instead of creating booking immediately, go to payment page
       navigate(`/payment/${showtimeId}`, {
         state: {
           selectedSeats,
           totalPrice,
           showtime,
-          reservedUntil: Date.now() + 5 * 60 * 1000 // 5 minutes from now
-        }
+          reservedUntil: Date.now() + 5 * 60 * 1000, // 5 minutes from now
+        },
       });
-
     } catch (err) {
-      console.error('Error in booking process:', err);
-      alert('Failed to proceed with booking. Please try again.');
+      console.error("Error in booking process:", err);
+      alert("Failed to proceed with booking. Please try again.");
     } finally {
       setBookingLoading(false);
     }
@@ -192,8 +278,12 @@ const BookingPage: React.FC = () => {
             <Card className="bg-gray-900 border-gray-800">
               <CardContent className="p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-4">Booking Not Available</h2>
-                <p className="text-gray-400 mb-6">{error || 'Unable to load booking information.'}</p>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Booking Not Available
+                </h2>
+                <p className="text-gray-400 mb-6">
+                  {error || "Unable to load booking information."}
+                </p>
                 <Button asChild className="bg-red-600 hover:bg-red-700">
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -211,21 +301,81 @@ const BookingPage: React.FC = () => {
   const seatMapByRow = bookingService.generateSeatMap(seatMap.seats);
   const rows = Object.keys(seatMapByRow).sort();
 
+  const prevSelectedSeats = (location.state as any)?.prevSelectedSeats as
+    | number[]
+    | undefined;
+
+  const pendingMinutes = Math.floor(bannerTimeLeft / 60000);
+  const pendingSeconds = Math.floor((bannerTimeLeft % 60000) / 1000);
+
   return (
     <div className="min-h-screen bg-gray-950">
+      {/* Resume Payment banner — active lock detected */}
+      {pendingPayment && bannerTimeLeft > 0 && (
+        <div className="bg-yellow-600/20 border-b border-yellow-500 py-3 px-4">
+          <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-yellow-300 text-sm font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              Bạn đang giữ{" "}
+              <span className="font-bold">
+                {pendingPayment.selectedSeats.length} ghế
+              </span>
+              {" — "}còn 
+              <span className="font-bold text-yellow-200">
+                {pendingMinutes}:{String(pendingSeconds).padStart(2, "0")}
+              </span>
+               để hoàn tất thanh toán.
+            </div>
+            <Button
+              size="sm"
+              className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold shrink-0"
+              onClick={() =>
+                navigate(`/payment/${showtimeId}`, {
+                  state: {
+                    selectedSeats: pendingPayment.selectedSeats,
+                    totalPrice: pendingPayment.totalPrice,
+                    showtime: pendingPayment.showtime,
+                    reservedUntil: pendingPayment.reservedUntil,
+                  },
+                })
+              }
+            >
+              Tiếp tục thanh toán →
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Restore notice banner */}
+      {prevSelectedSeats && prevSelectedSeats.length > 0 && (
+        <div className="bg-yellow-900/40 border-b border-yellow-700 py-2 px-4 text-center text-yellow-300 text-sm flex items-center justify-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Your previous seat selection has been restored. Modify or confirm to
+          proceed.
+        </div>
+      )}
+
       {/* Header Section - NEW UI with OLD data */}
       <section className="bg-gray-900 py-6 border-b border-gray-800">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
           <nav className="mb-6">
             <div className="flex items-center space-x-2 text-gray-400">
-              <Link to="/movies" className="hover:text-white transition-colors">Movies</Link>
+              <Link to="/movies" className="hover:text-white transition-colors">
+                Movies
+              </Link>
               <span className="text-gray-600">/</span>
-              <Link to={`/movies/${showtime.movieId}`} className="hover:text-white transition-colors">
+              <Link
+                to={`/movies/${showtime.movieId}`}
+                className="hover:text-white transition-colors"
+              >
                 {showtime.movieTitle}
               </Link>
               <span className="text-gray-600">/</span>
-              <Link to={`/movies/${showtime.movieId}/showtimes`} className="hover:text-white transition-colors">
+              <Link
+                to={`/movies/${showtime.movieId}/showtimes`}
+                className="hover:text-white transition-colors"
+              >
                 Showtimes
               </Link>
               <span className="text-gray-600">/</span>
@@ -241,15 +391,21 @@ const BookingPage: React.FC = () => {
             className="flex items-start space-x-4"
           >
             <img
-              src={showtime.moviePosterUrl || `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`}
+              src={
+                showtime.moviePosterUrl ||
+                `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`
+              }
               alt={showtime.movieTitle}
               className="w-20 h-30 object-cover rounded-lg"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`;
+                (e.target as HTMLImageElement).src =
+                  `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(showtime.movieTitle)}`;
               }}
             />
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white mb-4">{showtime.movieTitle}</h1>
+              <h1 className="text-2xl font-bold text-white mb-4">
+                {showtime.movieTitle}
+              </h1>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-gray-300">
@@ -268,7 +424,9 @@ const BookingPage: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-green-500 font-bold">
                     <DollarSign className="w-4 h-4" />
-                    <span>{showtimeService.formatPrice(showtime.price)} per seat</span>
+                    <span>
+                      {showtimeService.formatPrice(showtime.price)} per seat
+                    </span>
                   </div>
                 </div>
               </div>
@@ -317,6 +475,10 @@ const BookingPage: React.FC = () => {
                         <span className="text-gray-300">Đã đặt</span>
                       </div>
                       <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-orange-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Đang giữ tạm</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
                         <div className="w-6 h-6 bg-yellow-500 rounded border border-gray-600"></div>
                         <span className="text-gray-300">VIP (1.5x)</span>
                       </div>
@@ -326,50 +488,80 @@ const BookingPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-6 h-6 bg-blue-500 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Người khuyết tật (1.0x)</span>
+                        <span className="text-gray-300">
+                          Người khuyết tật (1.0x)
+                        </span>
                       </div>
                     </div>
 
                     {/* Seat Map */}
                     <div className="flex flex-col items-center space-y-3">
-                      {rows.map(row => (
+                      {rows.map((row) => (
                         <div key={row} className="flex items-center space-x-4">
-                          <div className="w-8 text-center font-bold text-gray-400">{row}</div>
+                          <div className="w-8 text-center font-bold text-gray-400">
+                            {row}
+                          </div>
                           <div className="flex space-x-2">
                             {seatMapByRow[row].map((seat, index) => {
                               // Add aisle spacing - typical CGV layout has aisles every 4-6 seats
-                              const shouldAddAisle = index > 0 && (index + 1) % 4 === 0 && index < seatMapByRow[row].length - 1;
-                              const isSelected = selectedSeats.includes(seat.id);
-                              const isBooked = !seat.isAvailable;
-                              const isVIP = seat.seatType === 'VIP';
-                              const isCouple = seat.seatType === 'COUPLE';
-                              const isWheelchair = seat.seatType === 'WHEELCHAIR';
+                              const shouldAddAisle =
+                                index > 0 &&
+                                (index + 1) % 4 === 0 &&
+                                index < seatMapByRow[row].length - 1;
+                              const isSelected = selectedSeats.includes(
+                                seat.id,
+                              );
+                              const isBooked =
+                                !seat.isAvailable && !seat.lockedByOther;
+                              const isLockedByOther =
+                                seat.lockedByOther === true;
+                              const isVIP = seat.seatType === "VIP";
+                              const isCouple = seat.seatType === "COUPLE";
+                              const isWheelchair =
+                                seat.seatType === "WHEELCHAIR";
 
-                              let seatClasses = "w-9 h-9 border border-gray-600 rounded text-white text-xs font-bold transition-all duration-200 hover:scale-105";
+                              let seatClasses =
+                                "w-9 h-9 border border-gray-600 rounded text-white text-xs font-bold transition-all duration-200 hover:scale-105";
                               let seatSize = "w-9 h-9";
 
                               if (isBooked) {
-                                seatClasses += " bg-gray-600 cursor-not-allowed opacity-50";
+                                seatClasses +=
+                                  " bg-gray-600 cursor-not-allowed opacity-50";
+                              } else if (isLockedByOther) {
+                                seatClasses +=
+                                  " bg-orange-500 cursor-not-allowed opacity-70";
                               } else if (isSelected) {
-                                seatClasses += " bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30";
+                                seatClasses +=
+                                  " bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30";
                               } else if (isVIP) {
-                                seatClasses += " bg-yellow-500 hover:bg-yellow-600 cursor-pointer";
+                                seatClasses +=
+                                  " bg-yellow-500 hover:bg-yellow-600 cursor-pointer";
                               } else if (isCouple) {
-                                seatClasses += " bg-pink-600 hover:bg-pink-700 cursor-pointer";
+                                seatClasses +=
+                                  " bg-pink-600 hover:bg-pink-700 cursor-pointer";
                                 seatSize = "w-12 h-9"; // Wider for couple seats
                               } else if (isWheelchair) {
-                                seatClasses += " bg-blue-500 hover:bg-blue-600 cursor-pointer";
+                                seatClasses +=
+                                  " bg-blue-500 hover:bg-blue-600 cursor-pointer";
                               } else {
-                                seatClasses += " bg-green-500 hover:bg-green-600 cursor-pointer";
+                                seatClasses +=
+                                  " bg-green-500 hover:bg-green-600 cursor-pointer";
                               }
+
+                              const isDisabled = isBooked || isLockedByOther;
+                              const tooltip = isLockedByOther
+                                ? `${row}${seat.seatNumber} - Đang được giữ tạm bởi người khác`
+                                : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
 
                               return (
                                 <React.Fragment key={seat.id}>
                                   <button
-                                    onClick={() => seat.isAvailable && handleSeatToggle(seat.id)}
-                                    disabled={!seat.isAvailable}
+                                    onClick={() =>
+                                      !isDisabled && handleSeatToggle(seat.id)
+                                    }
+                                    disabled={isDisabled}
                                     className={`${seatClasses} ${seatSize}`}
-                                    title={`${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`}
+                                    title={tooltip}
                                   >
                                     {seat.seatNumber}
                                   </button>
@@ -408,34 +600,50 @@ const BookingPage: React.FC = () => {
                       </h4>
                       {selectedSeats.length > 0 ? (
                         <div className="space-y-2">
-                          {selectedSeats.map(seatId => {
-                            const seat = seatMap.seats.find(s => s.id === seatId);
+                          {selectedSeats.map((seatId) => {
+                            const seat = seatMap.seats.find(
+                              (s) => s.id === seatId,
+                            );
                             return seat ? (
-                              <div key={seatId} className="flex justify-between items-center py-2 border-b border-gray-700">
+                              <div
+                                key={seatId}
+                                className="flex justify-between items-center py-2 border-b border-gray-700"
+                              >
                                 <span className="text-white font-medium">
-                                  {seat.rowLetter}{seat.seatNumber}
+                                  {seat.rowLetter}
+                                  {seat.seatNumber}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
-                                  {bookingService.getSeatTypeDisplay(seat.seatType)}
+                                  {bookingService.getSeatTypeDisplay(
+                                    seat.seatType,
+                                  )}
                                 </Badge>
                               </div>
                             ) : null;
                           })}
                         </div>
                       ) : (
-                        <p className="text-gray-400 italic">No seats selected</p>
+                        <p className="text-gray-400 italic">
+                          No seats selected
+                        </p>
                       )}
                     </div>
 
                     {priceCheck && (
                       <div className="bg-gray-700 rounded-lg p-4 mb-6">
                         <div className="flex justify-between items-center mb-2 text-sm">
-                          <span className="text-gray-300">Seats ({priceCheck.seatCount})</span>
-                          <span className="text-white">{bookingService.formatPrice(priceCheck.totalPrice)}</span>
+                          <span className="text-gray-300">
+                            Seats ({priceCheck.seatCount})
+                          </span>
+                          <span className="text-white">
+                            {bookingService.formatPrice(priceCheck.totalPrice)}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-600">
                           <span className="text-white">Total</span>
-                          <span className="text-green-500">{bookingService.formatPrice(priceCheck.totalPrice)}</span>
+                          <span className="text-green-500">
+                            {bookingService.formatPrice(priceCheck.totalPrice)}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -455,7 +663,7 @@ const BookingPage: React.FC = () => {
                           Processing...
                         </>
                       ) : (
-                        'Book Now'
+                        "Book Now"
                       )}
                     </Button>
 
@@ -466,8 +674,13 @@ const BookingPage: React.FC = () => {
                       </h4>
                       <ul className="space-y-1">
                         <li>• Maximum 8 seats per booking</li>
-                        <li>• Bookings can be cancelled up to 2 hours before showtime</li>
-                        <li>• Please arrive at least 15 minutes before showtime</li>
+                        <li>
+                          • Bookings can be cancelled up to 2 hours before
+                          showtime
+                        </li>
+                        <li>
+                          • Please arrive at least 15 minutes before showtime
+                        </li>
                         <li>• VIP seats include premium amenities</li>
                       </ul>
                     </div>
@@ -481,6 +694,5 @@ const BookingPage: React.FC = () => {
     </div>
   );
 };
-
 
 export default BookingPage;

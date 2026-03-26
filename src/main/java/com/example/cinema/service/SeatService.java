@@ -29,6 +29,7 @@ public class SeatService {
     private final SeatBookingRepository seatBookingRepository;
     private final TheaterRepository theaterRepository;
     private final ShowtimeRepository showtimeRepository;
+    private final DistributedLockService distributedLockService;
 
     /**
      * Get seat layout for a theater
@@ -41,9 +42,13 @@ public class SeatService {
     }
 
     /**
-     * Get seat map for a showtime with availability status
+     * Get seat map for a showtime with availability status.
+     * Marks seats locked by other users (Redis) so the frontend can display them differently.
+     *
+     * @param showtimeId  the showtime
+     * @param currentUser the calling user (may be null for unauthenticated requests)
      */
-    public SeatMapResponse getSeatMapForShowtime(Long showtimeId) {
+    public SeatMapResponse getSeatMapForShowtime(Long showtimeId, User currentUser) {
         Showtime showtime = showtimeRepository.findById(showtimeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
 
@@ -53,19 +58,41 @@ public class SeatService {
         Map<Long, SeatBooking> bookedSeatMap = bookedSeats.stream()
                 .collect(Collectors.toMap(sb -> sb.getSeat().getId(), sb -> sb));
 
+        Long currentUserId = currentUser != null ? currentUser.getId() : null;
+
         List<SeatInfo> seatInfos = allSeats.stream()
                 .map(seat -> {
                     SeatBooking booking = bookedSeatMap.get(seat.getId());
+                    boolean dbAvailable = booking == null;
+
+                    // Check Redis lock for temporarily-reserved seats
+                    boolean lockedByOther = false;
+                    boolean lockedByCurrentUser = false;
+                    if (dbAvailable) {
+                        String lockOwner = distributedLockService.getSeatLockOwner(showtimeId, seat.getId());
+                        if (lockOwner != null) {
+                            if (currentUserId != null && lockOwner.startsWith(currentUserId + ":")) {
+                                lockedByCurrentUser = true;
+                            } else {
+                                lockedByOther = true;
+                            }
+                        }
+                    }
+
                     return SeatInfo.builder()
                             .id(seat.getId())
                             .rowLetter(seat.getRowLetter())
                             .seatNumber(seat.getSeatNumber())
                             .seatType(seat.getSeatType())
                             .seatLabel(seat.getSeatLabel())
-                            .isAvailable(booking == null)
+                            .isAvailable(dbAvailable && !lockedByOther && !lockedByCurrentUser)
                             .isActive(seat.getIsActive())
                             .priceMultiplier(seat.getSeatType().getPriceMultiplier())
-                            .bookedByCurrentUser(false) // Will be updated by controller
+                            .bookedByCurrentUser(booking != null
+                                    && currentUserId != null
+                                    && booking.getBooking() != null
+                                    && currentUserId.equals(booking.getBooking().getUser().getId()))
+                            .lockedByOther(lockedByOther)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -81,6 +108,11 @@ public class SeatService {
                 .availableSeats(seatInfos.stream().mapToInt(s -> s.isAvailable() ? 1 : 0).sum())
                 .seats(seatInfos)
                 .build();
+    }
+
+    /** Backward-compatible overload for callers without a user context */
+    public SeatMapResponse getSeatMapForShowtime(Long showtimeId) {
+        return getSeatMapForShowtime(showtimeId, null);
     }
 
     /**
@@ -326,6 +358,7 @@ public class SeatService {
         public boolean isActive;
         public Double priceMultiplier;
         public boolean bookedByCurrentUser;
+        public boolean lockedByOther;
 
         public static SeatInfoBuilder builder() {
             return new SeatInfoBuilder();
@@ -378,6 +411,11 @@ public class SeatService {
 
             public SeatInfoBuilder bookedByCurrentUser(boolean bookedByCurrentUser) {
                 info.bookedByCurrentUser = bookedByCurrentUser;
+                return this;
+            }
+
+            public SeatInfoBuilder lockedByOther(boolean lockedByOther) {
+                info.lockedByOther = lockedByOther;
                 return this;
             }
 

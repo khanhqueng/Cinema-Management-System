@@ -8,6 +8,7 @@ import com.example.cinema.dto.BookingDto;
 import com.example.cinema.dto.BookingHistoryDto;
 import com.example.cinema.dto.SeatBookingDto;
 import com.example.cinema.dto.SeatLockResponse;
+import com.example.cinema.dto.SeatLockStatusResponse;
 import com.example.cinema.exception.BusinessRuleViolationException;
 import com.example.cinema.exception.ResourceNotFoundException;
 import com.example.cinema.exception.SeatLockException;
@@ -410,6 +411,37 @@ public class BookingService {
         return seatIds.stream()
                 .filter(seatId -> distributedLockService.isSeatLocked(showtimeId, seatId))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get the lock status and remaining TTL for a set of seats owned by the current user.
+     * Used by the frontend to recover the payment countdown timer after a page reload.
+     *
+     * @return locked=true with the minimum remainingMs across all seats if every seat is
+     *         still locked by this user; locked=false otherwise.
+     */
+    public SeatLockStatusResponse getSeatLockStatus(User user, Long showtimeId, List<Long> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) {
+            return new SeatLockStatusResponse(false, 0L, List.of());
+        }
+
+        long minRemainingMs = Long.MAX_VALUE;
+
+        for (Long seatId : seatIds) {
+            String owner = distributedLockService.getSeatLockOwner(showtimeId, seatId);
+            // lock value format: "userId:timestamp"
+            if (owner == null || !owner.startsWith(user.getId() + ":")) {
+                // at least one seat is not locked by this user
+                return new SeatLockStatusResponse(false, 0L, seatIds);
+            }
+            long remaining = distributedLockService.getSeatLockRemainingMs(showtimeId, seatId);
+            if (remaining <= 0) {
+                return new SeatLockStatusResponse(false, 0L, seatIds);
+            }
+            minRemainingMs = Math.min(minRemainingMs, remaining);
+        }
+
+        return new SeatLockStatusResponse(true, minRemainingMs, seatIds);
     }
 
 

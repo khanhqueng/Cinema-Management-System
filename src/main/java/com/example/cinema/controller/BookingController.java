@@ -6,6 +6,7 @@ import com.example.cinema.service.BookingService;
 import com.example.cinema.service.UserService;
 import com.example.cinema.dto.BookingHistoryDto;
 import com.example.cinema.dto.SeatLockResponse;
+import com.example.cinema.dto.SeatLockStatusResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -280,6 +281,19 @@ public class BookingController {
             @RequestParam List<Long> seatIds) {
         List<Long> lockedSeats = bookingService.getLockedSeats(showtimeId, seatIds);
         return ResponseEntity.ok(lockedSeats);
+    }
+
+    /**
+     * Get seat lock status and remaining TTL for the current user.
+     * Used by the payment page to recover the countdown timer after a page reload.
+     */
+    @GetMapping("/seats/lock-status")
+    public ResponseEntity<SeatLockStatusResponse> getSeatLockStatus(
+            @RequestParam Long showtimeId,
+            @RequestParam List<Long> seatIds) {
+        User currentUser = userService.getCurrentUser();
+        SeatLockStatusResponse status = bookingService.getSeatLockStatus(currentUser, showtimeId, seatIds);
+        return ResponseEntity.ok(status);
     }
 
     /**

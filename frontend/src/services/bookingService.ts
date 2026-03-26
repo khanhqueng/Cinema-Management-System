@@ -388,4 +388,19 @@ export const bookingService = {
         return "💺";
     }
   },
+
+  // Get lock status + remaining TTL for seats owned by the current user.
+  // Used by PaymentPage to recover the countdown timer after a page reload.
+  async getSeatLockStatus(
+    showtimeId: number,
+    seatIds: number[],
+  ): Promise<{ locked: boolean; remainingMs: number; seatIds: number[] }> {
+    const response = await api.get("/bookings/seats/lock-status", {
+      params: {
+        showtimeId,
+        seatIds,
+      },
+    });
+    return response.data;
+  },
 };

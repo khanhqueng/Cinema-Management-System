@@ -41,22 +41,7 @@ public class SeatController {
     @GetMapping("/showtime/{showtimeId}")
     public ResponseEntity<SeatService.SeatMapResponse> getSeatMapForShowtime(@PathVariable Long showtimeId) {
         User currentUser = userService.getCurrentUser();
-        SeatService.SeatMapResponse seatMap = seatService.getSeatMapForShowtime(showtimeId);
-
-        // Mark seats booked by current user
-        if (currentUser != null) {
-            List<SeatBooking> userSeats = seatService.getUserReservedSeats(currentUser.getId(), showtimeId);
-            List<Long> userSeatIds = userSeats.stream()
-                    .map(sb -> sb.getSeat().getId())
-                    .toList();
-
-            seatMap.seats.forEach(seatInfo -> {
-                if (userSeatIds.contains(seatInfo.id)) {
-                    seatInfo.bookedByCurrentUser = true;
-                }
-            });
-        }
-
+        SeatService.SeatMapResponse seatMap = seatService.getSeatMapForShowtime(showtimeId, currentUser);
         return ResponseEntity.ok(seatMap);
     }
 

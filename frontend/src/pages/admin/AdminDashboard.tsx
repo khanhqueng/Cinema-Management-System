@@ -9,8 +9,6 @@ import {
   Ticket,
   BarChart3,
   Loader2,
-  AlertCircle,
-  RefreshCw,
   Target,
   Activity,
 } from "lucide-react";
@@ -35,6 +33,7 @@ import adminService, {
   TheaterStats,
   TheaterUtilization,
 } from "../../services/adminService";
+import { authService } from "../../services/authService";
 
 // NEW UI components
 import { Button } from "../../components/ui/button";
@@ -101,7 +100,6 @@ const AdminDashboard: React.FC = () => {
     TheaterUtilization[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -120,7 +118,9 @@ const AdminDashboard: React.FC = () => {
         setTheaterUtilization(utilization);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError("Failed to load dashboard data");
+        authService.logout();
+        window.location.href = "/login";
+        return;
       } finally {
         setLoading(false);
       }
@@ -139,32 +139,6 @@ const AdminDashboard: React.FC = () => {
               <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
               <p className="text-gray-300 text-lg">Loading dashboard...</p>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // NEW error UI (modern design)
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-950 pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center min-h-100">
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="p-8 text-center">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-4">Error</h2>
-                <p className="text-gray-400 mb-6">{error}</p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

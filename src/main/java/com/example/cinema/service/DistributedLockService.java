@@ -224,6 +224,38 @@ public class DistributedLockService {
     }
 
     /**
+     * Get remaining TTL (in milliseconds) for a seat lock.
+     *
+     * @return remaining ms, or -1 if the key does not exist / no TTL set
+     */
+    public long getSeatLockRemainingMs(Long showtimeId, Long seatId) {
+        String lockKey = getSeatLockKey(showtimeId, seatId);
+        try {
+            Long ttl = redisTemplate.getExpire(lockKey, TimeUnit.MILLISECONDS);
+            return (ttl != null && ttl > 0) ? ttl : -1L;
+        } catch (Exception e) {
+            log.error("Error getting seat lock TTL: showtime={}, seat={}", showtimeId, seatId, e);
+            return -1L;
+        }
+    }
+
+    /**
+     * Get the userId that owns a seat lock.
+     *
+     * @return userId string (format "userId:timestamp"), or null if not locked
+     */
+    public String getSeatLockOwner(Long showtimeId, Long seatId) {
+        String lockKey = getSeatLockKey(showtimeId, seatId);
+        try {
+            Object value = redisTemplate.opsForValue().get(lockKey);
+            return value != null ? value.toString() : null;
+        } catch (Exception e) {
+            log.error("Error getting seat lock owner: showtime={}, seat={}", showtimeId, seatId, e);
+            return null;
+        }
+    }
+
+    /**
      * Force unlock a seat (admin operation or cleanup)
      *
      * @param showtimeId The showtime ID
