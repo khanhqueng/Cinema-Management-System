@@ -37,6 +37,25 @@ public class MovieEmbeddingOrchestrator {
         }
     }
 
+    public void onMovieUpdated(Movie movie) {
+        if (movie == null) {
+            return;
+        }
+
+        if (!aiProperties.isAutoGenerateMovieEmbeddingOnUpdate()) {
+            log.debug("Auto embedding regeneration on update is disabled. movieId={}", movie.getId());
+            return;
+        }
+
+        log.info("Auto embedding regeneration triggered after update for movieId={} (async={})", movie.getId(), aiProperties.isEmbeddingAsync());
+
+        if (aiProperties.isEmbeddingAsync()) {
+            generateAsync(movie);
+        } else {
+            generateSync(movie);
+        }
+    }
+
     private void generateSync(Movie movie) {
         try {
             movieEmbeddingService.generateAndSaveMovieEmbedding(movie);
