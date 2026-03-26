@@ -71,6 +71,15 @@ export interface ShowtimeAvailability {
   occupancyRate?: number;
 }
 
+export interface FileUploadResponse {
+  key: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  publicUrl: string;
+  uploadedAt: string;
+}
+
 export const adminService = {
   // ========== MOVIE ADMIN OPERATIONS ==========
 
@@ -86,6 +95,23 @@ export const adminService = {
 
   async deleteMovie(id: number): Promise<void> {
     await api.delete(`/movies/${id}`);
+  },
+
+  async uploadMoviePoster(file: File): Promise<FileUploadResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post(
+      "/files/upload?folder=movies/posters",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return response.data;
   },
 
   async getMovieStats(): Promise<MovieStats> {

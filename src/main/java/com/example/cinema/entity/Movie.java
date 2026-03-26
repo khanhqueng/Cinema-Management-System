@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -69,6 +70,7 @@ public class Movie {
     // AI Vector Embedding for similarity search
     // Map as text to avoid JDBC array mapping issues with pgvector.
     // Value format: [0.1,0.2,...]
+    @ColumnTransformer(write = "CAST(? AS vector)")
     @Column(name = "embedding", columnDefinition = "vector(1536)")
     private String embedding;
 

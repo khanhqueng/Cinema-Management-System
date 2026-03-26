@@ -52,6 +52,8 @@ const AdminMovies: React.FC = () => {
   });
   const [currentPage, setCurrentPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+  const [posterUploadError, setPosterUploadError] = useState<string | null>(null);
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -117,8 +119,23 @@ const AdminMovies: React.FC = () => {
     }
   };
 
+  const handlePosterUpload = async (file: File) => {
+    try {
+      setUploadingPoster(true);
+      setPosterUploadError(null);
+      const response = await adminService.uploadMoviePoster(file);
+      setFormData((prev) => ({ ...prev, posterUrl: response.publicUrl }));
+    } catch (err) {
+      console.error("Error uploading poster:", err);
+      setPosterUploadError("Không thể upload ảnh. Vui lòng thử lại.");
+    } finally {
+      setUploadingPoster(false);
+    }
+  };
+
   const handleEdit = (movie: Movie) => {
     setEditingMovie(movie);
+    setPosterUploadError(null);
     setFormData({
       title: movie.title,
       description: movie.description,
@@ -145,6 +162,7 @@ const AdminMovies: React.FC = () => {
   };
 
   const resetForm = () => {
+    setPosterUploadError(null);
     setFormData({
       title: "",
       description: "",
@@ -260,7 +278,10 @@ const AdminMovies: React.FC = () => {
                 </h2>
               </div>
               <button
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setPosterUploadError(null);
+                }}
                 className="text-gray-400 hover:text-white hover:bg-gray-700 p-1.5 rounded-lg transition-colors"
                 title="Close modal"
               >
@@ -390,6 +411,22 @@ const AdminMovies: React.FC = () => {
                   <Image className="w-3.5 h-3.5" /> Poster URL{" "}
                   <span className="text-gray-500">(optional)</span>
                 </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    title="Upload poster image"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handlePosterUpload(file);
+                      }
+                      e.target.value = "";
+                    }}
+                    disabled={uploadingPoster}
+                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-600 file:text-white hover:file:bg-red-700 file:cursor-pointer cursor-pointer disabled:opacity-60"
+                  />
+                </div>
                 <input
                   type="url"
                   title="Poster image URL"
@@ -400,6 +437,15 @@ const AdminMovies: React.FC = () => {
                   }
                   className={inputClass}
                 />
+                {uploadingPoster && (
+                  <p className="text-xs text-blue-300 flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Đang upload ảnh...
+                  </p>
+                )}
+                {posterUploadError && (
+                  <p className="text-xs text-red-300">{posterUploadError}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -423,17 +469,23 @@ const AdminMovies: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setPosterUploadError(null);
+                  }}
                   className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
                   <X className="w-4 h-4 mr-2" /> Cancel
                 </Button>
                 <Button
                   type="submit"
+                  disabled={uploadingPoster}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {editingMovie ? "Update" : "Create"} Movie
+                  {uploadingPoster
+                    ? "Uploading poster..."
+                    : `${editingMovie ? "Update" : "Create"} Movie`}
                 </Button>
               </div>
             </form>
