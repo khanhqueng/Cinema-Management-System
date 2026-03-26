@@ -29,33 +29,14 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     @Query("SELECT m FROM Movie m WHERE m.releaseDate <= :currentDate ORDER BY m.releaseDate DESC")
     Page<Movie> findCurrentlyShowing(@Param("currentDate") LocalDate currentDate, Pageable pageable);
 
-    // AI Vector Similarity Search - Find similar movies using embeddings
-    @Query(value = """
-        SELECT m.id, m.title, m.director, m.genre, m.description,
-               m.duration_minutes, m.release_date, m.poster_url, m.price_base, m.created_at, m.updated_at,
-               (m.embedding <=> CAST(:userEmbedding AS vector)) as distance
-        FROM movies m
-        WHERE m.embedding IS NOT NULL
-        ORDER BY m.embedding <=> CAST(:userEmbedding AS vector)
-        LIMIT :limit
-        """, nativeQuery = true)
-    List<Object[]> findSimilarMoviesByEmbeddingRaw(
-            @Param("userEmbedding") String userEmbedding,
-            @Param("limit") int limit
-    );
-
     // Get movie IDs that have embeddings
     @Query(value = "SELECT id FROM movies WHERE embedding IS NOT NULL ORDER BY id", nativeQuery = true)
     List<Long> findMovieIdsWithEmbeddings();
 
-    // Note: getMovieEmbeddingAsText() method no longer needed since embedding is now String type
+    // Find movie IDs that need embeddings (for batch processing)
+    @Query(value = "SELECT id FROM movies WHERE embedding IS NULL ORDER BY id", nativeQuery = true)
+    List<Long> findMovieIdsWithoutEmbeddings();
 
-    // Find movies that need embeddings (for batch processing)
-    @Query(value = "SELECT * FROM movies WHERE embedding IS NULL", nativeQuery = true)
-    List<Movie> findMoviesWithoutEmbeddings();
-
-    // Note: findMoviesWithEmbeddings() method removed due to Hibernate vector mapping issues
-    // Use findMovieIdsWithEmbeddings() + findAllById() + getMovieEmbeddingAsText() instead
 
     // Upcoming movies
     @Query("SELECT m FROM Movie m WHERE m.releaseDate > :currentDate ORDER BY m.releaseDate ASC")

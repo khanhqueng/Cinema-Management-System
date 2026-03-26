@@ -436,10 +436,8 @@ public class RecommendationService {
      */
     public RecommendationResponse semanticMovieSearch(String query, int limit) {
         try {
-            // Generate embedding for the search query
             List<Double> queryEmbedding = embeddingService.generateEmbedding(query);
 
-            // Get movies that have embeddings - now simplified since embedding is String
             List<Movie> moviesWithEmbeddings = movieRepository.findAllById(
                 movieRepository.findMovieIdsWithEmbeddings()
             );
@@ -454,23 +452,17 @@ public class RecommendationService {
                 );
             }
 
-            System.out.println("Found movies with embeddings: " + moviesWithEmbeddings.size());
-
-            // Calculate similarity scores and sort
             List<MovieSimilarityResult> similarityResults = new ArrayList<>();
 
             for (Movie movie : moviesWithEmbeddings) {
                 try {
-                    // Parse movie's embedding string directly
                     List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
                     if (movieEmbedding.isEmpty()) continue;
 
                     double similarity = embeddingService.calculateCosineSimilarity(queryEmbedding, movieEmbedding);
                     similarityResults.add(new MovieSimilarityResult(movie, similarity));
                 } catch (Exception e) {
-                    // Skip movies with invalid embeddings
                     System.err.println("Failed to process embedding for movie " + movie.getId() + ": " + e.getMessage());
-                    continue;
                 }
             }
 
@@ -522,31 +514,17 @@ public class RecommendationService {
         }
     }
 
-    // Helper class for similarity calculation
-    private static class MovieSimilarityResult {
-        Movie movie;
-        double similarity;
-
-        MovieSimilarityResult(Movie movie, double similarity) {
-            this.movie = movie;
-            this.similarity = similarity;
-        }
-    }
-
-
-    /**
-     * Calculate similar movies using in-memory cosine similarity
-     */
     private List<Movie> calculateSimilarMovies(List<Double> queryEmbedding, List<Movie> movies, int limit) {
         List<MovieSimilarityResult> similarityResults = new ArrayList<>();
 
         for (Movie movie : movies) {
             try {
                 List<Double> movieEmbedding = parseVectorText(movie.getEmbedding());
+                if (movieEmbedding.isEmpty()) continue;
+
                 double similarity = embeddingService.calculateCosineSimilarity(queryEmbedding, movieEmbedding);
                 similarityResults.add(new MovieSimilarityResult(movie, similarity));
             } catch (Exception e) {
-                // Skip movies with invalid embeddings
                 continue;
             }
         }
@@ -579,16 +557,11 @@ public class RecommendationService {
         return results;
     }
 
-
-    /**
-     * Parse pgvector text format [1.0,2.0,3.0,...] to List<Double>
-     */
     private List<Double> parseVectorText(String vectorText) {
         if (vectorText == null || vectorText.trim().isEmpty()) {
             return new ArrayList<>();
         }
 
-        // Remove brackets and split by comma
         String cleanText = vectorText.trim();
         if (cleanText.startsWith("[") && cleanText.endsWith("]")) {
             cleanText = cleanText.substring(1, cleanText.length() - 1);
@@ -601,11 +574,21 @@ public class RecommendationService {
             try {
                 result.add(Double.parseDouble(value.trim()));
             } catch (NumberFormatException e) {
-                // Skip invalid values
                 System.err.println("Invalid vector value: " + value);
             }
         }
 
         return result;
+    }
+
+    // Helper class for similarity calculation
+    private static class MovieSimilarityResult {
+        Movie movie;
+        double similarity;
+
+        MovieSimilarityResult(Movie movie, double similarity) {
+            this.movie = movie;
+            this.similarity = similarity;
+        }
     }
 }
