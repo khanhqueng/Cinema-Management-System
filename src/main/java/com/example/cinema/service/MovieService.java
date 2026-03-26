@@ -151,6 +151,9 @@ public class MovieService {
         // Nội dung phim thay đổi → embedding cũ và similar-movies không còn chính xác
         cacheManagementService.onMovieContentChanged(id);
 
+        // Regenerate embedding nếu title/genre/director/description thay đổi
+        movieEmbeddingOrchestrator.onMovieUpdated(savedMovie);
+
         return savedMovie;
     }
 

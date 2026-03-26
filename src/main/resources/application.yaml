@@ -89,6 +89,7 @@ app:
   version: 1.0.0
   ai:
     auto-generate-movie-embedding-on-create: true
+    auto-generate-movie-embedding-on-update: true
     embedding-async: true
 
 # Logging Configuration

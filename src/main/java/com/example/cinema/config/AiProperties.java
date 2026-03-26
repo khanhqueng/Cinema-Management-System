@@ -20,6 +20,11 @@ public class AiProperties {
     private boolean autoGenerateMovieEmbeddingOnCreate = false;
 
     /**
+     * If true, the system will regenerate the embedding when a movie's content is updated.
+     */
+    private boolean autoGenerateMovieEmbeddingOnUpdate = false;
+
+    /**
      * If true, embedding generation runs asynchronously (doesn't block create-movie API).
      */
     private boolean embeddingAsync = true;
