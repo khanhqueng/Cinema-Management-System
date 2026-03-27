@@ -21,14 +21,16 @@ public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
 
     // Search showtimes with optional filters
     @Query("SELECT s FROM Showtime s WHERE "
-         + "(:movieId IS NULL OR s.movie.id = :movieId) AND "
-         + "(:theaterId IS NULL OR s.theater.id = :theaterId) AND "
-         + "(:keyword IS NULL OR LOWER(CAST(s.movie.title AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) "
-         + "OR :keyword IS NULL OR LOWER(CAST(s.theater.name AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
+        + "s.showDatetime > :currentTime AND "
+        + "(:movieId IS NULL OR s.movie.id = :movieId) AND "
+        + "(:theaterId IS NULL OR s.theater.id = :theaterId) AND "
+        + "((:keyword IS NULL) OR LOWER(CAST(s.movie.title AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) "
+        + "OR (:keyword IS NULL) OR LOWER(CAST(s.theater.name AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
     Page<Showtime> searchShowtimes(@Param("movieId") Long movieId,
-                                   @Param("theaterId") Long theaterId,
-                                   @Param("keyword") String keyword,
-                                   Pageable pageable);
+                            @Param("theaterId") Long theaterId,
+                            @Param("keyword") String keyword,
+                            @Param("currentTime") LocalDateTime currentTime,
+                            Pageable pageable);
 
     // Find by movie
     List<Showtime> findByMovieIdOrderByShowDatetime(Long movieId);

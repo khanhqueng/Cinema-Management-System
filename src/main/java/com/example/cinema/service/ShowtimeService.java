@@ -33,7 +33,7 @@ public class ShowtimeService {
      * Get all showtimes with pagination
      */
     public Page<Showtime> getAllShowtimes(Pageable pageable) {
-        return showtimeRepository.findAll(pageable);
+        return showtimeRepository.findUpcomingShowtimes(LocalDateTime.now(), pageable);
     }
 
     /**
@@ -83,7 +83,7 @@ public class ShowtimeService {
      * Search showtimes with optional filters as DTO
      */
     public Page<ShowtimeDto> searchShowtimesDto(Long movieId, Long theaterId, String keyword, Pageable pageable) {
-        Page<Showtime> showtimes = showtimeRepository.searchShowtimes(movieId, theaterId, keyword, pageable);
+        Page<Showtime> showtimes = showtimeRepository.searchShowtimes(movieId, theaterId, keyword, LocalDateTime.now(), pageable);
         return showtimes.map(this::convertToDto);
     }
 
@@ -91,7 +91,7 @@ public class ShowtimeService {
      * Get all showtimes as DTO with pagination
      */
     public Page<ShowtimeDto> getAllShowtimesDto(Pageable pageable) {
-        Page<Showtime> showtimes = showtimeRepository.findAll(pageable);
+        Page<Showtime> showtimes = showtimeRepository.findUpcomingShowtimes(LocalDateTime.now(), pageable);
         return showtimes.map(this::convertToDto);
     }
 
