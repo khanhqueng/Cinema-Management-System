@@ -158,9 +158,9 @@ public class MovieController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Movie> createMovie(@Valid @RequestBody Movie movie) {
+    public ResponseEntity<MovieResponseDto> createMovie(@Valid @RequestBody Movie movie) {
         Movie savedMovie = movieService.createMovie(movie);
-        return ResponseEntity.ok(savedMovie);
+        return ResponseEntity.ok(MovieResponseDto.from(savedMovie));
     }
 
     /**
@@ -168,9 +168,9 @@ public class MovieController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Movie> updateMovie(@PathVariable Long id, @Valid @RequestBody Movie movieDetails) {
+    public ResponseEntity<MovieResponseDto> updateMovie(@PathVariable Long id, @Valid @RequestBody Movie movieDetails) {
         Movie updatedMovie = movieService.updateMovieOrThrow(id, movieDetails);
-        return ResponseEntity.ok(updatedMovie);
+        return ResponseEntity.ok(MovieResponseDto.from(updatedMovie));
     }
 
     /**

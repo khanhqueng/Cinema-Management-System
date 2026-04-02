@@ -20,8 +20,6 @@ export interface Movie {
   posterUrl?: string;
   priceBase: number;
   createdAt: string;
-  poster: string;
-  rating: number;
   duration: number;
   // Computed fields from backend
   currentlyShowing: boolean;

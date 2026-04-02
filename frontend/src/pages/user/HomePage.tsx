@@ -28,7 +28,7 @@ const HomePage: React.FC = () => {
 
   // OLD API logic (100% preserved from original HomePage)
   useEffect(() => {
-    // Redirect admin users to admin dashboard
+    // Redirect admin users to Based on your preferences
     if (authService.isAdmin()) {
       navigate("/admin");
       return;
@@ -168,7 +168,7 @@ const HomePage: React.FC = () => {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            src={featuredMovie.poster}
+            src={featuredMovie.posterUrl}
             alt={featuredMovie.title}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -179,7 +179,6 @@ const HomePage: React.FC = () => {
           <div className="absolute inset-0 bg-linear-to-r from-gray-950 via-gray-950/80 to-transparent" />
           <div className="absolute inset-0 bg-linear-to-t from-gray-950 via-transparent to-transparent" />
         </div>
-
         {/* Hero Content */}
         <div className="relative container mx-auto px-4 h-full flex items-center">
           <motion.div
@@ -203,11 +202,11 @@ const HomePage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                 <span className="font-semibold">
-                  {featuredMovie.rating || "N/A"}/10
+                  {featuredMovie.averageRating || "N/A"}
                 </span>
               </div>
               <span>•</span>
-              <span>{featuredMovie.duration} min</span>
+              <span>{featuredMovie.formattedDuration}</span>
               <span>•</span>
               <span>{featuredMovie.genre}</span>
             </div>
@@ -286,7 +285,7 @@ const HomePage: React.FC = () => {
                           <Card className="bg-gray-900 border-gray-800 overflow-hidden hover:bg-gray-800 transition-colors">
                             <div className="aspect-2/3 relative overflow-hidden">
                               <img
-                                src={movie.poster}
+                                src={movie.posterUrl}
                                 alt={movie.title}
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                 onError={(e) => {
@@ -307,7 +306,7 @@ const HomePage: React.FC = () => {
                                 <span>{movie.genre}</span>
                                 <div className="flex items-center space-x-1">
                                   <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                  <span>{movie.rating || "N/A"}</span>
+                                  <span>{movie.averageRating || "N/A"}</span>
                                 </div>
                               </div>
                             </CardContent>
@@ -317,7 +316,7 @@ const HomePage: React.FC = () => {
                     ))}
                   </div>
                 </motion.section>
-              )
+              ),
           )}
 
           {/* CTA Section */}

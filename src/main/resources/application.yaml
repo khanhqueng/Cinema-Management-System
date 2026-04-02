@@ -16,7 +16,7 @@ spring:
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/cinema_db
+    url: jdbc:postgresql://localhost:5433/cinema_db
     username: cinema_user
     password: cinema_password
     driver-class-name: org.postgresql.Driver
@@ -76,7 +76,7 @@ r2:
   secret-access-key: ${R2_SECRET_ACCESS_KEY:8b35565b12f84f7ee026e616094054f80911eef0773feac4b1ebb41fa9b18ec1}
   bucket-name: ${R2_BUCKET_NAME:cinema-media}
   region: ${R2_REGION:auto}
-  public-url: ${R2_PUBLIC_URL:https://pub-465518e03b044f7bad8e5137e9c04351.r2.dev}  # Optional: custom CDN domain
+  public-url: ${R2_PUBLIC_URL:https://pub-465518e03b044f7bad8e5137e9c04351.r2.dev} # Optional: custom CDN domain
 
 # JWT Configuration (Simplified)
 jwt:
