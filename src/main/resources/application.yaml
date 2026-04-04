@@ -8,7 +8,7 @@ spring:
   # AI Configuration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:}
       base-url: https://api.openai.com
       embedding:
         model: text-embedding-ada-002
@@ -16,7 +16,7 @@ spring:
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5433/cinema_db
+    url: jdbc:postgresql://localhost:5432/cinema_db
     username: cinema_user
     password: cinema_password
     driver-class-name: org.postgresql.Driver
@@ -61,6 +61,21 @@ spring:
         max-wait: -1ms
         max-idle: 8
         min-idle: 0
+
+  # Email (SMTP) Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:quangkhanh1232004@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
 
   # File upload size limits
   servlet:

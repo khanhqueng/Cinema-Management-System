@@ -2,6 +2,7 @@ package com.example.cinema.controller;
 
 import com.example.cinema.entity.Booking;
 import com.example.cinema.entity.User;
+import com.example.cinema.service.BookingEmailService;
 import com.example.cinema.service.BookingService;
 import com.example.cinema.service.UserService;
 import com.example.cinema.dto.BookingHistoryDto;
@@ -33,6 +34,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final UserService userService;
+    private final BookingEmailService bookingEmailService;
 
     /**
      * Get all bookings (Admin only)
@@ -169,6 +171,8 @@ public class BookingController {
         User currentUser = userService.getCurrentUser();
         BookingService.BookingWithSeatsResponse response = bookingService.createBookingWithSeats(
                 currentUser, request.showtimeId(), request.seatIds());
+        // Transaction is committed at this point — fire email asynchronously without blocking the response.
+        bookingEmailService.sendBookingConfirmation(response.booking(), response.seatBookings());
         return ResponseEntity.ok(response);
     }
 
