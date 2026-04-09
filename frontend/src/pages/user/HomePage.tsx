@@ -216,7 +216,7 @@ const HomePage: React.FC = () => {
             </p>
 
             <div className="flex items-center space-x-4">
-              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white">
                 <Link to={`/movies/${featuredMovie.id}`}>
                   <Play className="w-5 h-5 mr-2" />
                   Watch Now
@@ -262,9 +262,9 @@ const HomePage: React.FC = () => {
                     </div>
                     <Button
                       variant="ghost"
-                      className="text-red-500 hover:text-red-400"
+                      className="text-red-500 hover:text-red-400 text-lg"
                     >
-                      View All
+                      <Link to={`/movies?search=${section.title}`}>View All</Link>
                     </Button>
                   </div>
 
@@ -334,7 +334,7 @@ const HomePage: React.FC = () => {
               entertainment at our state-of-the-art theaters.
             </p>
             <div className="flex items-center justify-center space-x-4">
-              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white">
                 <Link to="/movies">Browse Movies</Link>
               </Button>
               {!authService.getToken() && (
@@ -342,7 +342,7 @@ const HomePage: React.FC = () => {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="bg-gray-800! border-gray-600! text-white! hover:bg-white! hover:text-black!"
+                  className="bg-gray-800! border-gray-600! text-white! hover:bg-white! hover:text-black! text-lg"
                 >
                   <Link to="/login">Sign In</Link>
                 </Button>

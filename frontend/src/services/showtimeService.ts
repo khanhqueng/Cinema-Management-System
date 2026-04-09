@@ -9,6 +9,8 @@ interface GetShowtimesParams {
   movieId?: number;
   theaterId?: number;
   keyword?: string;
+  date?: string; // ISO date string: YYYY-MM-DD
+  dates?: string[]; // ISO date strings: YYYY-MM-DD
 }
 
 interface GetShowtimesByDateRangeParams {
@@ -29,6 +31,8 @@ export const showtimeService = {
       movieId,
       theaterId,
       keyword,
+      date,
+      dates,
     } = params;
 
     const response = await api.get("/showtimes", {
@@ -40,6 +44,8 @@ export const showtimeService = {
         ...(movieId ? { movieId } : {}),
         ...(theaterId ? { theaterId } : {}),
         ...(keyword ? { keyword } : {}),
+        ...(date ? { date } : {}),
+        ...(dates && dates.length > 0 ? { dates: dates.join(",") } : {}),
       },
     });
     return response.data;

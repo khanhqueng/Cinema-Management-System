@@ -14,9 +14,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,7 +51,9 @@ public class ShowtimeController {
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) Long movieId,
             @RequestParam(required = false) Long theaterId,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String dates) {
 
         Sort sort = sortDir.equalsIgnoreCase("desc")
             ? Sort.by(sortBy).descending()
@@ -56,10 +61,19 @@ public class ShowtimeController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        boolean hasFilters = movieId != null || theaterId != null || (keyword != null && !keyword.isBlank());
+        List<LocalDate> parsedDates = (dates == null || dates.isBlank())
+            ? List.of()
+            : java.util.Arrays.stream(dates.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(LocalDate::parse)
+                .toList();
+
+        boolean hasFilters = movieId != null || theaterId != null || date != null || !parsedDates.isEmpty()
+            || (keyword != null && !keyword.isBlank());
         Page<ShowtimeDto> showtimes = hasFilters
             ? showtimeService.searchShowtimesDto(movieId, theaterId,
-                keyword != null && !keyword.isBlank() ? keyword.trim() : null, pageable)
+                keyword != null && !keyword.isBlank() ? keyword.trim() : null, date, parsedDates, pageable)
             : showtimeService.getAllShowtimesDto(pageable);
 
         return ResponseEntity.ok(showtimes);

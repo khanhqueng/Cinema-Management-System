@@ -1,7 +1,11 @@
-import React from 'react';
-import { Movie } from '../types';
-import { formatDuration, formatPrice } from '../utils/format';
-import styles from './RecommendationCard.module.css';
+import React from "react";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
+import { Star, Clock, Play, Calendar } from "lucide-react";
+import { Movie } from "../types";
+import { formatDuration, formatPrice } from "../utils/format";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
 
 interface RecommendationCardProps {
   movie: Movie;
@@ -13,96 +17,112 @@ interface RecommendationCardProps {
 
 const RecommendationCard: React.FC<RecommendationCardProps> = ({
   movie,
-  onViewDetails,
-  onViewShowtimes,
   showReason,
-  compact = false
 }) => {
-  const placeholderImage = `https://placehold.co/300x450/e2e8f0/64748b?text=${encodeURIComponent(movie.title)}`;
+  const placeholderImage = `https://placehold.co/300x450/141414/E50914?text=${encodeURIComponent(movie.title)}`;
 
   return (
-    <div className={`${styles.recommendationCard} ${compact ? styles.compact : ''}`}>
-      {/* Movie Poster */}
-      <div className={styles.moviePoster}>
-        <img
-          src={movie.posterUrl || placeholderImage}
-          alt={movie.title}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = placeholderImage;
-          }}
-        />
+    <motion.div whileHover={{ scale: 1.02 }} className="group cursor-pointer">
+      <Card className="bg-gray-900 border-gray-800 overflow-hidden hover:bg-gray-800 transition-all duration-300 hover:shadow-2xl hover:shadow-red-500/10">
+        {/* Poster */}
+        <Link to={`/movies/${movie.id}`} className="block">
+          <div className="relative aspect-[2/3] overflow-hidden">
+            <img
+              src={movie.posterUrl || placeholderImage}
+              alt={movie.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = placeholderImage;
+              }}
+            />
 
-        {movie.currentlyShowing && (
-          <div className={styles.nowShowingBadge}>Now Showing</div>
-        )}
-
-        {showReason && (
-          <div className={styles.recommendationReason}>
-            {showReason}
-          </div>
-        )}
-      </div>
-
-      {/* Movie Info */}
-      <div className={styles.movieInfo}>
-        <h3 className={styles.movieTitle} title={movie.title}>
-          {movie.title}
-        </h3>
-
-        <div className={styles.movieMeta}>
-          <span className={styles.director}>Dir: {movie.director}</span>
-          <span className={styles.genre}>{movie.genre}</span>
-          {movie.durationMinutes && (
-            <span className={styles.duration}>{formatDuration(movie.durationMinutes)}</span>
-          )}
-        </div>
-
-        {/* Rating */}
-        <div className={styles.movieRating}>
-          <div className={styles.stars}>
-            {Array.from({ length: 5 }, (_, i) => (
-              <svg
-                key={i}
-                className={`${styles.star} ${i < Math.floor(movie.averageRating || 0) ? styles.filled : ''}`}
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-            ))}
-          </div>
-          <span className={styles.ratingText}>
-            {movie.averageRating ? movie.averageRating.toFixed(1) : '0.0'}
-            {movie.reviewCount && movie.reviewCount > 0 && (
-              <span className={styles.reviewCount}>({movie.reviewCount})</span>
+            {/* Badges */}
+            {movie.currentlyShowing && (
+              <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md uppercase">
+                Now Showing
+              </div>
             )}
-          </span>
-        </div>
+            {showReason && (
+              <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md">
+                {showReason}
+              </div>
+            )}
+            {movie.averageRating > 0 && (
+              <div className="absolute top-3 right-3 bg-black/80 text-yellow-500 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                <Star className="w-3 h-3 fill-yellow-500" />
+                {movie.averageRating.toFixed(1)}
+              </div>
+            )}
 
-        {/* Price */}
-        <div className={styles.moviePrice}>
-          From {formatPrice(movie.priceBase)}
-        </div>
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Play className="w-12 h-12 text-white" />
+            </div>
+          </div>
+        </Link>
 
-        {/* Action Buttons */}
-        <div className={styles.movieActions}>
-          <button
-            className={`${styles.btn} ${styles.btnOutline}`}
-            onClick={() => onViewDetails(movie)}
-          >
-            Details
-          </button>
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={() => onViewShowtimes(movie)}
-          >
-            Showtimes
-          </button>
-        </div>
-      </div>
-    </div>
+        {/* Info */}
+        <CardContent className="p-4">
+          <h3 className="text-white font-semibold text-lg mb-1 line-clamp-1">
+            {movie.title}
+          </h3>
+          <p className="text-gray-400 text-sm mb-2 italic">
+            Directed by {movie.director}
+          </p>
+          <p className="text-red-500 font-semibold text-sm mb-3">
+            {movie.genre}
+          </p>
+
+          <div className="flex items-center justify-between text-sm text-gray-400 mb-3">
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{formatDuration(movie.durationMinutes)}</span>
+            </div>
+            <span className="text-green-500 font-bold">
+              {formatPrice(movie.priceBase)}
+            </span>
+          </div>
+
+          {movie.reviewCount > 0 && (
+            <p className="text-gray-500 text-xs mb-3">
+              {movie.reviewCount} review{movie.reviewCount !== 1 ? "s" : ""}
+            </p>
+          )}
+
+          <p className="text-gray-300 text-sm mb-4 line-clamp-2">
+            {movie.description
+              ? movie.description.length > 100
+                ? `${movie.description.substring(0, 100)}...`
+                : movie.description
+              : "No description available"}
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              asChild
+              size="sm"
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              <Link to={`/movies/${movie.id}`}>
+                <Play className="w-4 h-4 mr-1" />
+                Details
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="flex-1 !bg-gray-800 !border-gray-600 !text-white hover:!bg-green-600 hover:!border-green-600 hover:!text-white"
+            >
+              <Link to={`/movies/${movie.id}/showtimes`}>
+                <Calendar className="w-4 h-4 mr-1" />
+                Showtimes
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 

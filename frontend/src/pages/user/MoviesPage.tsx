@@ -11,6 +11,14 @@ import SemanticSearch from '../../components/SemanticSearch';
 // NEW UI components
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
 
 const MoviesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -196,7 +204,7 @@ const MoviesPage: React.FC = () => {
             className={`
               ${showSemanticSearch
                 ? 'bg-red-600 hover:bg-red-700 text-white'
-                : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'
+                : 'bg-gray-800! border-gray-600! text-white! hover:bg-red-600! hover:text-white!'
               }
             `}
           >
@@ -230,15 +238,15 @@ const MoviesPage: React.FC = () => {
             <form onSubmit={handleSearch} className="flex gap-4 mb-6">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
+                <Input
                   type="text"
                   placeholder="Search movies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full min-h-11! h-auto! pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
-              <Button type="submit" className="bg-red-600 hover:bg-red-700">
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 h-auto text-white">
                 Search
               </Button>
             </form>
@@ -256,19 +264,39 @@ const MoviesPage: React.FC = () => {
             {/* Genre Filter */}
             <div className="min-w-[200px]">
               <label className="block text-sm font-medium text-gray-300 mb-2">Genre:</label>
-              <div className="relative">
-                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                <select
-                  value={selectedGenre}
-                  onChange={(e) => handleGenreFilter(e.target.value)}
-                  className="w-full pl-12 pr-10 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent appearance-none cursor-pointer"
-                >
-                  <option value="">All Genres</option>
-                  {genres.map(genre => (
-                    <option key={genre} value={genre}>{genre}</option>
+              <Select
+                value={selectedGenre || "__all__"}
+                onValueChange={(v) =>
+                  handleGenreFilter(v === "__all__" ? "" : v)
+                }
+              >
+                <div className="relative">
+                  <Filter className="absolute left-4 top-1/2 z-10 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <SelectTrigger
+                    aria-label="Filter by genre"
+                    className="h-11 w-full rounded-lg border border-gray-800 bg-gray-900 pl-12 pr-3 text-sm text-white shadow-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-red-500"
+                  >
+                    <SelectValue placeholder="All Genres" />
+                  </SelectTrigger>
+                </div>
+                <SelectContent className="max-h-[280px] border-gray-800 bg-gray-900 text-white">
+                  <SelectItem
+                    value="__all__"
+                    className="focus:bg-gray-800 focus:text-white"
+                  >
+                    All Genres
+                  </SelectItem>
+                  {genres.map((genre) => (
+                    <SelectItem
+                      key={genre}
+                      value={genre}
+                      className="focus:bg-gray-800 focus:text-white"
+                    >
+                      {genre}
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Sort Options */}
@@ -417,7 +445,7 @@ const MoviesPage: React.FC = () => {
 
                       {/* Action Buttons */}
                       <div className="flex gap-2">
-                        <Button asChild size="sm" className="flex-1 bg-red-600 hover:bg-red-700">
+                        <Button asChild size="sm" className="text-white flex-1 bg-red-600 hover:bg-red-700">
                           <Link to={`/movies/${movie.id}`}>
                             <Play className="w-4 h-4 mr-1" />
                             Details

@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Eye,
   Ticket,
+  ChevronDown,
 } from "lucide-react";
 
 // OLD API services (keep 100% logic) - UNCHANGED
@@ -25,6 +26,15 @@ import { Showtime, PageResponse } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import { Input } from "../../components/ui/input";
 
 const AllShowtimesPage: React.FC = () => {
   const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(
@@ -33,28 +43,24 @@ const AllShowtimesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedKeyword, setAppliedKeyword] = useState("");
 
+  // Single fetch function — always uses backend filtering
   const fetchShowtimes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Get all showtimes with pagination
-      const params: any = {
+      const response = await showtimeService.getAllShowtimes({
         page: currentPage,
         size: 12,
         sortBy: "showDatetime",
         sortDir: "asc",
-      };
-
-      // Add date filter if selected
-      if (selectedDate) {
-        params.date = selectedDate;
-      }
-
-      const response = await showtimeService.getAllShowtimes(params);
+        ...(appliedKeyword ? { keyword: appliedKeyword } : {}),
+        ...(selectedDates.length === 1 ? { date: selectedDates[0] } : {}),
+        ...(selectedDates.length > 1 ? { dates: selectedDates } : {}),
+      });
       setShowtimes(response);
     } catch (err: any) {
       console.error("Error fetching showtimes:", err);
@@ -62,82 +68,69 @@ const AllShowtimesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedDate]);
+  }, [currentPage, selectedDates, appliedKeyword]);
 
   useEffect(() => {
     fetchShowtimes();
   }, [fetchShowtimes]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      fetchShowtimes();
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await showtimeService.getAllShowtimes({
-        page: 0,
-        size: 200,
-        sortBy: "showDatetime",
-        sortDir: "asc",
-      });
-      // Filter client-side by movie title or theater name
-      const q = searchQuery.trim().toLowerCase();
-      const filtered = response.content.filter(
-        (s) =>
-          s.movieTitle.toLowerCase().includes(q) ||
-          s.theaterName.toLowerCase().includes(q),
-      );
-      setShowtimes({
-        ...response,
-        content: filtered,
-        totalElements: filtered.length,
-      });
-    } catch (err: any) {
-      console.error("Error searching showtimes:", err);
-      setError("Failed to search showtimes");
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAppliedKeyword(searchQuery.trim());
+    setCurrentPage(0);
   };
 
   const handleDateFilter = (date: string) => {
-    setSelectedDate(date);
+    setSelectedDates((prevDates) =>
+      prevDates.includes(date)
+        ? prevDates.filter((d) => d !== date)
+        : [...prevDates, date],
+    );
     setCurrentPage(0);
   };
 
   const clearFilters = () => {
-    setSelectedDate("");
     setSearchQuery("");
+    setAppliedKeyword("");
+    setSelectedDates([]);
     setCurrentPage(0);
-    fetchShowtimes();
   };
 
   const getNextDates = () => {
-    const dates = [];
+    const dates: {
+      value: string;
+      fullDisplay: string;
+    }[] = [];
     const today = new Date();
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      dates.push({
-        value: date.toISOString().split("T")[0],
-        label:
-          i === 0
-            ? "Today"
-            : i === 1
-              ? "Tomorrow"
-              : date.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                }),
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const value = `${y}-${m}-${d}`;
+      const dayMonth = date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
       });
+      const fullDisplay =
+        i === 0
+          ? `Today — ${dayMonth}`
+          : i === 1
+            ? `Tomorrow — ${dayMonth}`
+            : dayMonth;
+      dates.push({ value, fullDisplay });
     }
 
     return dates;
   };
+
+  const nextDates = getNextDates();
+  const selectedDateEntries = nextDates.filter((date) =>
+    selectedDates.includes(date.value),
+  );
 
   // NEW loading UI (modern design)
   if (loading && !showtimes) {
@@ -147,7 +140,7 @@ const AllShowtimesPage: React.FC = () => {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin text-red-500 mx-auto mb-4" />
-              <p className="text-gray-300 text-lg">Loading all showtimes...</p>
+              <p className="text-gray-300 text-lg">Loading showtimes...</p>
             </div>
           </div>
         </div>
@@ -157,26 +150,7 @@ const AllShowtimesPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Header Section - NEW UI */}
-      {/* <section className="bg-linear-to-r from-indigo-900 to-purple-800 py-16 text-center">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
-              <Clock className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              All Showtimes
-            </h1>
-            <p className="text-lg text-indigo-100 max-w-2xl mx-auto">
-              Discover all movie showtimes across our theaters
-            </p>
-          </motion.div>
-        </div>
-      </section> */}
+     
 
       {/* Content Section */}
       <main className="py-12 bg-gray-950">
@@ -190,79 +164,108 @@ const AllShowtimesPage: React.FC = () => {
             {/* Filters Section - NEW UI */}
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-6">
-                {/* Search Bar on top */}
-                <div className="mb-6">
-                  <label className="text-sm font-medium text-gray-300 flex items-center mb-2">
-                    <Search className="w-4 h-4 mr-2" />
-                    Tìm phim hoặc rạp
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Nhập tên phim hoặc rạp..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                {/* Row: Date filter (left), Actions (right) */}
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                  {/* Date Filter */}
-                  <div className="space-y-2 md:w-2/3">
-                    <label className="text-sm font-medium text-gray-300 flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Chọn ngày
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {getNextDates().map((date) => (
-                        <Button
-                          key={date.value}
-                          onClick={() => handleDateFilter(date.value)}
-                          variant={
-                            selectedDate === date.value ? "default" : "outline"
-                          }
-                          size="sm"
-                          className={
-                            selectedDate === date.value
-                              ? "bg-indigo-600 hover:bg-indigo-700"
-                              : "border-gray-600 bg-gray-800 text-white hover:text-yellow-50 hover:bg-gray-700"
-                          }
+                <form onSubmit={handleSearch} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-300 flex items-center">
+                      <Search className="w-4 h-4 mr-2" />
+                      Search movies or cinemas
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <Input
+                          type="text"
+                          placeholder="Enter movie or cinema name..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full min-h-12 pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-300 flex items-center">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Select date
+                      </label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-auto min-h-12 w-full items-center justify-between gap-2 px-4 py-3 bg-gray-700/50 border-gray-600! text-white hover:bg-gray-700 hover:text-white"
+                          >
+                            <div className="min-w-0 flex flex-wrap gap-1.5 text-left">
+                              {selectedDates.length === 0 ? (
+                                <span className="text-sm font-normal text-gray-300">
+                                  All dates
+                                </span>
+                              ) : (
+                                selectedDateEntries.map((date) => (
+                                  <span
+                                    key={date.value}
+                                    className="inline-flex max-w-full rounded-md border border-indigo-400/45 bg-indigo-950/55 px-2 py-1 text-xs font-medium text-indigo-100 wrap-break-word"
+                                  >
+                                    {date.fullDisplay}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                            <ChevronDown className="h-4 w-4 shrink-0 opacity-80" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className="min-w-[min(100vw-2rem,20rem)] max-w-[min(100vw-2rem,28rem)] bg-gray-800 border-gray-700 text-white"
                         >
-                          {date.label}
-                        </Button>
-                      ))}
+                          <DropdownMenuLabel>
+                            Select multiple dates
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {nextDates.map((date) => (
+                            <DropdownMenuCheckboxItem
+                              key={date.value}
+                              checked={selectedDates.includes(date.value)}
+                              onCheckedChange={() =>
+                                handleDateFilter(date.value)
+                              }
+                              onSelect={(e) => e.preventDefault()}
+                              className="cursor-pointer whitespace-normal wrap-break-word items-start py-2"
+                            >
+                              {date.fullDisplay}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                  {/* Actions */}
-                  <div className="space-y-2 md:w-1/3 md:text-right">
-                    <div className="flex flex-row md:justify-end items-center space-x-2">
+                  <div className="flex flex-row items-center justify-between">
+                    <p className="text-sm text-gray-400">
+                      {showtimes
+                        ? `${showtimes.totalElements} showtime${showtimes.totalElements !== 1 ? "s" : ""}`
+                        : "Loading..."}
+                    </p>
+                    <div className="flex items-center gap-2">
                       <Button
-                        onClick={handleSearch}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        type="submit"
+                        className="h-11 bg-indigo-600 hover:bg-indigo-700 text-white"
                       >
                         <Search className="w-4 h-4 mr-2" />
-                        Tìm kiếm
+                        Search
                       </Button>
-                      {(searchQuery || selectedDate) && (
+                      {(appliedKeyword || selectedDates.length > 0) && (
                         <Button
+                          type="button"
                           onClick={clearFilters}
                           variant="outline"
-                          className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white!"
+                          className="h-11 bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white!"
                         >
-                          Xóa bộ lọc
+                          Clear filters
                         </Button>
                       )}
                     </div>
-                    <p className="text-sm text-gray-400 md:text-right">
-                      {showtimes
-                        ? `${showtimes.totalElements} lịch chiếu`
-                        : "Đang tải..."}
-                    </p>
                   </div>
-                </div>
+                </form>
               </CardContent>
             </Card>
 
@@ -295,7 +298,7 @@ const AllShowtimesPage: React.FC = () => {
                           No Showtimes Found
                         </h3>
                         <p className="text-gray-400 mb-8">
-                          {searchQuery || selectedDate
+                          {appliedKeyword || selectedDates.length > 0
                             ? "Try adjusting your filters to see more results."
                             : "No showtimes are currently available."}
                         </p>
@@ -440,11 +443,11 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-white mb-1 truncate">
-              {showtime.movieTitle || "Unknown Movie"}
+              {showtime.movieTitle || "Unknown"}
             </h3>
             <div className="flex items-center text-gray-400 text-sm mb-2">
               <Building2 className="w-4 h-4 mr-1" />
-              {showtime.theaterName || "Unknown Theater"}
+              {showtime.theaterName || "Unknown"}
             </div>
             {showtime.movieDurationMinutes && (
               <div className="flex items-center text-gray-400 text-sm">
@@ -510,7 +513,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
         <div className="mt-6 pt-4 border-t border-gray-700">
           <Button
             asChild
-            className={`w-full ${isPast ? "bg-gray-600 hover:bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"}`}
+            className={`w-full text-white ${isPast ? "bg-gray-600 hover:bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"}`}
           >
             <Link
               to={
@@ -522,7 +525,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
               {isPast ? (
                 <>
                   <Eye className="w-4 h-4 mr-2" />
-                  Show Details
+                  View Details
                 </>
               ) : (
                 <>

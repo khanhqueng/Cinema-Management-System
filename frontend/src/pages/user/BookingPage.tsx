@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   MapPin,
@@ -167,20 +168,31 @@ const BookingPage: React.FC = () => {
         clearInterval(interval);
         localStorage.removeItem("pendingPayment");
         setPendingPayment(null);
+        // Refresh seat map so previously locked seats become selectable again
+        if (showtimeId) {
+          bookingService
+            .getSeatMapForShowtime(parseInt(showtimeId, 10))
+            .then(setSeatMap)
+            .catch(console.error);
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [pendingPayment]);
+  }, [pendingPayment, showtimeId]);
 
   const handleSeatToggle = (seatId: number) => {
+    if (pendingPayment && bannerTimeLeft > 0) {
+      toast.warning(
+        "You have seats on hold — please complete your current payment before selecting new seats.",
+      );
+      return;
+    }
     setSelectedSeats((prev) => {
       if (prev.includes(seatId)) {
-        // Deselecting seat - just remove from local state
         return prev.filter((id) => id !== seatId);
       } else {
-        // Selecting seat - just add to local state
         if (prev.length >= 8) {
-          alert("You can select maximum 8 seats per booking");
+          toast.warning("You can select maximum 8 seats per booking");
           return prev;
         }
         return [...prev, seatId];
@@ -189,8 +201,15 @@ const BookingPage: React.FC = () => {
   };
 
   const handleBooking = async () => {
+    if (pendingPayment && bannerTimeLeft > 0) {
+      toast.warning(
+        "You have seats on hold. Please complete your current payment first.",
+      );
+      return;
+    }
+
     if (!showtimeId || selectedSeats.length === 0) {
-      alert("Please select at least one seat");
+      toast.warning("Please select at least one seat");
       return;
     }
 
@@ -208,11 +227,11 @@ const BookingPage: React.FC = () => {
       } catch (reserveErr: any) {
         // Handle seat reservation conflicts
         if (reserveErr.response?.status === 409) {
-          alert(
+          toast.error(
             "Some selected seats are already taken by another user. Please select different seats.",
           );
         } else {
-          alert("Unable to reserve selected seats. Please try again.");
+          toast.error("Unable to reserve selected seats. Please try again.");
         }
 
         // Refresh seat map and reset selection
@@ -247,7 +266,7 @@ const BookingPage: React.FC = () => {
       });
     } catch (err) {
       console.error("Error in booking process:", err);
-      alert("Failed to proceed with booking. Please try again.");
+      toast.error("Failed to proceed with booking. Please try again.");
     } finally {
       setBookingLoading(false);
     }
@@ -316,15 +335,16 @@ const BookingPage: React.FC = () => {
           <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-yellow-300 text-sm font-medium">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              Bạn đang giữ{" "}
+              You are holding
               <span className="font-bold">
-                {pendingPayment.selectedSeats.length} ghế
+                {pendingPayment.selectedSeats.length} seat
+                {pendingPayment.selectedSeats.length !== 1 ? "s" : ""}
               </span>
-              {" — "}còn 
+              {" — "}remaining 
               <span className="font-bold text-yellow-200">
                 {pendingMinutes}:{String(pendingSeconds).padStart(2, "0")}
               </span>
-               để hoàn tất thanh toán.
+               to complete the payment.
             </div>
             <Button
               size="sm"
@@ -340,7 +360,7 @@ const BookingPage: React.FC = () => {
                 })
               }
             >
-              Tiếp tục thanh toán →
+              Continue to Payment →
             </Button>
           </div>
         </div>
@@ -454,48 +474,18 @@ const BookingPage: React.FC = () => {
                     </h2>
 
                     {/* Screen Indicator */}
-                    <div className="text-center mb-8">
-                      <div className="inline-block bg-gray-700 text-gray-300 px-8 py-2 rounded-full text-sm font-bold tracking-wide">
-                        SCREEN
+                    <div className="text-center mb-7">
+                      <div className="max-w-xl mx-auto">
+                        <div className="h-1 rounded-full bg-gray-300/90 mb-2" />
+                        <div className="text-xs font-bold tracking-widest text-gray-300 uppercase">
+                          Screen
+                        </div>
                       </div>
                     </div>
 
-                    {/* Legend */}
-                    <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-green-500 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Thường (1.0x)</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-red-600 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Đã chọn</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-gray-600 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Đã đặt</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-orange-500 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Đang giữ tạm</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-yellow-500 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">VIP (1.5x)</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-6 bg-pink-600 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Đôi (1.3x)</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-blue-500 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">
-                          Người khuyết tật (1.0x)
-                        </span>
-                      </div>
-                    </div>
 
                     {/* Seat Map */}
-                    <div className="flex flex-col items-center space-y-3">
+                    <div className="flex flex-col items-center space-y-3 mb-8">
                       {rows.map((row) => (
                         <div key={row} className="flex items-center space-x-4">
                           <div className="w-8 text-center font-bold text-gray-400">
@@ -520,8 +510,20 @@ const BookingPage: React.FC = () => {
                               const isWheelchair =
                                 seat.seatType === "WHEELCHAIR";
 
+                              const rowSeats = seatMapByRow[row];
+                              const centerStart = Math.floor(
+                                rowSeats.length * 0.35,
+                              );
+                              const centerEnd = Math.ceil(
+                                rowSeats.length * 0.65,
+                              );
+                              const isCenterZone =
+                                index >= centerStart &&
+                                index < centerEnd &&
+                                !isCouple;
+
                               let seatClasses =
-                                "w-9 h-9 border border-gray-600 rounded text-white text-xs font-bold transition-all duration-200 hover:scale-105";
+                                "w-9 h-9 border border-gray-700 rounded-md text-white text-[10px] font-bold transition-all duration-200 hover:scale-105";
                               let seatSize = "w-9 h-9";
 
                               if (isBooked) {
@@ -532,10 +534,10 @@ const BookingPage: React.FC = () => {
                                   " bg-orange-500 cursor-not-allowed opacity-70";
                               } else if (isSelected) {
                                 seatClasses +=
-                                  " bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30";
+                                  " bg-pink-500 hover:bg-pink-600 shadow-lg shadow-pink-500/30";
                               } else if (isVIP) {
                                 seatClasses +=
-                                  " bg-yellow-500 hover:bg-yellow-600 cursor-pointer";
+                                  " bg-red-500 hover:bg-red-600 cursor-pointer";
                               } else if (isCouple) {
                                 seatClasses +=
                                   " bg-pink-600 hover:bg-pink-700 cursor-pointer";
@@ -545,12 +547,22 @@ const BookingPage: React.FC = () => {
                                   " bg-blue-500 hover:bg-blue-600 cursor-pointer";
                               } else {
                                 seatClasses +=
-                                  " bg-green-500 hover:bg-green-600 cursor-pointer";
+                                  " bg-violet-600 hover:bg-violet-700 cursor-pointer";
+                              }
+
+                              if (
+                                isCenterZone &&
+                                !isBooked &&
+                                !isLockedByOther &&
+                                !isSelected
+                              ) {
+                                seatClasses +=
+                                  " ring-1 ring-emerald-500/80 ring-offset-0";
                               }
 
                               const isDisabled = isBooked || isLockedByOther;
                               const tooltip = isLockedByOther
-                                ? `${row}${seat.seatNumber} - Đang được giữ tạm bởi người khác`
+                                ? `${row}${seat.seatNumber} - Temporarily held by another user`
                                 : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
 
                               return (
@@ -563,7 +575,7 @@ const BookingPage: React.FC = () => {
                                     className={`${seatClasses} ${seatSize}`}
                                     title={tooltip}
                                   >
-                                    {seat.seatNumber}
+                                    {`${seat.rowLetter ?? row}${seat.seatNumber}`}
                                   </button>
                                   {shouldAddAisle && (
                                     <div className="w-5 min-w-[20px] border-l-2 border-gray-600 mx-2 h-9 flex items-center justify-center text-gray-600 text-xs font-bold"></div>
@@ -574,6 +586,39 @@ const BookingPage: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-gray-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Booked</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-pink-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Your selected seats</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-violet-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Regular seats</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-red-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">VIP seats</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-7 h-5 bg-pink-600 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Sweetbox seats</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 rounded border border-emerald-500/80 bg-transparent"></div>
+                        <span className="text-gray-300">Center zone</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-orange-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Temporarily held</span>
+                      </div>
                     </div>
                   </motion.div>
                 </CardContent>
@@ -648,24 +693,51 @@ const BookingPage: React.FC = () => {
                       </div>
                     )}
 
-                    <Button
-                      onClick={handleBooking}
-                      disabled={selectedSeats.length === 0 || bookingLoading}
-                      className={`w-full mb-6 ${
-                        selectedSeats.length > 0 && !bookingLoading
-                          ? "bg-red-600 hover:bg-red-700"
-                          : "bg-gray-600 cursor-not-allowed"
-                      }`}
-                    >
-                      {bookingLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        "Book Now"
-                      )}
-                    </Button>
+                    {pendingPayment && bannerTimeLeft > 0 ? (
+                      <>
+                        <Button
+                          onClick={() =>
+                            navigate(`/payment/${showtimeId}`, {
+                              state: {
+                                selectedSeats: pendingPayment.selectedSeats,
+                                totalPrice: pendingPayment.totalPrice,
+                                showtime: pendingPayment.showtime,
+                                reservedUntil: pendingPayment.reservedUntil,
+                              },
+                            })
+                          }
+                          className="w-full mb-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
+                        >
+                          Resume Payment →
+                        </Button>
+                        <p className="text-xs text-yellow-400 text-center mb-3">
+                          You have {pendingPayment.selectedSeats.length} seat
+                          {pendingPayment.selectedSeats.length !== 1
+                            ? "s"
+                            : ""}{" "}
+                          on hold. Complete payment before booking new seats.
+                        </p>
+                      </>
+                    ) : (
+                      <Button
+                        onClick={handleBooking}
+                        disabled={selectedSeats.length === 0 || bookingLoading}
+                        className={`w-full mb-6 text-white ${
+                          selectedSeats.length > 0 && !bookingLoading
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-gray-600 cursor-not-allowed"
+                        }`}
+                      >
+                        {bookingLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          "Book Now"
+                        )}
+                      </Button>
+                    )}
 
                     <div className="text-xs text-gray-400">
                       <h4 className="font-semibold text-white mb-2 flex items-center">

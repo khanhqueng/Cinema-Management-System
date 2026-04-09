@@ -67,6 +67,22 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "ORDER BY COUNT(b) DESC")
     List<Object[]> findPopularMoviesByBookings(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
 
+    // Tickets (seats) sold per movie
+    @Query("SELECT b.showtime.movie.title, SUM(b.seatsBooked) as totalTickets " +
+           "FROM Booking b " +
+           "WHERE b.bookingStatus = 'CONFIRMED' AND b.createdAt >= :fromDate " +
+           "GROUP BY b.showtime.movie.id, b.showtime.movie.title " +
+           "ORDER BY SUM(b.seatsBooked) DESC")
+    List<Object[]> findTicketSalesByMovie(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
+
+    // Tickets (seats) sold per showtime
+    @Query("SELECT b.showtime.movie.title, b.showtime.showDatetime, SUM(b.seatsBooked) as totalTickets " +
+           "FROM Booking b " +
+           "WHERE b.bookingStatus = 'CONFIRMED' AND b.createdAt >= :fromDate " +
+           "GROUP BY b.showtime.id, b.showtime.movie.title, b.showtime.showDatetime " +
+           "ORDER BY SUM(b.seatsBooked) DESC")
+    List<Object[]> findTicketSalesByShowtime(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
+
     // Statistics
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.bookingStatus = :status")
     long countByStatus(@Param("status") Booking.BookingStatus status);

@@ -8,6 +8,7 @@
 .main-content {
   padding-top: 65px; /* Height of fixed header */
   min-height: calc(100vh - 65px);
+  background-color: rgb(3 7 18);
 }
 
 /* Remove default App styles */

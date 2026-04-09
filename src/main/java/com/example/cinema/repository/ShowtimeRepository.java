@@ -4,6 +4,7 @@ import com.example.cinema.entity.Showtime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,19 +18,21 @@ import java.util.List;
  * Core showtime operations with availability tracking
  */
 @Repository
-public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
+public interface ShowtimeRepository extends JpaRepository<Showtime, Long>, JpaSpecificationExecutor<Showtime> {
 
     // Search showtimes with optional filters
     @Query("SELECT s FROM Showtime s WHERE "
-        + "s.showDatetime > :currentTime AND "
         + "(:movieId IS NULL OR s.movie.id = :movieId) AND "
         + "(:theaterId IS NULL OR s.theater.id = :theaterId) AND "
-        + "((:keyword IS NULL) OR LOWER(CAST(s.movie.title AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) "
-        + "OR (:keyword IS NULL) OR LOWER(CAST(s.theater.name AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
+        + "(:keyword IS NULL OR LOWER(s.movie.title) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+        + "   OR :keyword IS NULL OR LOWER(s.theater.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND "
+        + "s.showDatetime >= :fromTime AND "
+        + "(:toTime IS NULL OR s.showDatetime < :toTime)")
     Page<Showtime> searchShowtimes(@Param("movieId") Long movieId,
                             @Param("theaterId") Long theaterId,
                             @Param("keyword") String keyword,
-                            @Param("currentTime") LocalDateTime currentTime,
+                            @Param("fromTime") LocalDateTime fromTime,
+                            @Param("toTime") LocalDateTime toTime,
                             Pageable pageable);
 
     // Find by movie

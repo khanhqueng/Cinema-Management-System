@@ -84,8 +84,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/showtimes/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/showtimes/**").hasRole("ADMIN")
 
-                // User endpoints (authenticated users)
-                .requestMatchers("/api/bookings/**").hasRole("USER")
+                // Booking endpoints — role enforcement is handled by method-level @PreAuthorize
+                // (admin needs access to /bookings/stats/**, /bookings/recent, etc.)
+                .requestMatchers("/api/bookings/**").authenticated()
                 .requestMatchers("/api/users/profile/**").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/reviews/**").hasRole("USER")
                 .requestMatchers(HttpMethod.PUT, "/api/reviews/**").hasRole("USER")

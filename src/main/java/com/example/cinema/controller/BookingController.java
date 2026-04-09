@@ -243,6 +243,28 @@ public class BookingController {
     }
 
     /**
+     * Get ticket sales grouped by movie (Admin only)
+     */
+    @GetMapping("/stats/by-movie")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<BookingService.MovieTicketSales>> getTicketSalesByMovie(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(bookingService.getTicketSalesByMovie(days, limit));
+    }
+
+    /**
+     * Get ticket sales grouped by showtime (Admin only)
+     */
+    @GetMapping("/stats/by-showtime")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<BookingService.ShowtimeTicketSales>> getTicketSalesByShowtime(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(bookingService.getTicketSalesByShowtime(days, limit));
+    }
+
+    /**
      * Reserve seats temporarily for user selection (prevents race conditions)
      * This endpoint is called when user selects seats to lock them temporarily
      *

@@ -32,12 +32,14 @@ import {
   AdminProfilePage,
 } from "./pages/admin";
 
+import { Toaster } from "./components/ui/sonner";
 import "./App.css";
 
 function App() {
   return (
     <Router>
       <div className="App netflix-app">
+        <Toaster position="top-right" richColors />
         <Routes>
           {/* Admin Routes - Protected */}
           <Route

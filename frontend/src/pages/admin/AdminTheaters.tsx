@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import {
   Building2,
   Search,
@@ -30,6 +31,14 @@ import { theaterService } from "../../services/theaterService";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Input } from "../../components/ui/input";
 
 const AdminTheaters: React.FC = () => {
   const [theaters, setTheaters] = useState<PageResponse<Theater> | null>(null);
@@ -120,7 +129,7 @@ const AdminTheaters: React.FC = () => {
     try {
       if (editingTheater) {
         await adminService.updateTheater(editingTheater.id, formData);
-        alert("Theater updated successfully!");
+        toast.success("Theater updated successfully!");
       } else {
         const created = await adminService.createTheater(formData);
         // Auto-initialize seats using rows/cols from the form
@@ -134,7 +143,7 @@ const AdminTheaters: React.FC = () => {
             seatErr,
           );
         }
-        alert(`Theater created with ${rows * cols} seats initialized!`);
+        toast.success(`Theater created with ${rows * cols} seats initialized!`);
       }
       setShowForm(false);
       setEditingTheater(null);
@@ -142,7 +151,7 @@ const AdminTheaters: React.FC = () => {
       fetchTheaters();
     } catch (err) {
       console.error("Error saving theater:", err);
-      alert("Failed to save theater");
+      toast.error("Failed to save theater");
     }
   };
 
@@ -165,11 +174,11 @@ const AdminTheaters: React.FC = () => {
     ) {
       try {
         await adminService.deleteTheater(theaterId);
-        alert("Theater deleted successfully!");
+        toast.success("Theater deleted successfully!");
         fetchTheaters();
       } catch (err) {
         console.error("Error deleting theater:", err);
-        alert("Failed to delete theater");
+        toast.error("Failed to delete theater");
       }
     }
   };
@@ -261,27 +270,6 @@ const AdminTheaters: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Header Section */}
-      <section className="bg-linear-to-r from-green-900 to-green-800 py-16 text-center">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
-              <Building2 className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Theater Management
-            </h1>
-            <p className="text-lg text-green-100 max-w-2xl mx-auto">
-              Manage your cinema's theater configurations and seating
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
       {/* Content Section */}
       <main className="py-12 bg-gray-950">
         <div className="container mx-auto px-4 max-w-7xl">
@@ -305,7 +293,7 @@ const AdminTheaters: React.FC = () => {
                   resetForm();
                   setShowForm(true);
                 }}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 text-white"
                 size="lg"
               >
                 <Plus className="w-5 h-5 mr-2" />
@@ -320,20 +308,20 @@ const AdminTheaters: React.FC = () => {
                   <div className="flex-1">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input
+                      <Input
                         type="text"
                         title="Search theaters"
                         placeholder="Search theaters by name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        className="w-full pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        className="w-full h-11 pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                     </div>
                   </div>
                   <Button
                     onClick={handleSearch}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     size="lg"
                   >
                     <Search className="w-4 h-4 mr-2" />
@@ -412,28 +400,35 @@ const AdminTheaters: React.FC = () => {
                             <Users className="w-4 h-4 mr-2" />
                             Theater Type *
                           </label>
-                          <select
-                            title="Theater type"
+                          <Select
                             value={formData.theaterType}
-                            onChange={(e) =>
+                            onValueChange={(v) =>
                               setFormData({
                                 ...formData,
-                                theaterType: e.target.value as TheaterType,
+                                theaterType: v as TheaterType,
                               })
                             }
                             required
-                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           >
-                            {theaterTypes.map((type) => (
-                              <option
-                                key={type}
-                                value={type}
-                                className="bg-gray-700 text-white"
-                              >
-                                {adminService.getTheaterTypeDisplay(type)}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger
+                              title="Theater type"
+                              aria-label="Theater type"
+                              className="h-11 w-full rounded-lg border border-gray-600 bg-gray-700/50 px-4 text-sm text-white shadow-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-green-500"
+                            >
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent className="border-gray-600 bg-gray-800 text-white">
+                              {theaterTypes.map((type) => (
+                                <SelectItem
+                                  key={type}
+                                  value={type}
+                                  className="focus:bg-gray-700 focus:text-white"
+                                >
+                                  {adminService.getTheaterTypeDisplay(type)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-300 flex items-center">

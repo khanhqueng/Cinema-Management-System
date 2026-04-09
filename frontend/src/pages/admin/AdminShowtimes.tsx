@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import {
   Clock,
   Film,
@@ -26,6 +27,14 @@ import { showtimeService } from "../../services/showtimeService";
 import { Movie, Theater, Showtime, PageResponse } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Input } from "../../components/ui/input";
 
 const AdminShowtimes: React.FC = () => {
   const [showtimes, setShowtimes] = useState<PageResponse<Showtime> | null>(
@@ -120,13 +129,17 @@ const AdminShowtimes: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.movieId || !formData.theaterId) {
+      toast.error("Please select a movie and a theater");
+      return;
+    }
     try {
       if (editingShowtime) {
         await adminService.updateShowtime(editingShowtime.id, formData);
-        alert("Showtime updated successfully!");
+        toast.success("Showtime updated successfully!");
       } else {
         await adminService.createShowtime(formData);
-        alert("Showtime created successfully!");
+        toast.success("Showtime created successfully!");
       }
       setShowForm(false);
       setEditingShowtime(null);
@@ -134,7 +147,7 @@ const AdminShowtimes: React.FC = () => {
       fetchShowtimes();
     } catch (err) {
       console.error("Error saving showtime:", err);
-      alert("Failed to save showtime");
+      toast.error("Failed to save showtime");
     }
   };
 
@@ -157,11 +170,11 @@ const AdminShowtimes: React.FC = () => {
     ) {
       try {
         await adminService.deleteShowtime(showtimeId);
-        alert("Showtime deleted successfully!");
+        toast.success("Showtime deleted successfully!");
         fetchShowtimes();
       } catch (err) {
         console.error("Error deleting showtime:", err);
-        alert("Failed to delete showtime");
+        toast.error("Failed to delete showtime");
       }
     }
   };
@@ -240,43 +253,64 @@ const AdminShowtimes: React.FC = () => {
       >
         <Card className="bg-gray-900 border-gray-800 p-4">
           <form onSubmit={handleSearch} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
-              {/* Keyword */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="Search movie or theater..."
-                  className="w-full pl-9 pr-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
-                />
+            <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="relative min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Input
+                    type="text"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    placeholder="Search movie or theater..."
+                    className="w-full min-h-11 pl-9 pr-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
+                  />
+                </div>
+
+                {/* Theater Filter */}
+                <Select
+                  value={
+                    filterTheaterId != null
+                      ? String(filterTheaterId)
+                      : "__all__"
+                  }
+                  onValueChange={(v) =>
+                    setFilterTheaterId(
+                      v === "__all__" ? undefined : parseInt(v, 10),
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    title="Filter by theater"
+                    aria-label="Filter by theater"
+                    className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                  >
+                    <SelectValue placeholder="All Theaters" />
+                  </SelectTrigger>
+                  <SelectContent className="border-gray-700 bg-gray-800 text-white">
+                    <SelectItem
+                      value="__all__"
+                      className="focus:bg-gray-700 focus:text-white"
+                    >
+                      All Theaters
+                    </SelectItem>
+                    {theaters.map((t) => (
+                      <SelectItem
+                        key={t.id}
+                        value={String(t.id)}
+                        className="focus:bg-gray-700 focus:text-white"
+                      >
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Theater Filter */}
-              <select
-                value={filterTheaterId ?? ""}
-                onChange={(e) =>
-                  setFilterTheaterId(
-                    e.target.value ? parseInt(e.target.value) : undefined,
-                  )
-                }
-                title="Filter by theater"
-                className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 text-white"
-              >
-                <option value="">All Theaters</option>
-                {theaters.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-
               {/* Buttons */}
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <Button
                   type="submit"
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  className="min-h-11 bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Search className="w-4 h-4 mr-2" />
                   Search
@@ -286,7 +320,7 @@ const AdminShowtimes: React.FC = () => {
                     type="button"
                     variant="outline"
                     onClick={handleClearFilters}
-                    className="border-gray-700 text-gray-300 hover:bg-gray-700"
+                    className="border-gray-700 min-h-11 text-gray-300 hover:bg-gray-700"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -333,50 +367,86 @@ const AdminShowtimes: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Film className="w-3.5 h-3.5" /> Movie *
                   </label>
-                  <select
-                    value={formData.movieId}
-                    onChange={(e) =>
+                  <Select
+                    value={
+                      formData.movieId ? String(formData.movieId) : "__none__"
+                    }
+                    onValueChange={(v) =>
                       setFormData({
                         ...formData,
-                        movieId: parseInt(e.target.value),
+                        movieId: v === "__none__" ? 0 : parseInt(v, 10),
                       })
                     }
-                    required
-                    title="Select movie"
-                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
                   >
-                    <option value={0}>Select a movie</option>
-                    {movies.map((movie) => (
-                      <option key={movie.id} value={movie.id}>
-                        {movie.title} (
-                        {adminService.formatDate(movie.releaseDate)})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      title="Select movie"
+                      aria-label="Select movie"
+                      className="h-10 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                    >
+                      <SelectValue placeholder="Select a movie" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[260px] border-gray-700 bg-gray-800 text-white">
+                      <SelectItem
+                        value="__none__"
+                        className="focus:bg-gray-700 focus:text-white"
+                      >
+                        Select a movie
+                      </SelectItem>
+                      {movies.map((movie) => (
+                        <SelectItem
+                          key={movie.id}
+                          value={String(movie.id)}
+                          className="focus:bg-gray-700 focus:text-white"
+                        >
+                          {movie.title} (
+                          {adminService.formatDate(movie.releaseDate)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5" /> Theater *
                   </label>
-                  <select
-                    value={formData.theaterId}
-                    onChange={(e) =>
+                  <Select
+                    value={
+                      formData.theaterId
+                        ? String(formData.theaterId)
+                        : "__none__"
+                    }
+                    onValueChange={(v) =>
                       setFormData({
                         ...formData,
-                        theaterId: parseInt(e.target.value),
+                        theaterId: v === "__none__" ? 0 : parseInt(v, 10),
                       })
                     }
-                    required
-                    title="Select theater"
-                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
                   >
-                    <option value={0}>Select a theater</option>
-                    {theaters.map((theater) => (
-                      <option key={theater.id} value={theater.id}>
-                        {theater.name} (Capacity: {theater.capacity})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      title="Select theater"
+                      aria-label="Select theater"
+                      className="h-10 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                    >
+                      <SelectValue placeholder="Select a theater" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[260px] border-gray-700 bg-gray-800 text-white">
+                      <SelectItem
+                        value="__none__"
+                        className="focus:bg-gray-700 focus:text-white"
+                      >
+                        Select a theater
+                      </SelectItem>
+                      {theaters.map((theater) => (
+                        <SelectItem
+                          key={theater.id}
+                          value={String(theater.id)}
+                          className="focus:bg-gray-700 focus:text-white"
+                        >
+                          {theater.name} (Capacity: {theater.capacity})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -577,7 +647,7 @@ const AdminShowtimes: React.FC = () => {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 0}
-                  className="border-gray-700 text-gray-900 hover:bg-gray-700"
+                  className="border-gray-700 text-white hover:bg-gray-700"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" /> Previous
                 </Button>
@@ -599,7 +669,7 @@ const AdminShowtimes: React.FC = () => {
                   size="sm"
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage >= showtimes.totalPages - 1}
-                  className="border-gray-700 text-gray-900 hover:bg-gray-700"
+                  className="border-gray-700 text-white hover:bg-gray-700"
                 >
                   Next <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>

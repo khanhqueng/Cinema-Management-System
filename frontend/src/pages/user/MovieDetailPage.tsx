@@ -216,7 +216,7 @@ const MovieDetailPage: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-4">
-              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white">
                 <Link to={`/movies/${movie.id}/showtimes`}>
                   <Play className="w-5 h-5 mr-2" />
                   Book Tickets

@@ -146,10 +146,10 @@ public class BookingService {
             }
 
             // Check if user already has a booking for this showtime
-            if (bookingRepository.existsByUserIdAndShowtimeIdAndBookingStatus(
-                    user.getId(), showtime.getId(), Booking.BookingStatus.CONFIRMED)) {
-                throw new BusinessRuleViolationException("You already have a confirmed booking for this showtime");
-            }
+            // if (bookingRepository.existsByUserIdAndShowtimeIdAndBookingStatus(
+            //         user.getId(), showtime.getId(), Booking.BookingStatus.CONFIRMED)) {
+            //     throw new BusinessRuleViolationException("You already have a confirmed booking for this showtime");
+            // }
 
             // Calculate total amount based on seat types
             BigDecimal totalAmount = seatService.calculateSeatPrice(showtimeId, seatIds);
@@ -444,6 +444,52 @@ public class BookingService {
         return new SeatLockStatusResponse(true, minRemainingMs, seatIds);
     }
 
+
+    /**
+     * Ticket sales grouped by movie (seats sold per movie)
+     */
+    public List<MovieTicketSales> getTicketSalesByMovie(int days, int limit) {
+        LocalDateTime fromDate = LocalDateTime.now().minusDays(days);
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
+        List<Object[]> results = bookingRepository.findTicketSalesByMovie(fromDate, pageable);
+        return results.stream()
+                .map(row -> new MovieTicketSales(
+                        row[0].toString(),
+                        ((Number) row[1]).longValue()))
+                .toList();
+    }
+
+    /**
+     * Ticket sales grouped by showtime (seats sold per showtime)
+     */
+    public List<ShowtimeTicketSales> getTicketSalesByShowtime(int days, int limit) {
+        LocalDateTime fromDate = LocalDateTime.now().minusDays(days);
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
+        List<Object[]> results = bookingRepository.findTicketSalesByShowtime(fromDate, pageable);
+        return results.stream()
+                .map(row -> new ShowtimeTicketSales(
+                        row[0].toString(),
+                        row[1].toString(),
+                        ((Number) row[2]).longValue()))
+                .toList();
+    }
+
+    /**
+     * Movie Ticket Sales DTO
+     */
+    public record MovieTicketSales(
+        String movieTitle,
+        long ticketsSold
+    ) {}
+
+    /**
+     * Showtime Ticket Sales DTO
+     */
+    public record ShowtimeTicketSales(
+        String movieTitle,
+        String showDatetime,
+        long ticketsSold
+    ) {}
 
     /**
      * Daily Revenue DTO

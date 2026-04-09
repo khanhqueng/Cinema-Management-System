@@ -63,6 +63,26 @@ export interface TheaterUtilization {
   utilizationRate?: number;
 }
 
+export interface BookingStats {
+  totalBookings: number;
+  confirmedBookings: number;
+  cancelledBookings: number;
+  totalRevenue: number;
+  totalSeatsBooked: number;
+  periodDays: number;
+}
+
+export interface MovieTicketSales {
+  movieTitle: string;
+  ticketsSold: number;
+}
+
+export interface ShowtimeTicketSales {
+  movieTitle: string;
+  showDatetime: string;
+  ticketsSold: number;
+}
+
 export interface ShowtimeAvailability {
   availableSeats: number;
   totalCapacity: number;
@@ -181,6 +201,31 @@ export const adminService = {
 
   async getShowtimeStats(): Promise<ShowtimeStats> {
     const response = await api.get("/showtimes/stats");
+    return response.data;
+  },
+
+  async getBookingStats(days = 30): Promise<BookingStats> {
+    const response = await api.get(`/bookings/stats?days=${days}`);
+    return response.data;
+  },
+
+  async getTicketSalesByMovie(
+    days = 30,
+    limit = 10,
+  ): Promise<MovieTicketSales[]> {
+    const response = await api.get(
+      `/bookings/stats/by-movie?days=${days}&limit=${limit}`,
+    );
+    return response.data;
+  },
+
+  async getTicketSalesByShowtime(
+    days = 30,
+    limit = 10,
+  ): Promise<ShowtimeTicketSales[]> {
+    const response = await api.get(
+      `/bookings/stats/by-showtime?days=${days}&limit=${limit}`,
+    );
     return response.data;
   },
 

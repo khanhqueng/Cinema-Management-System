@@ -32,6 +32,9 @@ import adminService, {
   ShowtimeStats,
   TheaterStats,
   TheaterUtilization,
+  BookingStats,
+  MovieTicketSales,
+  ShowtimeTicketSales,
 } from "../../services/adminService";
 import { authService } from "../../services/authService";
 
@@ -99,12 +102,19 @@ const AdminDashboard: React.FC = () => {
   const [theaterUtilization, setTheaterUtilization] = useState<
     TheaterUtilization[]
   >([]);
+  const [bookingStats, setBookingStats] = useState<BookingStats | null>(null);
+  const [ticketsByMovie, setTicketsByMovie] = useState<MovieTicketSales[]>([]);
+  const [ticketsByShowtime, setTicketsByShowtime] = useState<
+    ShowtimeTicketSales[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+
+        // Core stats — if these fail it's a real auth/server problem
         const [movies, showtimes, theaters, utilization] = await Promise.all([
           adminService.getMovieStats(),
           adminService.getShowtimeStats(),
@@ -116,11 +126,31 @@ const AdminDashboard: React.FC = () => {
         setShowtimeStats(showtimes);
         setTheaterStats(theaters);
         setTheaterUtilization(utilization);
-      } catch (err) {
+
+        // Ticket-sales stats — fail silently so they don't kick the user out
+        // (these endpoints require a server restart to activate)
+        try {
+          const [bookingSt, byMovie, byShowtime] = await Promise.all([
+            adminService.getBookingStats(30),
+            adminService.getTicketSalesByMovie(30, 10),
+            adminService.getTicketSalesByShowtime(30, 10),
+          ]);
+          setBookingStats(bookingSt);
+          setTicketsByMovie(byMovie);
+          setTicketsByShowtime(byShowtime);
+        } catch (ticketErr) {
+          console.warn(
+            "Ticket sales stats unavailable (backend may need restart):",
+            ticketErr,
+          );
+        }
+      } catch (err: any) {
         console.error("Error fetching dashboard data:", err);
-        authService.logout();
-        window.location.href = "/login";
-        return;
+        // Only log out on 401 Unauthorized — not on 500s or network errors
+        if (err?.response?.status === 401) {
+          authService.logout();
+          window.location.href = "/login";
+        }
       } finally {
         setLoading(false);
       }
@@ -147,27 +177,6 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Header Section - NEW UI */}
-      <section className="bg-linear-to-r from-slate-900 to-gray-800 py-16 text-center">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
-              <LayoutDashboard className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Admin Dashboard
-            </h1>
-            <p className="text-lg text-gray-200 max-w-2xl mx-auto">
-              Cinema management overview
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
       {/* Content Section */}
       <main className="py-12 bg-gray-950">
         <div className="container mx-auto px-4 max-w-7xl">
@@ -314,7 +323,7 @@ const AdminDashboard: React.FC = () => {
                 )}
 
                 {/* Theater Utilization Bar Chart */}
-                {theaterUtilization.length > 0 && (
+                {/* {theaterUtilization.length > 0 && (
                   <Card className="bg-gray-800 border-gray-700 lg:col-span-2">
                     <CardContent className="p-6">
                       <h3 className="text-lg font-bold text-white mb-4">
@@ -365,7 +374,7 @@ const AdminDashboard: React.FC = () => {
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>
-                )}
+                )} */}
 
                 {/* Showtimes Overview */}
                 {showtimeStats &&
@@ -763,8 +772,178 @@ const AdminDashboard: React.FC = () => {
               </div>
             </motion.div>
 
+            {/* Ticket Sales Section */}
+            {(ticketsByMovie.length > 0 || bookingStats) && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <Ticket className="w-6 h-6 mr-3 text-pink-500" />
+                  Ticket Sales — Last 30 days
+                </h2>
+
+                {/* Booking summary stats */}
+                {bookingStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {[
+                      {
+                        label: "Total Bookings",
+                        value: bookingStats.totalBookings,
+                        color: "text-white",
+                      },
+                      {
+                        label: "Confirmed",
+                        value: bookingStats.confirmedBookings,
+                        color: "text-green-400",
+                      },
+                      {
+                        label: "Cancelled",
+                        value: bookingStats.cancelledBookings,
+                        color: "text-red-400",
+                      },
+                      {
+                        label: "Tickets Sold",
+                        value: bookingStats.totalSeatsBooked,
+                        color: "text-indigo-400",
+                      },
+                    ].map((stat) => (
+                      <Card
+                        key={stat.label}
+                        className="bg-gray-800 border-gray-700"
+                      >
+                        <CardContent className="p-4 text-center">
+                          <p className={`text-2xl font-bold ${stat.color}`}>
+                            {stat.value.toLocaleString()}
+                          </p>
+                          <p className="text-gray-400 text-sm mt-1">
+                            {stat.label}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Tickets by Movie */}
+                  {ticketsByMovie.length > 0 && (
+                    <Card className="bg-gray-800 border-gray-700">
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-bold text-white mb-4">
+                          Tickets Sold by Movie
+                        </h3>
+                        <ResponsiveContainer width="100%" height={320}>
+                          <BarChart
+                            data={ticketsByMovie.map((m) => ({
+                              name:
+                                m.movieTitle.length > 20
+                                  ? m.movieTitle.slice(0, 18) + "…"
+                                  : m.movieTitle,
+                              fullName: m.movieTitle,
+                              Tickets: m.ticketsSold,
+                            }))}
+                            layout="vertical"
+                            margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#374151"
+                              horizontal={false}
+                            />
+                            <XAxis
+                              type="number"
+                              tick={{ fill: "#9ca3af", fontSize: 12 }}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="name"
+                              tick={{ fill: "#9ca3af", fontSize: 11 }}
+                              width={110}
+                            />
+                            <Tooltip content={<CustomTooltipContent />} />
+                            <Bar
+                              dataKey="Tickets"
+                              fill="#ec4899"
+                              radius={[0, 4, 4, 0]}
+                            >
+                              {ticketsByMovie.map((_, i) => (
+                                <Cell
+                                  key={i}
+                                  fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Tickets by Showtime */}
+                  {ticketsByShowtime.length > 0 && (
+                    <Card className="bg-gray-800 border-gray-700">
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-bold text-white mb-4">
+                          Tickets Sold by Showtime (Top 10)
+                        </h3>
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                          {ticketsByShowtime.map((s, i) => {
+                            const maxTickets =
+                              ticketsByShowtime[0]?.ticketsSold || 1;
+                            const pct = Math.round(
+                              (s.ticketsSold / maxTickets) * 100,
+                            );
+                            const dt = new Date(s.showDatetime);
+                            const dateStr = dt.toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            });
+                            const timeStr = dt.toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            });
+                            return (
+                              <div key={i} className="flex items-center gap-3">
+                                <span className="text-gray-500 text-xs w-5 shrink-0">
+                                  {i + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-white text-sm font-medium truncate max-w-[160px]">
+                                      {s.movieTitle}
+                                    </span>
+                                    <span className="text-indigo-400 text-sm font-bold shrink-0 ml-2">
+                                      {s.ticketsSold}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-gray-500 text-xs">
+                                      {dateStr} · {timeStr}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1.5">
+                                    <div
+                                      className="h-1.5 rounded-full bg-indigo-500 transition-all duration-500"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {/* Theater Utilization */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -773,7 +952,7 @@ const AdminDashboard: React.FC = () => {
                 <Activity className="w-6 h-6 mr-3 text-purple-500" />
                 Theater Utilization
               </h2>
-              {theaterUtilization.length === 0 && (
+              {theaterUtilization.length === 0 ? (
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-12 text-center">
                     <Activity className="w-12 h-12 text-gray-600 mx-auto mb-4" />
@@ -785,63 +964,65 @@ const AdminDashboard: React.FC = () => {
                     </p>
                   </CardContent>
                 </Card>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {theaterUtilization.map((theater, index) => {
-                  const utilizationRate = adminService.calculateUtilizationRate(
-                    theater.totalBookedSeats,
-                    theater.capacity,
-                  );
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {theaterUtilization.map((theater, index) => {
+                    const utilizationRate =
+                      adminService.calculateUtilizationRate(
+                        theater.totalBookedSeats,
+                        theater.capacity,
+                      );
 
-                  return (
-                    <motion.div
-                      key={theater.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                    >
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="p-6">
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-bold text-white">
-                              {theater.name}
-                            </h4>
-                            <Badge
-                              className={`text-white font-medium ${getUtilizationBarClass(
-                                utilizationRate,
-                              )}`}
-                            >
-                              {utilizationRate}%
-                            </Badge>
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-400">Capacity:</span>
-                              <span className="text-gray-300">
-                                {theater.capacity} seats
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-400">Booked:</span>
-                              <span className="text-gray-300">
-                                {theater.totalBookedSeats} seats
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
-                              <div
-                                className={`h-2 rounded-full transition-all duration-300 ${getUtilizationWidthClass(
+                    return (
+                      <motion.div
+                        key={theater.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                      >
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-6">
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-lg font-bold text-white">
+                                {theater.name}
+                              </h4>
+                              <Badge
+                                className={`text-white font-medium ${getUtilizationBarClass(
                                   utilizationRate,
-                                )} ${getUtilizationBarClass(utilizationRate)}`}
-                              />
+                                )}`}
+                              >
+                                {utilizationRate}%
+                              </Badge>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </motion.div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Capacity:</span>
+                                <span className="text-gray-300">
+                                  {theater.capacity} seats
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Booked:</span>
+                                <span className="text-gray-300">
+                                  {theater.totalBookedSeats} seats
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
+                                <div
+                                  className={`h-2 rounded-full transition-all duration-300 ${getUtilizationWidthClass(
+                                    utilizationRate,
+                                  )} ${getUtilizationBarClass(utilizationRate)}`}
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div> */}
           </div>
         </div>
       </main>

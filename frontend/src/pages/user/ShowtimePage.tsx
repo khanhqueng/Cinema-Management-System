@@ -426,10 +426,10 @@ const ShowtimePage: React.FC = () => {
                                         →{" "}
                                         {new Date(
                                           showtime.endDatetime,
-                                        ).toLocaleTimeString("vi-VN", {
+                                        ).toLocaleTimeString("en-US", {
                                           hour: "2-digit",
                                           minute: "2-digit",
-                                          hour12: false,
+                                          hour12: true,
                                         })}
                                       </span>
                                     )}
@@ -470,11 +470,11 @@ const ShowtimePage: React.FC = () => {
                                   </Badge>
                                   <div className="text-gray-400 text-sm flex items-center">
                                     <Users className="w-4 h-4 mr-1" />
-                                    {showtime.availableSeats} trống /{" "}
+                                    {showtime.availableSeats} available /{" "}
                                     {showtime.bookedSeats ??
                                       showtime.theaterCapacity -
                                         showtime.availableSeats}{" "}
-                                    đã đặt
+                                    booked
                                   </div>
                                 </div>
 
@@ -486,25 +486,25 @@ const ShowtimePage: React.FC = () => {
                                       className="w-full bg-blue-900/50 text-blue-300 cursor-not-allowed"
                                     >
                                       <Ticket className="w-4 h-4 mr-2" />
-                                      Đang chiếu
+                                      Now Showing
                                     </Button>
                                   ) : showtime.finished ? (
                                     <Button
                                       disabled
                                       className="w-full bg-gray-700 text-gray-500 cursor-not-allowed"
                                     >
-                                      Đã kết thúc
+                                      Finished
                                     </Button>
                                   ) : isUpcoming &&
                                     (showtime.bookable ?? true) &&
                                     showtime.availableSeats > 0 ? (
                                     <Button
                                       asChild
-                                      className="w-full bg-red-600 hover:bg-red-700"
+                                      className="w-full text-white bg-red-600 hover:bg-red-700"
                                     >
                                       <Link to={`/booking/${showtime.id}`}>
                                         <Ticket className="w-4 h-4 mr-2" />
-                                        Đặt vé
+                                        Book Tickets
                                       </Link>
                                     </Button>
                                   ) : (
@@ -512,7 +512,7 @@ const ShowtimePage: React.FC = () => {
                                       disabled
                                       className="w-full bg-gray-600 text-gray-300 cursor-not-allowed"
                                     >
-                                      Không còn chỗ
+                                      Sold Out
                                     </Button>
                                   )}
                                 </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import {
   Film,
   Search,
@@ -27,6 +28,7 @@ import { Movie, PageResponse } from "../../types";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
 
 const inputClass =
   "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500";
@@ -53,7 +55,9 @@ const AdminMovies: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadingPoster, setUploadingPoster] = useState(false);
-  const [posterUploadError, setPosterUploadError] = useState<string | null>(null);
+  const [posterUploadError, setPosterUploadError] = useState<string | null>(
+    null,
+  );
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -104,10 +108,10 @@ const AdminMovies: React.FC = () => {
     try {
       if (editingMovie) {
         await adminService.updateMovie(editingMovie.id, formData);
-        alert("Movie updated successfully!");
+        toast.success("Movie updated successfully!");
       } else {
         await adminService.createMovie(formData);
-        alert("Movie created successfully!");
+        toast.success("Movie created successfully!");
       }
       setShowForm(false);
       setEditingMovie(null);
@@ -115,7 +119,7 @@ const AdminMovies: React.FC = () => {
       fetchMovies();
     } catch (err) {
       console.error("Error saving movie:", err);
-      alert("Failed to save movie");
+      toast.error("Failed to save movie");
     }
   };
 
@@ -153,11 +157,11 @@ const AdminMovies: React.FC = () => {
     if (!window.confirm("Are you sure you want to delete this movie?")) return;
     try {
       await adminService.deleteMovie(movieId);
-      alert("Movie deleted successfully!");
+      toast.success("Movie deleted successfully!");
       fetchMovies();
     } catch (err) {
       console.error("Error deleting movie:", err);
-      alert("Failed to delete movie");
+      toast.error("Failed to delete movie");
     }
   };
 
@@ -232,19 +236,19 @@ const AdminMovies: React.FC = () => {
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
+          <Input
             type="text"
             title="Search movies"
             placeholder="Search movies..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
+            className="w-full h-11 pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
           />
         </div>
         <Button
           onClick={handleSearch}
-          className="bg-red-600 hover:bg-red-700 text-white"
+          className="bg-red-600 h-auto hover:bg-red-700 text-white"
         >
           <Search className="w-4 h-4 mr-2" /> Search
         </Button>
@@ -542,7 +546,7 @@ const AdminMovies: React.FC = () => {
                           src={
                             movie.posterUrl ||
                             `https://placehold.co/40x60?text=${encodeURIComponent(
-                              movie.title.slice(0, 2)
+                              movie.title.slice(0, 2),
                             )}`
                           }
                           alt={movie.title}

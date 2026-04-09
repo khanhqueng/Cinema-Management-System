@@ -8,7 +8,6 @@ import {
   Users,
   Calendar,
   Clock,
-  Film,
   ArrowLeft,
   ArrowRight,
   Loader2,
@@ -27,6 +26,14 @@ import { Theater, TheaterType, PageResponse, Showtime } from '../../types';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
 
 const TheaterPage: React.FC = () => {
   const [theaters, setTheaters] = useState<Theater[]>([]);
@@ -166,11 +173,14 @@ const TheaterPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
-              <Building2 className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-200 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-5">
+              <MapPin className="w-3.5 h-3.5" />
+              Premium venues
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Our Theaters</h1>
-            <p className="text-lg text-red-100 max-w-2xl mx-auto">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+              Our Theaters
+            </h1>
+            <p className="text-base text-red-100 max-w-xl mx-auto">
               Experience movies like never before in our state-of-the-art theaters
             </p>
           </motion.div>
@@ -196,7 +206,7 @@ const TheaterPage: React.FC = () => {
                       Search Theaters
                     </label>
                     <div className="flex space-x-2">
-                      <input
+                      <Input
                         type="text"
                         placeholder="Search theaters..."
                         value={searchQuery}
@@ -215,18 +225,38 @@ const TheaterPage: React.FC = () => {
                       <Filter className="w-4 h-4 mr-2" />
                       Theater Type
                     </label>
-                    <select
-                      value={selectedType}
-                      onChange={(e) => handleTypeFilter(e.target.value as TheaterType | '')}
-                      className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    <Select
+                      value={selectedType || "__all__"}
+                      onValueChange={(v) =>
+                        handleTypeFilter(
+                          v === "__all__" ? "" : (v as TheaterType),
+                        )
+                      }
                     >
-                      <option value="">All Types</option>
-                      {theaterTypes.map(type => (
-                        <option key={type} value={type}>
-                          {theaterService.getTheaterTypeDisplay(type)}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        aria-label="Filter by theater type"
+                        className="h-10 w-full rounded-lg border border-gray-600 bg-gray-700/50 px-4 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500"
+                      >
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent className="border-gray-700 bg-gray-800 text-white">
+                        <SelectItem
+                          value="__all__"
+                          className="focus:bg-gray-700 focus:text-white"
+                        >
+                          All Types
+                        </SelectItem>
+                        {theaterTypes.map((type) => (
+                          <SelectItem
+                            key={type}
+                            value={type}
+                            className="focus:bg-gray-700 focus:text-white"
+                          >
+                            {theaterService.getTheaterTypeDisplay(type)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Clear Filters & Results Info */}

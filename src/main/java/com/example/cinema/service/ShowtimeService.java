@@ -10,10 +10,14 @@ import com.example.cinema.repository.TheaterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,10 +85,41 @@ public class ShowtimeService {
 
     /**
      * Search showtimes with optional filters as DTO
+     * When date is provided: show all showtimes on that date (past included)
+     * When date is null: show only upcoming showtimes (now → future)
      */
-    public Page<ShowtimeDto> searchShowtimesDto(Long movieId, Long theaterId, String keyword, Pageable pageable) {
-        Page<Showtime> showtimes = showtimeRepository.searchShowtimes(movieId, theaterId, keyword, LocalDateTime.now(), pageable);
-        return showtimes.map(this::convertToDto);
+    public Page<ShowtimeDto> searchShowtimesDto(Long movieId, Long theaterId, String keyword, LocalDate date,
+                                                 List<LocalDate> dates, Pageable pageable) {
+        final boolean hasMultipleDates = dates != null && !dates.isEmpty();
+        final LocalDateTime fromTime = (date != null || hasMultipleDates) ? null : LocalDateTime.now();
+        final LocalDateTime toTime   = (date != null) ? date.plusDays(1).atStartOfDay() : null;
+        final LocalDateTime dateStartTime = (date != null) ? date.atStartOfDay() : null;
+
+        Specification<Showtime> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (movieId != null)
+                predicates.add(cb.equal(root.get("movie").get("id"), movieId));
+            if (theaterId != null)
+                predicates.add(cb.equal(root.get("theater").get("id"), theaterId));
+            if (keyword != null && !keyword.isBlank()) {
+                String pattern = "%" + keyword.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("movie").get("title")), pattern),
+                    cb.like(cb.lower(root.get("theater").get("name")), pattern)
+                ));
+            }
+            if (hasMultipleDates) {
+                predicates.add(cb.function("DATE", LocalDate.class, root.get("showDatetime")).in(dates));
+            } else if (dateStartTime != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("showDatetime"), dateStartTime));
+                predicates.add(cb.lessThan(root.get("showDatetime"), toTime));
+            } else if (fromTime != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("showDatetime"), fromTime));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return showtimeRepository.findAll(spec, pageable).map(this::convertToDto);
     }
 
     /**
