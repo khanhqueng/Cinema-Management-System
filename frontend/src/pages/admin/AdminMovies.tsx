@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import {
@@ -29,12 +29,43 @@ import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { Textarea } from "../../components/ui/textarea";
 
 const inputClass =
-  "w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500";
+  "w-full h-11 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500";
 
 const paginationBtnClass =
   "bg-gray-800! border-gray-600! text-white! hover:bg-gray-600! hover:text-white! disabled:opacity-50 disabled:cursor-not-allowed";
+
+const MOVIE_GENRES = [
+  "Action",
+  "Adventure",
+  "Animation",
+  "Biography",
+  "Comedy",
+  "Crime",
+  "Documentary",
+  "Drama",
+  "Family",
+  "Fantasy",
+  "History",
+  "Horror",
+  "Music",
+  "Mystery",
+  "Romance",
+  "Sci-Fi",
+  "Sport",
+  "Thriller",
+  "War",
+  "Western",
+] as const;
 
 const AdminMovies: React.FC = () => {
   const [movies, setMovies] = useState<PageResponse<Movie> | null>(null);
@@ -58,6 +89,9 @@ const AdminMovies: React.FC = () => {
   const [posterUploadError, setPosterUploadError] = useState<string | null>(
     null,
   );
+  const [genreError, setGenreError] = useState<string | null>(null);
+  const releaseDateInputRef = useRef<HTMLInputElement>(null);
+  const posterFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMovies = useCallback(async () => {
     try {
@@ -105,6 +139,12 @@ const AdminMovies: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.genre.trim()) {
+      setGenreError("Please select a genre.");
+      return;
+    }
+    setGenreError(null);
+
     try {
       if (editingMovie) {
         await adminService.updateMovie(editingMovie.id, formData);
@@ -140,6 +180,7 @@ const AdminMovies: React.FC = () => {
   const handleEdit = (movie: Movie) => {
     setEditingMovie(movie);
     setPosterUploadError(null);
+    setGenreError(null);
     setFormData({
       title: movie.title,
       description: movie.description,
@@ -167,6 +208,7 @@ const AdminMovies: React.FC = () => {
 
   const resetForm = () => {
     setPosterUploadError(null);
+    setGenreError(null);
     setFormData({
       title: "",
       description: "",
@@ -302,7 +344,7 @@ const AdminMovies: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Film className="w-3.5 h-3.5" /> Title *
                   </label>
-                  <input
+                  <Input
                     type="text"
                     title="Movie title"
                     placeholder="e.g. The Dark Knight"
@@ -318,17 +360,40 @@ const AdminMovies: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" /> Genre *
                   </label>
-                  <input
-                    type="text"
-                    title="Movie genre"
-                    placeholder="e.g. Action, Drama"
-                    value={formData.genre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, genre: e.target.value })
-                    }
-                    required
-                    className={inputClass}
-                  />
+                  <Select
+                    value={formData.genre || "__none__"}
+                    onValueChange={(value) => {
+                      const nextGenre = value === "__none__" ? "" : value;
+                      setFormData({
+                        ...formData,
+                        genre: nextGenre,
+                      });
+                      setGenreError(nextGenre ? null : "Please select a genre.");
+                    }}
+                  >
+                    <SelectTrigger
+                      title="Movie genre"
+                      className={`min-h-11 w-full border bg-gray-800 text-sm text-white ${
+                        genreError
+                          ? "border-red-500 focus-visible:ring-red-500/50"
+                          : "border-gray-700"
+                      }`}
+                    >
+                      <SelectValue placeholder="Select genre" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 border-gray-700 bg-gray-800 text-white">
+                      <SelectItem value="__none__">Select genre</SelectItem>
+                      {MOVIE_GENRES.map((genre) => (
+                        <SelectItem key={genre} value={genre}>
+                          {genre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input type="hidden" value={formData.genre} />
+                  {genreError && (
+                    <p className="text-xs text-red-300">{genreError}</p>
+                  )}
                 </div>
               </div>
 
@@ -337,7 +402,7 @@ const AdminMovies: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" /> Director *
                   </label>
-                  <input
+                  <Input
                     type="text"
                     title="Movie director"
                     placeholder="e.g. Christopher Nolan"
@@ -353,7 +418,7 @@ const AdminMovies: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> Duration (min) *
                   </label>
-                  <input
+                  <Input
                     type="number"
                     title="Duration in minutes"
                     placeholder="e.g. 120"
@@ -376,22 +441,37 @@ const AdminMovies: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" /> Release Date *
                   </label>
-                  <input
-                    type="date"
-                    title="Release date"
-                    value={formData.releaseDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, releaseDate: e.target.value })
-                    }
-                    required
-                    className={inputClass}
-                  />
+                  <div className="relative">
+                    <Input
+                      ref={releaseDateInputRef}
+                      type="date"
+                      title="Release date"
+                      value={formData.releaseDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, releaseDate: e.target.value })
+                      }
+                      required
+                      className={`${inputClass} pr-10 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer`}
+                    />
+                    <button
+                      type="button"
+                      title="Open release date picker"
+                      onClick={() =>
+                        (releaseDateInputRef.current as HTMLInputElement & {
+                          showPicker?: () => void;
+                        })?.showPicker?.() ?? releaseDateInputRef.current?.focus()
+                      }
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-white/90 hover:text-white"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <DollarSign className="w-3.5 h-3.5" /> Base Price (VND) *
                   </label>
-                  <input
+                  <Input
                     type="number"
                     title="Base price in VND"
                     placeholder="e.g. 100000"
@@ -416,7 +496,8 @@ const AdminMovies: React.FC = () => {
                   <span className="text-gray-500">(optional)</span>
                 </label>
                 <div className="flex items-center gap-3">
-                  <input
+                  <Input
+                    ref={posterFileInputRef}
                     type="file"
                     accept="image/*"
                     title="Upload poster image"
@@ -428,10 +509,32 @@ const AdminMovies: React.FC = () => {
                       e.target.value = "";
                     }}
                     disabled={uploadingPoster}
-                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-red-600 file:text-white hover:file:bg-red-700 file:cursor-pointer cursor-pointer disabled:opacity-60"
+                    className="hidden"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={uploadingPoster}
+                    onClick={() => posterFileInputRef.current?.click()}
+                    className="h-11 border-gray-600 text-gray-200 hover:bg-gray-700 hover:text-white"
+                  >
+                    {uploadingPoster ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Image className="w-4 h-4 mr-2" />
+                        Upload from device
+                      </>
+                    )}
+                  </Button>
+                  <span className="text-xs text-gray-400">
+                    JPG, PNG, WEBP (max 5MB)
+                  </span>
                 </div>
-                <input
+                <Input
                   type="url"
                   title="Poster image URL"
                   placeholder="https://example.com/poster.jpg"
@@ -456,7 +559,7 @@ const AdminMovies: React.FC = () => {
                 <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5" /> Description *
                 </label>
-                <textarea
+                <Textarea
                   title="Movie description"
                   placeholder="Enter movie description..."
                   value={formData.description}

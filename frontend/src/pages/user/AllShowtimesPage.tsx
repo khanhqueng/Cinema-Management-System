@@ -178,7 +178,7 @@ const AllShowtimesPage: React.FC = () => {
                           placeholder="Enter movie or cinema name..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full min-h-12 pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          className="w-full min-h-12 pl-10 pr-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -204,7 +204,7 @@ const AllShowtimesPage: React.FC = () => {
                                 selectedDateEntries.map((date) => (
                                   <span
                                     key={date.value}
-                                    className="inline-flex max-w-full rounded-md border border-indigo-400/45 bg-indigo-950/55 px-2 py-1 text-xs font-medium text-indigo-100 wrap-break-word"
+                                    className="inline-flex max-w-full rounded-md border border-red-400/45 bg-red-950/55 px-2 py-1 text-xs font-medium text-red-100 wrap-break-word"
                                   >
                                     {date.fullDisplay}
                                   </span>
@@ -248,7 +248,7 @@ const AllShowtimesPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Button
                         type="submit"
-                        className="h-11 bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="h-11 bg-red-600 hover:bg-red-700 text-white"
                       >
                         <Search className="w-4 h-4 mr-2" />
                         Search
@@ -304,7 +304,7 @@ const AllShowtimesPage: React.FC = () => {
                         </p>
                         <Button
                           onClick={() => (window.location.href = "/movies")}
-                          className="bg-indigo-600 hover:bg-indigo-700"
+                          className="bg-red-600 hover:bg-red-700"
                         >
                           <Film className="w-5 h-5 mr-2" />
                           Browse Movies
@@ -426,7 +426,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
   };
 
   return (
-    <Card className="bg-gray-800 border-gray-700 hover:border-indigo-500 transition-all duration-300 h-full">
+    <Card className="bg-gray-800 border-gray-700 hover:border-red-500 transition-all duration-300 h-full">
       <CardContent className="p-6 flex flex-col h-full">
         {/* Movie Info */}
         <div className="flex items-start space-x-4 mb-4">
@@ -462,7 +462,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
         <div className="space-y-3 flex-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center text-white">
-              <Calendar className="w-4 h-4 mr-2 text-indigo-400" />
+              <Calendar className="w-4 h-4 mr-2 text-red-400" />
               <span className="font-medium">
                 {showDate.toLocaleDateString("en-US", {
                   weekday: "short",
@@ -476,7 +476,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center text-white">
-              <Clock className="w-4 h-4 mr-2 text-indigo-400" />
+              <Clock className="w-4 h-4 mr-2 text-red-400" />
               <span className="font-bold text-lg">
                 {showDate.toLocaleTimeString("en-US", {
                   hour: "numeric",
@@ -513,7 +513,7 @@ const ShowtimeCard: React.FC<{ showtime: Showtime }> = ({ showtime }) => {
         <div className="mt-6 pt-4 border-t border-gray-700">
           <Button
             asChild
-            className={`w-full text-white ${isPast ? "bg-gray-600 hover:bg-gray-500" : "bg-indigo-600 hover:bg-indigo-700"}`}
+            className={`w-full text-white ${isPast ? "bg-gray-600 hover:bg-gray-500" : "bg-red-600 hover:bg-red-700"}`}
           >
             <Link
               to={

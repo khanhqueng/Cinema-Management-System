@@ -241,7 +241,7 @@ const PaymentPage: React.FC = () => {
                 <p className="text-gray-400 mb-6">
                   No valid seat reservation found.
                 </p>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Movies
@@ -474,7 +474,7 @@ const PaymentPage: React.FC = () => {
                       onClick={handlePayment}
                       disabled={paymentLoading || timeRemaining <= 0}
                       size="lg"
-                      className="bg-red-600 hover:bg-red-700 min-w-[200px]"
+                      className="text-white bg-red-600 hover:bg-red-700 min-w-[200px]"
                     >
                       {paymentLoading ? (
                         <>

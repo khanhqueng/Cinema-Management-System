@@ -23,9 +23,9 @@ spring:
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/cinema_db
-    username: cinema_user
-    password: cinema_password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cinema_db}
+    username: ${SPRING_DATASOURCE_USERNAME:cinema_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:cinema_password}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 20000
@@ -74,7 +74,7 @@ spring:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:quangkhanh1232004@gmail.com}
-    password: ${MAIL_PASSWORD:}
+    password: ${MAIL_PASSWORD:orjailovpxhlpzar}
     properties:
       mail:
         smtp:

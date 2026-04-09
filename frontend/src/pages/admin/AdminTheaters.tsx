@@ -381,7 +381,7 @@ const AdminTheaters: React.FC = () => {
                           <Building2 className="w-4 h-4 mr-2" />
                           Theater Name *
                         </label>
-                        <input
+                        <Input
                           type="text"
                           title="Theater name"
                           value={formData.name}
@@ -390,7 +390,7 @@ const AdminTheaters: React.FC = () => {
                           }
                           required
                           placeholder="e.g., Theater A, VIP Hall 1"
-                          className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          className="w-full h-11 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                       </div>
 
@@ -413,7 +413,7 @@ const AdminTheaters: React.FC = () => {
                             <SelectTrigger
                               title="Theater type"
                               aria-label="Theater type"
-                              className="h-11 w-full rounded-lg border border-gray-600 bg-gray-700/50 px-4 text-sm text-white shadow-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-green-500"
+                              className="min-h-11 w-full rounded-lg border border-gray-600 bg-gray-700/50 px-4 text-sm text-white shadow-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-green-500"
                             >
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
@@ -435,7 +435,7 @@ const AdminTheaters: React.FC = () => {
                             <Activity className="w-4 h-4 mr-2" />
                             Capacity
                           </label>
-                          <input
+                          <Input
                             type="number"
                             title="Theater capacity (auto-calculated)"
                             value={
@@ -453,7 +453,7 @@ const AdminTheaters: React.FC = () => {
                               })
                             }
                             min="1"
-                            className={`w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editingTheater ? "opacity-60 cursor-not-allowed" : ""}`}
+                            className={`w-full h-11 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editingTheater ? "opacity-60 cursor-not-allowed" : ""}`}
                           />
                           {!editingTheater && (
                             <p className="text-xs text-gray-500">
@@ -480,7 +480,7 @@ const AdminTheaters: React.FC = () => {
                               <label className="text-xs text-gray-400">
                                 Number of Rows
                               </label>
-                              <input
+                              <Input
                                 type="number"
                                 title="Number of rows"
                                 value={formData.rows ?? 10}
@@ -498,14 +498,14 @@ const AdminTheaters: React.FC = () => {
                                 }}
                                 min="1"
                                 max="30"
-                                className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full h-11 px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
                             <div className="space-y-1">
                               <label className="text-xs text-gray-400">
                                 Seats per Row
                               </label>
-                              <input
+                              <Input
                                 type="number"
                                 title="Seats per row"
                                 value={formData.seatsPerRow ?? 12}
@@ -523,7 +523,7 @@ const AdminTheaters: React.FC = () => {
                                 }}
                                 min="1"
                                 max="30"
-                                className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full h-11 px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
                           </div>
@@ -663,7 +663,7 @@ const AdminTheaters: React.FC = () => {
                             <Layers className="w-4 h-4 mr-2" />
                             Number of Rows *
                           </label>
-                          <input
+                          <Input
                             type="number"
                             title="Number of rows"
                             value={initRows}
@@ -675,7 +675,7 @@ const AdminTheaters: React.FC = () => {
                             required
                             min="1"
                             max="30"
-                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full h-11 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </div>
                         <div className="space-y-2">
@@ -683,7 +683,7 @@ const AdminTheaters: React.FC = () => {
                             <Users className="w-4 h-4 mr-2" />
                             Seats per Row *
                           </label>
-                          <input
+                          <Input
                             type="number"
                             title="Seats per row"
                             value={initSeatsPerRow}
@@ -695,7 +695,7 @@ const AdminTheaters: React.FC = () => {
                             required
                             min="1"
                             max="30"
-                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full h-11 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </div>
                       </div>

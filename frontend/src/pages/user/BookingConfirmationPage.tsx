@@ -112,7 +112,7 @@ const BookingConfirmationPage: React.FC = () => {
                 <p className="text-gray-400 mb-6">
                   {error || "Unable to load booking details."}
                 </p>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Movies
@@ -191,7 +191,7 @@ const BookingConfirmationPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Success Header - NEW UI */}
-      <section className="bg-gradient-to-r from-green-900 to-green-800 py-16 text-center">
+      <section className="bg-linear-to-r from-green-900 to-green-800 py-16 text-center">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -519,7 +519,7 @@ const BookingConfirmationPage: React.FC = () => {
                 View My Bookings
               </Link>
             </Button>
-            <Button asChild size="lg" className="bg-red-600 hover:bg-red-700">
+            <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white">
               <Link to="/movies">
                 <Film className="w-4 h-4 mr-2" />
                 Book More Movies

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import {
@@ -60,6 +60,7 @@ const AdminShowtimes: React.FC = () => {
   const [filterTheaterId, setFilterTheaterId] = useState<number | undefined>(
     undefined,
   );
+  const showDatetimeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -381,7 +382,7 @@ const AdminShowtimes: React.FC = () => {
                     <SelectTrigger
                       title="Select movie"
                       aria-label="Select movie"
-                      className="h-10 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                      className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                     >
                       <SelectValue placeholder="Select a movie" />
                     </SelectTrigger>
@@ -425,7 +426,7 @@ const AdminShowtimes: React.FC = () => {
                     <SelectTrigger
                       title="Select theater"
                       aria-label="Select theater"
-                      className="h-10 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+                      className="min-h-11 w-full rounded-lg border border-gray-700 bg-gray-800 px-3 text-sm text-white shadow-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                     >
                       <SelectValue placeholder="Select a theater" />
                     </SelectTrigger>
@@ -456,22 +457,40 @@ const AdminShowtimes: React.FC = () => {
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" /> Date & Time *
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.showDatetime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, showDatetime: e.target.value })
-                    }
-                    required
-                    title="Show date and time"
-                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                  />
+                  <div className="relative">
+                    <Input
+                      ref={showDatetimeInputRef}
+                      type="datetime-local"
+                      value={formData.showDatetime}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          showDatetime: e.target.value,
+                        })
+                      }
+                      required
+                      title="Show date and time"
+                      className="w-full h-11 pl-3 pr-10 py-2.5 bg-gray-800/90 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      title="Open date and time picker"
+                      onClick={() =>
+                        (showDatetimeInputRef.current as HTMLInputElement & {
+                          showPicker?: () => void;
+                        })?.showPicker?.() ?? showDatetimeInputRef.current?.focus()
+                      }
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-white/90 hover:text-white"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
                     <DollarSign className="w-3.5 h-3.5" /> Price (VND) *
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.price}
                     onChange={(e) =>
@@ -484,7 +503,7 @@ const AdminShowtimes: React.FC = () => {
                     min="0"
                     step="1000"
                     placeholder="e.g., 100000"
-                    className="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
+                    className="w-full h-11 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 placeholder-gray-500"
                   />
                 </div>
               </div>
