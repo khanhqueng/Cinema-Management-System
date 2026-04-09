@@ -17,7 +17,7 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: false   # Flyway manages schema
-        dimensions: 1536
+        dimensions: 3072
         distance-type: COSINE_DISTANCE
         index-type: HNSW
 
