@@ -322,7 +322,7 @@ const ShowtimePage: React.FC = () => {
                     There are currently no showtimes scheduled for this{" "}
                     {isTheaterRoute ? "theater" : "movie"}.
                   </p>
-                  <Button asChild className="bg-red-600 hover:bg-red-700">
+                  <Button asChild className="text-white bg-red-600 hover:bg-red-700">
                     {isTheaterRoute ? (
                       <Link to="/theaters">
                         <ArrowLeft className="w-4 h-4 mr-2" />

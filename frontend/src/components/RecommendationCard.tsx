@@ -101,7 +101,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
             <Button
               asChild
               size="sm"
-              className="flex-1 bg-red-600 hover:bg-red-700"
+              className="flex-1 text-white bg-red-600 hover:bg-red-700"
             >
               <Link to={`/movies/${movie.id}`}>
                 <Play className="w-4 h-4 mr-1" />

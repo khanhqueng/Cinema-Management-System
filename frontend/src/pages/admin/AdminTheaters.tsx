@@ -865,7 +865,7 @@ const AdminTheaters: React.FC = () => {
                                       <Button
                                         onClick={() => handleEdit(theater)}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
+                                        className="bg-green-600 hover:bg-green-700 text-white"
                                       >
                                         <Edit3 className="w-4 h-4 mr-1" />
                                         Edit
@@ -873,7 +873,7 @@ const AdminTheaters: React.FC = () => {
                                       <Button
                                         onClick={() => handleDelete(theater.id)}
                                         size="sm"
-                                        className="bg-red-600 hover:bg-red-700"
+                                        className="bg-red-600 hover:bg-red-700 text-white"
                                       >
                                         <Trash2 className="w-4 h-4 mr-1" />
                                         Delete
