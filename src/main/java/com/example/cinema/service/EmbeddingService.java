@@ -77,6 +77,19 @@ public class EmbeddingService {
         return generateEmbedding(movieText);
     }
 
+    /**
+     * Generate embedding for user preferences and cache by semantic versions.
+     */
+    @Cacheable(value = USER_PREFERENCE_EMBEDDING_CACHE,
+               key = "'user:' + #userId + ':pref' + #prefVersion + ':fav' + #favVersion")
+    public List<Double> generateUserPreferenceEmbedding(Long userId, int prefVersion, int favVersion,
+                                                        List<String> preferredGenres, List<String> favoriteMovieTitles) {
+        String preferenceText = buildUserPreferenceText(preferredGenres, favoriteMovieTitles);
+        log.debug("Generating preference embedding for user {} with key versions pref={}, fav={}",
+                 userId, prefVersion, favVersion);
+        return generateEmbedding(preferenceText);
+    }
+
     // ── Static text-building helpers ────────────────────────────────────────
 
     /**
@@ -135,5 +148,39 @@ public class EmbeddingService {
         int h = 0;
         for (char c : raw.toCharArray()) h = 31 * h + c;
         return String.format("%08x", h & 0xFFFFFFFFL);
+    }
+
+    /**
+     * Stable version hash for cache keys built from ordered semantic values.
+     */
+    public static int prefListVersion(List<String> items) {
+        if (items == null || items.isEmpty()) {
+            return 0;
+        }
+        List<String> sorted = items.stream().map(s -> s == null ? "" : s.trim().toLowerCase()).sorted().toList();
+        int h = 0;
+        for (String s : sorted) {
+            h = 31 * h + s.hashCode();
+        }
+        return h & 0x7FFFFFFF;
+    }
+
+    /**
+     * Convert numeric embedding to pgvector literal string, e.g. [0.1,0.2,...].
+     */
+    public static String toVectorLiteral(List<Double> embedding) {
+        if (embedding == null || embedding.isEmpty()) {
+            throw new IllegalArgumentException("Embedding cannot be null or empty");
+        }
+
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < embedding.size(); i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append(embedding.get(i));
+        }
+        sb.append(']');
+        return sb.toString();
     }
 }
