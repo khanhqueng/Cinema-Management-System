@@ -1,5 +1,6 @@
 package com.example.cinema.service;
 
+import com.example.cinema.config.AiProperties;
 import com.example.cinema.entity.Movie;
 import com.example.cinema.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class MovieEmbeddingService {
 
     private final MovieRepository movieRepository;
     private final VectorStore vectorStore;
+    private final AiProperties aiProperties;
 
     /**
      * Generate and save embedding for a single movie.
@@ -90,7 +92,7 @@ public class MovieEmbeddingService {
                         .orElseThrow(() -> new RuntimeException("Movie not found: " + movieId));
                 generateAndSaveMovieEmbedding(movie);
                 successCount++;
-                Thread.sleep(500); // rate-limit guard for OpenAI
+                Thread.sleep(Math.max(aiProperties.getBatchEmbeddingDelayMs(), 0));
             } catch (Exception e) {
                 failureCount++;
                 log.warn("Failed to generate embedding for movieId {}. Skipping.", movieId);
@@ -145,13 +147,18 @@ public class MovieEmbeddingService {
             targetMovie.getTitle(), targetMovie.getDescription(),
             targetMovie.getGenre(), targetMovie.getDirector());
 
-        double primaryThreshold  = Math.max(similarityThreshold, 0.65);
-        double fallbackThreshold = Math.max(similarityThreshold * 0.75, 0.5);
+        double primaryThreshold = Math.max(similarityThreshold, aiProperties.getSimilarMoviePrimaryThreshold());
+        double fallbackThreshold = Math.max(
+            Math.min(primaryThreshold - 0.05, aiProperties.getSimilarMovieFallbackThreshold()),
+            0.0
+        );
 
-        List<Movie> results = searchAndFetch(movieText, primaryThreshold, limit + 1, targetMovie.getId());
+        int topK = Math.max(limit + 1, limit * Math.max(aiProperties.getRecommendationCandidateMultiplier(), 1));
+
+        List<Movie> results = searchAndFetch(movieText, primaryThreshold, topK, targetMovie.getId());
 
         if (results.size() < Math.min(2, limit)) {
-            results = searchAndFetch(movieText, fallbackThreshold, limit + 1, targetMovie.getId());
+            results = searchAndFetch(movieText, fallbackThreshold, topK, targetMovie.getId());
             log.info("findSimilarMovies - fallback threshold {} → {} results", fallbackThreshold, results.size());
         } else {
             log.info("findSimilarMovies - primary threshold {} → {} results", primaryThreshold, results.size());

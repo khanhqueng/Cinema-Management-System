@@ -1,5 +1,6 @@
 package com.example.cinema.service;
 
+import com.example.cinema.config.AiProperties;
 import com.example.cinema.entity.Movie;
 import com.example.cinema.entity.UserGenrePreference;
 import com.example.cinema.entity.FavoriteMovie;
@@ -46,9 +47,9 @@ public class RecommendationService {
     private final UserGenrePreferenceService genrePreferenceService;
     private final FavoriteMovieService favoriteMovieService;
     private final MovieRepository movieRepository;
-    private final EmbeddingService embeddingService;
     private final MovieEmbeddingService movieEmbeddingService;
     private final VectorStore vectorStore;
+    private final AiProperties aiProperties;
 
     /**
      * Get personalized movie recommendations for user
@@ -331,19 +332,24 @@ public class RecommendationService {
             // Build preference text → VectorStore generates embedding and searches internally
             String preferenceText = EmbeddingService.buildUserPreferenceText(preferredGenres, favoriteMovieTitles);
 
+            int candidateMultiplier = Math.max(aiProperties.getRecommendationCandidateMultiplier(), 1);
+            int topK = Math.max(limit * candidateMultiplier, limit);
+            double primaryThreshold = aiProperties.getPersonalizedPrimaryThreshold();
+            double fallbackThreshold = Math.min(primaryThreshold - 0.05, aiProperties.getPersonalizedFallbackThreshold());
+
             List<Document> docs = vectorStore.similaritySearch(
                 SearchRequest.builder()
                     .query(preferenceText)
-                    .topK(limit * 2)
-                    .similarityThreshold(0.65)
+                    .topK(topK)
+                    .similarityThreshold(primaryThreshold)
                     .build());
 
-            if (docs.size() < Math.min(2, limit * 2)) {
+            if (docs.size() < Math.min(2, topK)) {
                 docs = vectorStore.similaritySearch(
                     SearchRequest.builder()
                         .query(preferenceText)
-                        .topK(limit * 2)
-                        .similarityThreshold(0.5)
+                        .topK(topK)
+                        .similarityThreshold(fallbackThreshold)
                         .build());
             }
 
@@ -426,11 +432,14 @@ public class RecommendationService {
     public RecommendationResponse semanticMovieSearch(String query, int limit) {
         try {
             // VectorStore generates embedding for query and executes native pgvector <=> search
+            double primaryThreshold = aiProperties.getSemanticPrimaryThreshold();
+            double fallbackThreshold = Math.min(primaryThreshold - 0.05, aiProperties.getSemanticFallbackThreshold());
+
             List<Document> docs = vectorStore.similaritySearch(
                 SearchRequest.builder()
                     .query(query)
                     .topK(limit)
-                    .similarityThreshold(0.6)
+                    .similarityThreshold(primaryThreshold)
                     .build());
 
             if (docs.size() < Math.min(3, limit)) {
@@ -438,7 +447,7 @@ public class RecommendationService {
                     SearchRequest.builder()
                         .query(query)
                         .topK(limit)
-                        .similarityThreshold(0.4)
+                        .similarityThreshold(fallbackThreshold)
                         .build());
             }
 

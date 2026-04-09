@@ -11,8 +11,9 @@ spring:
       api-key: ${OPENAI_API_KEY}
       base-url: https://api.openai.com
       embedding:
-        model: text-embedding-ada-002
-        dimensions: 1536
+        # Better semantic quality while keeping 1536 dims compatible with existing pgvector schema.
+        model: text-embedding-3-small
+        dimensions: 3072
     vectorstore:
       pgvector:
         initialize-schema: false   # Flyway manages schema
@@ -113,6 +114,14 @@ app:
     auto-generate-movie-embedding-on-update: true
     embedding-async: true
     seed-movie-embeddings-on-startup: false
+    batch-embedding-delay-ms: 250
+    similar-movie-primary-threshold: 0.72
+    similar-movie-fallback-threshold: 0.56
+    personalized-primary-threshold: 0.72
+    personalized-fallback-threshold: 0.56
+    semantic-primary-threshold: 0.68
+    semantic-fallback-threshold: 0.50
+    recommendation-candidate-multiplier: 3
 
 # Logging Configuration
 logging:
