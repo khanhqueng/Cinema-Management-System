@@ -8,7 +8,7 @@ spring:
   # AI Configuration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:}
       base-url: https://api.openai.com
       embedding:
         # Better semantic quality while keeping 1536 dims compatible with existing pgvector schema.
@@ -17,7 +17,7 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: false   # Flyway manages schema
-        dimensions: 1536
+        dimensions: 3072
         distance-type: COSINE_DISTANCE
         index-type: HNSW
 

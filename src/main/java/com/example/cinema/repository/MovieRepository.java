@@ -67,6 +67,19 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
            """, nativeQuery = true)
     boolean existsEmbeddingByMovieId(@Param("movieId") Long movieId);
 
+    @Query(value = """
+           SELECT (vs.metadata::jsonb ->> 'movieId')::bigint AS movie_id
+           FROM vector_store vs
+           WHERE vs.metadata IS NOT NULL
+                                           AND jsonb_exists(vs.metadata::jsonb, 'movieId')
+             AND (1 - (vs.embedding <=> CAST(:queryVector AS vector))) >= :threshold
+           ORDER BY vs.embedding <=> CAST(:queryVector AS vector)
+           LIMIT :limit
+           """, nativeQuery = true)
+    List<Long> findTopMovieIdsByEmbedding(@Param("queryVector") String queryVector,
+                                          @Param("threshold") double threshold,
+                                          @Param("limit") int limit);
+
     // Upcoming movies
     @Query("SELECT m FROM Movie m WHERE m.releaseDate > :currentDate ORDER BY m.releaseDate ASC")
     Page<Movie> findUpcoming(@Param("currentDate") LocalDate currentDate, Pageable pageable);
