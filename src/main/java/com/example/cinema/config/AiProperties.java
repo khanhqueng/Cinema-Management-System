@@ -28,5 +28,11 @@ public class AiProperties {
      * If true, embedding generation runs asynchronously (doesn't block create-movie API).
      */
     private boolean embeddingAsync = true;
+
+    /**
+     * If true, generate movie embeddings in Java after seed data is loaded/reloaded.
+     * Useful for local/demo environments to avoid SQL-level placeholder vectors.
+     */
+    private boolean seedMovieEmbeddingsOnStartup = false;
 }
 

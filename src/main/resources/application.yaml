@@ -13,10 +13,16 @@ spring:
       embedding:
         model: text-embedding-ada-002
         dimensions: 1536
+    vectorstore:
+      pgvector:
+        initialize-schema: false   # Flyway manages schema
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
 
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5433/cinema_db
+    url: jdbc:postgresql://localhost:5432/cinema_db
     username: cinema_user
     password: cinema_password
     driver-class-name: org.postgresql.Driver
@@ -62,6 +68,21 @@ spring:
         max-idle: 8
         min-idle: 0
 
+  # Email (SMTP) Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:quangkhanh1232004@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: false
+
   # File upload size limits
   servlet:
     multipart:
@@ -91,6 +112,7 @@ app:
     auto-generate-movie-embedding-on-create: true
     auto-generate-movie-embedding-on-update: true
     embedding-async: true
+    seed-movie-embeddings-on-startup: false
 
 # Logging Configuration
 logging:

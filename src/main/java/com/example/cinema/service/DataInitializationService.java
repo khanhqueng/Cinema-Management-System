@@ -1,6 +1,7 @@
 package com.example.cinema.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.cinema.config.AiProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,12 @@ import java.nio.charset.StandardCharsets;
  * Simple implementation that loads the mock data SQL file once
  */
 @Service
+@RequiredArgsConstructor
 public class DataInitializationService {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
+    private final MovieEmbeddingService movieEmbeddingService;
+    private final AiProperties aiProperties;
 
     /**
      * Initialize database with comprehensive mock data
@@ -38,9 +41,11 @@ public class DataInitializationService {
 
                 System.out.println("✅ Comprehensive mock data loaded successfully!");
                 printDataSummary();
+                seedEmbeddingsIfEnabled();
             } else {
                 System.out.println("📊 Database already contains comprehensive mock data (" + movieCount + " movies). Skipping initialization.");
                 System.out.println("💡 Use POST /api/admin/data/reinitialize to reload mock data if needed.");
+                seedEmbeddingsIfEnabled();
             }
 
         } catch (Exception e) {
@@ -153,9 +158,25 @@ public class DataInitializationService {
             loadFromSqlFile();
             System.out.println("✅ Data reinitialized successfully!");
             printDataSummary();
+            seedEmbeddingsIfEnabled();
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to reinitialize data", e);
+        }
+    }
+
+    private void seedEmbeddingsIfEnabled() {
+        if (!aiProperties.isSeedMovieEmbeddingsOnStartup()) {
+            System.out.println("⏭️ Skipping Java embedding seeding (app.ai.seed-movie-embeddings-on-startup=false)");
+            return;
+        }
+
+        try {
+            System.out.println("🧠 Seeding movie embeddings via Java service...");
+            movieEmbeddingService.generateEmbeddingsForAllMovies();
+            System.out.println("✅ Java embedding seeding completed.");
+        } catch (Exception e) {
+            System.err.println("❌ Java embedding seeding failed: " + e.getMessage());
         }
     }
 }
