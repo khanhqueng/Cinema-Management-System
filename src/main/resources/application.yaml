@@ -8,11 +8,17 @@ spring:
   # AI Configuration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:}
+      api-key: ${OPENAI_API_KEY}
       base-url: https://api.openai.com
       embedding:
         model: text-embedding-ada-002
         dimensions: 1536
+    vectorstore:
+      pgvector:
+        initialize-schema: false   # Flyway manages schema
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
 
   # Database Configuration
   datasource:
@@ -106,6 +112,7 @@ app:
     auto-generate-movie-embedding-on-create: true
     auto-generate-movie-embedding-on-update: true
     embedding-async: true
+    seed-movie-embeddings-on-startup: false
 
 # Logging Configuration
 logging:

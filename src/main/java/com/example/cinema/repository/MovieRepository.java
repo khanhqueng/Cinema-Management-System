@@ -29,14 +29,43 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     @Query("SELECT m FROM Movie m WHERE m.releaseDate <= :currentDate ORDER BY m.releaseDate DESC")
     Page<Movie> findCurrentlyShowing(@Param("currentDate") LocalDate currentDate, Pageable pageable);
 
-    // Get movie IDs that have embeddings
-    @Query(value = "SELECT id FROM movies WHERE embedding IS NOT NULL ORDER BY id", nativeQuery = true)
+    // Get movie IDs that have embeddings in Spring AI vector_store
+    @Query(value = """
+           SELECT m.id
+           FROM movies m
+           WHERE EXISTS (
+              SELECT 1
+              FROM vector_store vs
+              WHERE vs.metadata IS NOT NULL
+                AND vs.metadata::jsonb ->> 'movieId' = m.id::text
+           )
+           ORDER BY m.id
+           """, nativeQuery = true)
     List<Long> findMovieIdsWithEmbeddings();
 
     // Find movie IDs that need embeddings (for batch processing)
-    @Query(value = "SELECT id FROM movies WHERE embedding IS NULL ORDER BY id", nativeQuery = true)
+    @Query(value = """
+           SELECT m.id
+           FROM movies m
+           WHERE NOT EXISTS (
+              SELECT 1
+              FROM vector_store vs
+              WHERE vs.metadata IS NOT NULL
+                AND vs.metadata::jsonb ->> 'movieId' = m.id::text
+           )
+           ORDER BY m.id
+           """, nativeQuery = true)
     List<Long> findMovieIdsWithoutEmbeddings();
 
+    @Query(value = """
+           SELECT EXISTS (
+              SELECT 1
+              FROM vector_store vs
+              WHERE vs.metadata IS NOT NULL
+                AND vs.metadata::jsonb ->> 'movieId' = CAST(:movieId AS text)
+           )
+           """, nativeQuery = true)
+    boolean existsEmbeddingByMovieId(@Param("movieId") Long movieId);
 
     // Upcoming movies
     @Query("SELECT m FROM Movie m WHERE m.releaseDate > :currentDate ORDER BY m.releaseDate ASC")

@@ -9,6 +9,10 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 description = 'project for Cinema Management System'
 
+ext {
+    set('springAiVersion', '1.0.0')
+}
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -49,8 +53,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.redisson:redisson-spring-boot-starter:3.35.0'
 
-	// OpenAI Java Client for AI-powered recommendations
-	implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
+	// Spring AI - pgvector store + OpenAI embedding
+	implementation 'org.springframework.ai:spring-ai-starter-vector-store-pgvector'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 
 	// Spring Retry for robust API calls
 	implementation 'org.springframework.retry:spring-retry'
@@ -64,6 +69,12 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+	}
 }
 
 tasks.named('test') {
