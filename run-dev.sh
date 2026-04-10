@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+# Auto-load environment variables from .env if present
+if [ -f ".env" ]; then
+  set -a
+  source ".env"
+  set +a
+fi
+
 # ─── Config (chỉnh ở đây nếu cần) ─────────────────────────────────────────────
 DB_CONTAINER="cinema-postgres-dev"
 DB_HOST="localhost"
@@ -25,29 +32,42 @@ if [ -z "$MAIL_PASSWORD" ]; then
 fi
 # ───────────────────────────────────────────────────────────────────────────────
 
+if [ -z "$OPENAI_API_KEY" ]; then
+  echo "❌ Thiếu OPENAI_API_KEY. Hãy export OPENAI_API_KEY trước khi chạy."
+  exit 1
+fi
+
 echo ""
 echo "▶ Kiểm tra Docker containers..."
-if ! docker ps --format '{{.Names}}' | grep -q "^${DB_CONTAINER}$"; then
-  echo "  Container '${DB_CONTAINER}' chưa chạy — khởi động docker compose..."
-  docker compose -f docker-compose-dev.yml up -d
-  echo "  Chờ Postgres sẵn sàng..."
-  sleep 3
+if [ "${DB_HOST}" = "localhost" ] || [ "${DB_HOST}" = "127.0.0.1" ]; then
+  if ! docker ps --format '{{.Names}}' | rg "^${DB_CONTAINER}$" >/dev/null; then
+    echo "  Container '${DB_CONTAINER}' chưa chạy — khởi động docker compose..."
+    docker compose -f docker-compose-dev.yml up -d
+    echo "  Chờ Postgres sẵn sàng..."
+    sleep 3
+  else
+    echo "  ✔ ${DB_CONTAINER} đang chạy"
+  fi
 else
-  echo "  ✔ ${DB_CONTAINER} đang chạy"
+  echo "  Dùng database remote (${DB_HOST}:${DB_PORT}) — bỏ qua Docker local"
 fi
 
 echo ""
 echo "▶ Đảm bảo role '${DB_USER}' và database '${DB_NAME}' tồn tại..."
 
-# Superuser trong container là chính DB_USER (POSTGRES_USER trong docker-compose)
-PSQL="docker exec ${DB_CONTAINER} psql -U ${DB_USER}"
+if [ "${DB_HOST}" = "localhost" ] || [ "${DB_HOST}" = "127.0.0.1" ]; then
+  # Superuser trong container là chính DB_USER (POSTGRES_USER trong docker-compose)
+  PSQL="docker exec ${DB_CONTAINER} psql -U ${DB_USER}"
 
-${PSQL} -tc \
-  "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
-  ${PSQL} -c \
-  "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}; GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" || true
+  ${PSQL} -tc \
+    "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | rg 1 >/dev/null || \
+    ${PSQL} -c \
+    "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}; GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};" || true
 
-echo "  ✔ DB sẵn sàng"
+  echo "  ✔ DB local sẵn sàng"
+else
+  echo "  ✔ Giả định DB remote đã sẵn sàng"
+fi
 
 echo ""
 echo "▶ Khởi động Spring Boot (port ${SERVER_PORT})..."

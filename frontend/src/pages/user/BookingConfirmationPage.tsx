@@ -512,9 +512,9 @@ const BookingConfirmationPage: React.FC = () => {
               asChild
               variant="outline"
               size="lg"
-              className="!bg-gray-800 !border-gray-600 !text-white hover:!bg-gray-700 hover:!text-white"
+              className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white!"
             >
-              <Link to="/bookings/my-bookings">
+              <Link to="/bookings/bookings">
                 <Ticket className="w-4 h-4 mr-2" />
                 View My Bookings
               </Link>

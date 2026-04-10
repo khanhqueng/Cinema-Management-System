@@ -265,8 +265,8 @@ public class SeatService {
             return Seat.SeatType.VIP;
         }
 
-        // Last row couple seats (even numbered seats)
-        if (row == totalRows - 1 && seatNum % 2 == 0 && seatNum <= seatsPerRow - 1) {
+        // Last row: all seats are Sweetbox/Couple
+        if (row == totalRows - 1) {
             return Seat.SeatType.COUPLE;
         }
 
@@ -276,6 +276,38 @@ public class SeatService {
         }
 
         return Seat.SeatType.STANDARD;
+    }
+
+    /**
+     * Fix seat types for an existing theater based on current layout rules.
+     * Non-destructive: only updates the seat_type column, does NOT delete or recreate seats.
+     */
+    @Transactional
+    public int fixSeatTypesForTheater(Long theaterId) {
+        Theater theater = theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Theater", "id", theaterId));
+
+        List<Seat> seats = seatRepository.findByTheaterOrderByRowLetterAscSeatNumberAsc(theater);
+        if (seats.isEmpty()) return 0;
+
+        // Determine grid dimensions from existing data
+        long totalRows = seats.stream().map(Seat::getRowLetter).distinct().count();
+        int seatsPerRow = seats.stream()
+                .mapToInt(Seat::getSeatNumber)
+                .max()
+                .orElse(1);
+
+        int updated = 0;
+        for (Seat seat : seats) {
+            int rowIndex = seat.getRowLetter().charAt(0) - 'A';
+            Seat.SeatType expected = determineSeatType(rowIndex, seat.getSeatNumber(), (int) totalRows, seatsPerRow);
+            if (!expected.equals(seat.getSeatType())) {
+                seat.setSeatType(expected);
+                seatRepository.save(seat);
+                updated++;
+            }
+        }
+        return updated;
     }
 
     // DTOs

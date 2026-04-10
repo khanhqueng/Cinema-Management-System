@@ -260,16 +260,56 @@ export interface ShowtimeAvailability {
   occupancyRate?: number;
 }
 
-// Review types
+// Review types — align with Spring Review entity JSON
+export interface ReviewUserSummary {
+  id: number;
+  email: string;
+  fullName: string;
+  role?: string;
+  phone?: string;
+  createdAt?: string;
+}
+
+/** Nested movie on Review payload (may be partial) */
+export interface ReviewMovieSummary {
+  id: number;
+  title?: string;
+  posterUrl?: string;
+}
+
 export interface Review {
   id: number;
-  userId: number;
+  rating: number;
+  reviewText: string | null;
+  createdAt: string;
+  user: ReviewUserSummary;
+  movie?: ReviewMovieSummary;
+}
+
+export interface RatingDistribution {
+  rating1: number;
+  rating2: number;
+  rating3: number;
+  rating4: number;
+  rating5: number;
+}
+
+export interface MovieRatingStats {
+  movieId: number;
+  averageRating: number;
+  reviewCount: number;
+  distribution: RatingDistribution;
+}
+
+export interface CreateReviewPayload {
   movieId: number;
   rating: number;
-  comment: string;
-  reviewDate: string;
-  user?: User;
-  movie?: Movie;
+  reviewText?: string | null;
+}
+
+export interface UpdateReviewPayload {
+  rating?: number | null;
+  reviewText?: string | null;
 }
 
 // Auth types

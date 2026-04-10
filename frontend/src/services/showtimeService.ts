@@ -203,7 +203,7 @@ export const showtimeService = {
       };
     }
 
-    return { status: "available", color: "#4caf50", label: "Còn chỗ" };
+    return { status: "available", color: "#4caf50", label: "Available" };
   },
 
   formatPrice(price: number): string {

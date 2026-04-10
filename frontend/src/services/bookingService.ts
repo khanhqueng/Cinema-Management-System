@@ -362,15 +362,15 @@ export const bookingService = {
   getSeatTypeDisplay(seatType: string): string {
     switch (seatType) {
       case "STANDARD":
-        return "Thường";
+        return "Standard";
       case "VIP":
         return "VIP";
       case "COUPLE":
-        return "Đôi";
+        return "Couple";
       case "WHEELCHAIR":
-        return "Người khuyết tật";
+        return "Wheelchair";
       default:
-        return "Thường";
+        return "Standard";
     }
   },
 

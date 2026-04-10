@@ -8,7 +8,7 @@ spring:
   # AI Configuration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:}
+      api-key: ${OPENAI_API_KEY}
       base-url: https://api.openai.com
       embedding:
         # Better semantic quality while keeping 1536 dims compatible with existing pgvector schema.
@@ -17,13 +17,13 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: false   # Flyway manages schema
-        dimensions: 3072
+        dimensions: 1536
         distance-type: COSINE_DISTANCE
         index-type: HNSW
 
   # Database Configuration
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cinema_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/cinema_db}
     username: ${SPRING_DATASOURCE_USERNAME:cinema_user}
     password: ${SPRING_DATASOURCE_PASSWORD:cinema_password}
     driver-class-name: org.postgresql.Driver
@@ -74,7 +74,7 @@ spring:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:quangkhanh1232004@gmail.com}
-    password: ${MAIL_PASSWORD:orjailovpxhlpzar}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:

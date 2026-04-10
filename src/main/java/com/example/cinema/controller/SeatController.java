@@ -88,6 +88,17 @@ public class SeatController {
     }
 
     /**
+     * Fix seat types for an existing theater without deleting seats (Admin only).
+     * Re-applies the current layout rules (VIP front rows, Sweetbox last row, Wheelchair aisles).
+     */
+    @PatchMapping("/theater/{theaterId}/fix-seat-types")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> fixSeatTypes(@PathVariable Long theaterId) {
+        int updated = seatService.fixSeatTypesForTheater(theaterId);
+        return ResponseEntity.ok("Seat types updated: " + updated + " seat(s) changed.");
+    }
+
+    /**
      * Calculate price for selected seats
      */
     @PostMapping("/showtime/{showtimeId}/calculate-price")

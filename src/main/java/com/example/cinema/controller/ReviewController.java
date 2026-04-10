@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +41,7 @@ public class ReviewController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<Review>> getAllReviews(
+    public ResponseEntity<Page<ReviewResponseDto>> getAllReviews(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -51,7 +52,7 @@ public class ReviewController {
             : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Review> reviews = reviewRepository.findAll(pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository.findAll(pageable).map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -60,23 +61,26 @@ public class ReviewController {
      * Get review by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Review> getReviewById(@PathVariable Long id) {
-        Optional<Review> review = reviewRepository.findById(id);
-        return review.map(ResponseEntity::ok)
-                    .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<ReviewResponseDto> getReviewById(@PathVariable Long id) {
+        return reviewRepository.findById(id)
+                .map(ReviewResponseDto::from)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /**
      * Get reviews for a specific movie
      */
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<Page<Review>> getReviewsForMovie(
+    public ResponseEntity<Page<ReviewResponseDto>> getReviewsForMovie(
             @PathVariable Long movieId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findByMovieIdOrderByCreatedAtDesc(movieId, pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findByMovieIdOrderByCreatedAtDesc(movieId, pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -85,13 +89,15 @@ public class ReviewController {
      * Get my reviews (user's own reviews)
      */
     @GetMapping("/my-reviews")
-    public ResponseEntity<Page<Review>> getMyReviews(
+    public ResponseEntity<Page<ReviewResponseDto>> getMyReviews(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         User currentUser = getCurrentUser();
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getId(), pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findByUserIdOrderByCreatedAtDesc(currentUser.getId(), pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -100,7 +106,7 @@ public class ReviewController {
      * Get reviews by rating
      */
     @GetMapping("/rating/{rating}")
-    public ResponseEntity<Page<Review>> getReviewsByRating(
+    public ResponseEntity<Page<ReviewResponseDto>> getReviewsByRating(
             @PathVariable Integer rating,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -110,7 +116,9 @@ public class ReviewController {
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findByRatingOrderByCreatedAtDesc(rating, pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findByRatingOrderByCreatedAtDesc(rating, pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -119,7 +127,7 @@ public class ReviewController {
      * Get reviews by rating range
      */
     @GetMapping("/rating-range")
-    public ResponseEntity<Page<Review>> getReviewsByRatingRange(
+    public ResponseEntity<Page<ReviewResponseDto>> getReviewsByRatingRange(
             @RequestParam Integer minRating,
             @RequestParam Integer maxRating,
             @RequestParam(defaultValue = "0") int page,
@@ -130,7 +138,9 @@ public class ReviewController {
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findByRatingRange(minRating, maxRating, pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findByRatingRange(minRating, maxRating, pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -139,12 +149,14 @@ public class ReviewController {
      * Get reviews with text content
      */
     @GetMapping("/with-text")
-    public ResponseEntity<Page<Review>> getReviewsWithText(
+    public ResponseEntity<Page<ReviewResponseDto>> getReviewsWithText(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findReviewsWithText(pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findReviewsWithText(pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -153,12 +165,14 @@ public class ReviewController {
      * Get recent reviews
      */
     @GetMapping("/recent")
-    public ResponseEntity<Page<Review>> getRecentReviews(
+    public ResponseEntity<Page<ReviewResponseDto>> getRecentReviews(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Review> reviews = reviewRepository.findByOrderByCreatedAtDesc(pageable);
+        Page<ReviewResponseDto> reviews = reviewRepository
+                .findByOrderByCreatedAtDesc(pageable)
+                .map(ReviewResponseDto::from);
 
         return ResponseEntity.ok(reviews);
     }
@@ -170,18 +184,15 @@ public class ReviewController {
     public ResponseEntity<?> createReview(@Valid @RequestBody CreateReviewRequest request) {
         User currentUser = getCurrentUser();
 
-        // Check if movie exists
         Optional<Movie> movieOpt = movieRepository.findById(request.movieId());
         if (movieOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Movie not found");
         }
 
-        // Check if user already reviewed this movie
         if (reviewRepository.existsByMovieIdAndUserId(request.movieId(), currentUser.getId())) {
             return ResponseEntity.badRequest().body("You have already reviewed this movie");
         }
 
-        // Validate rating
         if (request.rating() < 1 || request.rating() > 5) {
             return ResponseEntity.badRequest().body("Rating must be between 1 and 5");
         }
@@ -194,7 +205,7 @@ public class ReviewController {
                 .build();
 
         Review savedReview = reviewRepository.save(review);
-        return ResponseEntity.ok(savedReview);
+        return ResponseEntity.ok(ReviewResponseDto.from(savedReview));
     }
 
     /**
@@ -211,17 +222,14 @@ public class ReviewController {
         Review review = reviewOpt.get();
         User currentUser = getCurrentUser();
 
-        // Users can only update their own reviews, admins can update any
         if (!currentUser.isAdmin() && !review.getUser().getId().equals(currentUser.getId())) {
             return ResponseEntity.notFound().build();
         }
 
-        // Validate rating if provided
         if (request.rating() != null && (request.rating() < 1 || request.rating() > 5)) {
             return ResponseEntity.badRequest().body("Rating must be between 1 and 5");
         }
 
-        // Update fields
         if (request.rating() != null) {
             review.setRating(request.rating());
         }
@@ -230,7 +238,7 @@ public class ReviewController {
         }
 
         Review updatedReview = reviewRepository.save(review);
-        return ResponseEntity.ok(updatedReview);
+        return ResponseEntity.ok(ReviewResponseDto.from(updatedReview));
     }
 
     /**
@@ -247,7 +255,6 @@ public class ReviewController {
         Review review = reviewOpt.get();
         User currentUser = getCurrentUser();
 
-        // Users can only delete their own reviews, admins can delete any
         if (!currentUser.isAdmin() && !review.getUser().getId().equals(currentUser.getId())) {
             return ResponseEntity.notFound().build();
         }
@@ -345,6 +352,52 @@ public class ReviewController {
         String email = authentication.getName();
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /**
+     * Review Response DTO - plain values, no JPA proxies exposed to Jackson.
+     * Nested user/movie sub-records match the existing frontend Review interface.
+     */
+    public record ReviewResponseDto(
+        Long id,
+        Integer rating,
+        String reviewText,
+        LocalDateTime createdAt,
+        ReviewUserDto user,
+        ReviewMovieDto movie,
+        boolean positiveReview,
+        boolean negativeReview,
+        String ratingDescription,
+        String starDisplay,
+        String reviewSummary
+    ) {
+        public record ReviewUserDto(Long id, String email, String fullName, String role) {}
+        public record ReviewMovieDto(Long id, String title, String posterUrl) {}
+
+        public static ReviewResponseDto from(Review review) {
+            return new ReviewResponseDto(
+                review.getId(),
+                review.getRating(),
+                review.getReviewText(),
+                review.getCreatedAt(),
+                new ReviewUserDto(
+                    review.getUser().getId(),
+                    review.getUser().getEmail(),
+                    review.getUser().getFullName(),
+                    review.getUser().getRole().name()
+                ),
+                new ReviewMovieDto(
+                    review.getMovie().getId(),
+                    review.getMovie().getTitle(),
+                    review.getMovie().getPosterUrl()
+                ),
+                review.isPositiveReview(),
+                review.isNegativeReview(),
+                review.getRatingDescription(),
+                review.getStarDisplay(),
+                review.getReviewSummary()
+            );
+        }
     }
 
     /**

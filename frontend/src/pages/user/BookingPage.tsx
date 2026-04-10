@@ -191,10 +191,6 @@ const BookingPage: React.FC = () => {
       if (prev.includes(seatId)) {
         return prev.filter((id) => id !== seatId);
       } else {
-        if (prev.length >= 8) {
-          toast.warning("You can select maximum 8 seats per booking");
-          return prev;
-        }
         return [...prev, seatId];
       }
     });
@@ -303,7 +299,7 @@ const BookingPage: React.FC = () => {
                 <p className="text-gray-400 mb-6">
                   {error || "Unable to load booking information."}
                 </p>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Movies
@@ -442,7 +438,7 @@ const BookingPage: React.FC = () => {
                     <Calendar className="w-4 h-4" />
                     <span>{showtimeService.formatShowtime(showtime)}</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-green-500 font-bold">
+                  <div className="flex items-center space-x-2 text-green-600 font-bold">
                     <DollarSign className="w-4 h-4" />
                     <span>
                       {showtimeService.formatPrice(showtime.price)} per seat
@@ -486,106 +482,215 @@ const BookingPage: React.FC = () => {
 
                     {/* Seat Map */}
                     <div className="flex flex-col items-center space-y-3 mb-8">
-                      {rows.map((row) => (
-                        <div key={row} className="flex items-center space-x-4">
-                          <div className="w-8 text-center font-bold text-gray-400">
-                            {row}
+                      {rows.map((row) => {
+                        const rowSeats = seatMapByRow[row];
+                        const coupleCount = rowSeats.filter(
+                          (s) => s.seatType === "COUPLE",
+                        ).length;
+                        // Treat a row as a Sweetbox row if more than half its seats are COUPLE
+                        const isCoupleRow =
+                          rowSeats.length > 0 &&
+                          coupleCount / rowSeats.length >= 0.5;
+
+                        // ── Sweetbox row: group every 2 COUPLE seats into one paired button ──
+                        if (isCoupleRow) {
+                          const coupleSeats = rowSeats.filter(
+                            (s) => s.seatType === "COUPLE",
+                          );
+                          const pairs: SeatInfo[][] = [];
+                          for (let i = 0; i < coupleSeats.length; i += 2) {
+                            pairs.push(coupleSeats.slice(i, i + 2));
+                          }
+                          return (
+                            <div
+                              key={row}
+                              className="flex items-center space-x-4"
+                            >
+                              <div className="w-8 text-center font-bold text-amber-400 text-xs">
+                                {row}
+                              </div>
+                              <div className="flex space-x-2">
+                                {pairs.map((pair, pairIdx) => {
+                                  const ids = pair.map((s) => s.id);
+                                  const isSelected = ids.some((id) =>
+                                    selectedSeats.includes(id),
+                                  );
+                                  const isBooked = pair.some(
+                                    (s) => !s.isAvailable && !s.lockedByOther,
+                                  );
+                                  const isLockedByOther = pair.some(
+                                    (s) => s.lockedByOther === true,
+                                  );
+                                  const isDisabled = isBooked || isLockedByOther;
+
+                                  const label =
+                                    pair.length === 2
+                                      ? `${pair[0].rowLetter ?? row}${pair[0].seatNumber}·${pair[1].seatNumber}`
+                                      : `${pair[0].rowLetter ?? row}${pair[0].seatNumber}`;
+
+                                  // w-20 ≈ 2×w-9 + gap, matching the width of two regular seats
+                                  let cls =
+                                    "w-20 h-9 border rounded-lg text-white text-[10px] font-bold transition-all duration-200 hover:scale-105 flex items-center justify-center";
+
+                                  if (isBooked) {
+                                    cls +=
+                                      " bg-gray-600 border-gray-600 cursor-not-allowed opacity-50";
+                                  } else if (isLockedByOther) {
+                                    cls +=
+                                      " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
+                                  } else if (isSelected) {
+                                    cls +=
+                                      " bg-green-600 border-emerald-400 hover:bg-emerald-600 shadow-lg shadow-green-600/30 cursor-pointer";
+                                  } else {
+                                    cls +=
+                                      " bg-pink-500 border-pink-400 hover:bg-pink-400 cursor-pointer shadow-sm shadow-pink-500/20";
+                                  }
+
+                                  const tooltip = isLockedByOther
+                                    ? `${label} - Temporarily held`
+                                    : `${label} - Sweetbox (2 seats)`;
+
+                                  const shouldAddAisle =
+                                    pairIdx > 0 &&
+                                    pairIdx % 2 === 0 &&
+                                    pairIdx < pairs.length;
+
+                                  return (
+                                    <React.Fragment key={pairIdx}>
+                                      {shouldAddAisle && (
+                                        <div className="w-5 min-w-[20px] border-l-2 border-gray-600 mx-2 h-9" />
+                                      )}
+                                      <button
+                                        className={cls}
+                                        disabled={isDisabled}
+                                        title={tooltip}
+                                        onClick={() => {
+                                          if (isDisabled) return;
+                                          setSelectedSeats((prev) => {
+                                            const anySelected = ids.some(
+                                              (id) => prev.includes(id),
+                                            );
+                                            if (anySelected) {
+                                              return prev.filter(
+                                                (id) => !ids.includes(id),
+                                              );
+                                            }
+                                            return [...prev, ...ids];
+                                          });
+                                        }}
+                                      >
+                                        {label}
+                                      </button>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // ── Normal row rendering ──
+                        return (
+                          <div
+                            key={row}
+                            className="flex items-center space-x-4"
+                          >
+                            <div className="w-8 text-center font-bold text-gray-400">
+                              {row}
+                            </div>
+                            <div className="flex space-x-2">
+                              {rowSeats.map((seat, index) => {
+                                const shouldAddAisle =
+                                  index > 0 &&
+                                  (index + 1) % 4 === 0 &&
+                                  index < rowSeats.length - 1;
+                                const isSelected = selectedSeats.includes(
+                                  seat.id,
+                                );
+                                const isBooked =
+                                  !seat.isAvailable && !seat.lockedByOther;
+                                const isLockedByOther =
+                                  seat.lockedByOther === true;
+                                const isVIP = seat.seatType === "VIP";
+                                const isCouple = seat.seatType === "COUPLE";
+                                const isWheelchair =
+                                  seat.seatType === "WHEELCHAIR";
+
+                                const centerStart = Math.floor(
+                                  rowSeats.length * 0.35,
+                                );
+                                const centerEnd = Math.ceil(
+                                  rowSeats.length * 0.65,
+                                );
+                                const isCenterZone =
+                                  index >= centerStart &&
+                                  index < centerEnd &&
+                                  !isCouple;
+
+                                let seatClasses =
+                                  "w-9 h-9 border border-gray-700 rounded-md text-white text-[10px] font-bold transition-all duration-200 hover:scale-105";
+
+                                if (isBooked) {
+                                  seatClasses +=
+                                    " bg-gray-600 cursor-not-allowed opacity-50";
+                                } else if (isLockedByOther) {
+                                  seatClasses +=
+                                    " bg-orange-500 cursor-not-allowed opacity-70";
+                                } else if (isSelected) {
+                                  seatClasses +=
+                                    " bg-green-600 hover:bg-emerald-600 shadow-lg shadow-green-600/30";
+                                } else if (isVIP) {
+                                  seatClasses +=
+                                    " bg-red-500 hover:bg-red-600 cursor-pointer";
+                                } else if (isCouple) {
+                                  seatClasses +=
+                                    " bg-pink-500 hover:bg-pink-400 cursor-pointer";
+                                } else if (isWheelchair) {
+                                  seatClasses +=
+                                    " bg-blue-500 hover:bg-blue-600 cursor-pointer";
+                                } else {
+                                  seatClasses +=
+                                    " bg-violet-600 hover:bg-violet-700 cursor-pointer";
+                                }
+
+                                if (
+                                  isCenterZone &&
+                                  !isBooked &&
+                                  !isLockedByOther &&
+                                  !isSelected
+                                ) {
+                                  seatClasses +=
+                                    " ring-1 ring-green-600/80 ring-offset-0";
+                                }
+
+                                const isDisabled = isBooked || isLockedByOther;
+                                const tooltip = isLockedByOther
+                                  ? `${row}${seat.seatNumber} - Temporarily held by another user`
+                                  : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
+
+                                return (
+                                  <React.Fragment key={seat.id}>
+                                    <button
+                                      onClick={() =>
+                                        !isDisabled &&
+                                        handleSeatToggle(seat.id)
+                                      }
+                                      disabled={isDisabled}
+                                      className={seatClasses}
+                                      title={tooltip}
+                                    >
+                                      {`${seat.rowLetter ?? row}${seat.seatNumber}`}
+                                    </button>
+                                    {shouldAddAisle && (
+                                      <div className="w-5 min-w-[20px] border-l-2 border-gray-600 mx-2 h-9 flex items-center justify-center text-gray-600 text-xs font-bold"></div>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className="flex space-x-2">
-                            {seatMapByRow[row].map((seat, index) => {
-                              // Add aisle spacing - typical CGV layout has aisles every 4-6 seats
-                              const shouldAddAisle =
-                                index > 0 &&
-                                (index + 1) % 4 === 0 &&
-                                index < seatMapByRow[row].length - 1;
-                              const isSelected = selectedSeats.includes(
-                                seat.id,
-                              );
-                              const isBooked =
-                                !seat.isAvailable && !seat.lockedByOther;
-                              const isLockedByOther =
-                                seat.lockedByOther === true;
-                              const isVIP = seat.seatType === "VIP";
-                              const isCouple = seat.seatType === "COUPLE";
-                              const isWheelchair =
-                                seat.seatType === "WHEELCHAIR";
-
-                              const rowSeats = seatMapByRow[row];
-                              const centerStart = Math.floor(
-                                rowSeats.length * 0.35,
-                              );
-                              const centerEnd = Math.ceil(
-                                rowSeats.length * 0.65,
-                              );
-                              const isCenterZone =
-                                index >= centerStart &&
-                                index < centerEnd &&
-                                !isCouple;
-
-                              let seatClasses =
-                                "w-9 h-9 border border-gray-700 rounded-md text-white text-[10px] font-bold transition-all duration-200 hover:scale-105";
-                              let seatSize = "w-9 h-9";
-
-                              if (isBooked) {
-                                seatClasses +=
-                                  " bg-gray-600 cursor-not-allowed opacity-50";
-                              } else if (isLockedByOther) {
-                                seatClasses +=
-                                  " bg-orange-500 cursor-not-allowed opacity-70";
-                              } else if (isSelected) {
-                                seatClasses +=
-                                  " bg-pink-500 hover:bg-pink-600 shadow-lg shadow-pink-500/30";
-                              } else if (isVIP) {
-                                seatClasses +=
-                                  " bg-red-500 hover:bg-red-600 cursor-pointer";
-                              } else if (isCouple) {
-                                seatClasses +=
-                                  " bg-pink-600 hover:bg-pink-700 cursor-pointer";
-                                seatSize = "w-12 h-9"; // Wider for couple seats
-                              } else if (isWheelchair) {
-                                seatClasses +=
-                                  " bg-blue-500 hover:bg-blue-600 cursor-pointer";
-                              } else {
-                                seatClasses +=
-                                  " bg-violet-600 hover:bg-violet-700 cursor-pointer";
-                              }
-
-                              if (
-                                isCenterZone &&
-                                !isBooked &&
-                                !isLockedByOther &&
-                                !isSelected
-                              ) {
-                                seatClasses +=
-                                  " ring-1 ring-emerald-500/80 ring-offset-0";
-                              }
-
-                              const isDisabled = isBooked || isLockedByOther;
-                              const tooltip = isLockedByOther
-                                ? `${row}${seat.seatNumber} - Temporarily held by another user`
-                                : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
-
-                              return (
-                                <React.Fragment key={seat.id}>
-                                  <button
-                                    onClick={() =>
-                                      !isDisabled && handleSeatToggle(seat.id)
-                                    }
-                                    disabled={isDisabled}
-                                    className={`${seatClasses} ${seatSize}`}
-                                    title={tooltip}
-                                  >
-                                    {`${seat.rowLetter ?? row}${seat.seatNumber}`}
-                                  </button>
-                                  {shouldAddAisle && (
-                                    <div className="w-5 min-w-[20px] border-l-2 border-gray-600 mx-2 h-9 flex items-center justify-center text-gray-600 text-xs font-bold"></div>
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
 
@@ -595,8 +700,8 @@ const BookingPage: React.FC = () => {
                         <div className="w-5 h-5 bg-gray-600 rounded border border-gray-600"></div>
                         <span className="text-gray-300">Booked</span>
                       </div>
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-5 h-5 bg-pink-500 rounded border border-gray-600"></div>
+                        <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-green-600 rounded border border-gray-600"></div>
                         <span className="text-gray-300">Your selected seats</span>
                       </div>
                       <div className="flex items-center space-x-1.5">
@@ -607,12 +712,16 @@ const BookingPage: React.FC = () => {
                         <div className="w-5 h-5 bg-red-500 rounded border border-gray-600"></div>
                         <span className="text-gray-300">VIP seats</span>
                       </div>
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-7 h-5 bg-pink-600 rounded border border-gray-600"></div>
-                        <span className="text-gray-300">Sweetbox seats</span>
+                        <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 bg-pink-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Couple seats</span>
                       </div>
                       <div className="flex items-center space-x-1.5">
-                        <div className="w-5 h-5 rounded border border-emerald-500/80 bg-transparent"></div>
+                        <div className="w-5 h-5 bg-blue-500 rounded border border-gray-600"></div>
+                        <span className="text-gray-300">Wheelchair</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-5 h-5 rounded border border-green-600/80 bg-transparent"></div>
                         <span className="text-gray-300">Center zone</span>
                       </div>
                       <div className="flex items-center space-x-1.5">
@@ -635,7 +744,7 @@ const BookingPage: React.FC = () => {
                     transition={{ duration: 0.6, delay: 0.3 }}
                   >
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-                      <CheckCircle2 className="w-5 h-5 mr-2 text-green-500" />
+                      <CheckCircle2 className="w-5 h-5 mr-2 text-green-600" />
                       Booking Summary
                     </h3>
 
@@ -686,7 +795,7 @@ const BookingPage: React.FC = () => {
                         </div>
                         <div className="flex justify-between items-center text-lg font-bold pt-2 border-t border-gray-600">
                           <span className="text-white">Total</span>
-                          <span className="text-green-500">
+                          <span className="text-green-600">
                             {bookingService.formatPrice(priceCheck.totalPrice)}
                           </span>
                         </div>
@@ -724,7 +833,7 @@ const BookingPage: React.FC = () => {
                         disabled={selectedSeats.length === 0 || bookingLoading}
                         className={`w-full mb-6 text-white ${
                           selectedSeats.length > 0 && !bookingLoading
-                            ? "bg-red-600 hover:bg-red-700"
+                            ? "text-white bg-red-600 hover:bg-red-700"
                             : "bg-gray-600 cursor-not-allowed"
                         }`}
                       >
@@ -745,7 +854,7 @@ const BookingPage: React.FC = () => {
                         Important Notes:
                       </h4>
                       <ul className="space-y-1">
-                        <li>• Maximum 8 seats per booking</li>
+
                         <li>
                           • Bookings can be cancelled up to 2 hours before
                           showtime
