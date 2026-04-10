@@ -188,11 +188,11 @@ export const showtimeService = {
       (showtime.upcoming !== false && showtime.availableSeats > 0);
 
     if (!isBookable) {
-      return { status: "unavailable", color: "#666", label: "Không thể đặt" };
+      return { status: "unavailable", color: "#666", label: "Cannot book" };
     }
 
     if (occupancyRate >= 90) {
-      return { status: "nearly-full", color: "#f44336", label: "Sắp hết chỗ" };
+      return { status: "nearly-full", color: "#f44336", label: "Nearly full" };
     }
 
     if (occupancyRate >= 70) {

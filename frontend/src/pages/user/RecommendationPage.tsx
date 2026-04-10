@@ -129,7 +129,7 @@ const RecommendationPage: React.FC = () => {
                 <p className="text-gray-400 mb-6">{error}</p>
                 <Button
                   onClick={loadRecommendations}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   Try Again
                 </Button>
@@ -387,7 +387,7 @@ const RecommendationPage: React.FC = () => {
                     </p>
                     <Button
                       onClick={() => navigate("/movies")}
-                      className="bg-red-600 hover:bg-red-700"
+                      className="text-white bg-red-600 hover:bg-red-700"
                       size="lg"
                     >
                       <Eye className="w-5 h-5 mr-2" />

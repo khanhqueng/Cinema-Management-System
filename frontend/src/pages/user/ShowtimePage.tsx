@@ -138,7 +138,7 @@ const ShowtimePage: React.FC = () => {
                   {error ||
                     `Unable to load showtimes for this ${isTheaterRoute ? "theater" : "movie"}.`}
                 </p>
-                <Button asChild className="bg-red-600 hover:bg-red-700">
+                <Button asChild className="text-white bg-red-600 hover:bg-red-700">
                   <Link to={isTheaterRoute ? "/theaters" : "/movies"}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to {isTheaterRoute ? "Theaters" : "Movies"}

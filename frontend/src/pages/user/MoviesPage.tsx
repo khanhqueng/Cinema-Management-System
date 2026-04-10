@@ -164,7 +164,7 @@ const MoviesPage: React.FC = () => {
                     setError(null);
                     fetchMovies();
                   }}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   Try Again
                 </Button>
@@ -246,7 +246,7 @@ const MoviesPage: React.FC = () => {
                   className="w-full min-h-11! h-auto! pl-12 pr-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
-              <Button type="submit" className="bg-red-600 hover:bg-red-700 h-auto text-white">
+              <Button type="submit" className="text-white bg-red-600 hover:bg-red-700 h-auto">
                 Search
               </Button>
             </form>
@@ -307,7 +307,7 @@ const MoviesPage: React.FC = () => {
                   onClick={() => handleSort('title')}
                   variant={sortBy === 'title' ? 'default' : 'outline'}
                   size="sm"
-                  className={sortBy === 'title' ? 'bg-red-600 hover:bg-red-700 text-white' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
+                  className={sortBy === 'title' ? 'text-white bg-red-600 hover:bg-red-700' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
                 >
                   Title {sortBy === 'title' && (sortDir === 'asc' ? '↑' : '↓')}
                 </Button>
@@ -315,7 +315,7 @@ const MoviesPage: React.FC = () => {
                   onClick={() => handleSort('averageRating')}
                   variant={sortBy === 'averageRating' ? 'default' : 'outline'}
                   size="sm"
-                  className={sortBy === 'averageRating' ? 'bg-red-600 hover:bg-red-700 text-white' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
+                  className={sortBy === 'averageRating' ? 'text-white bg-red-600 hover:bg-red-700' : '!bg-gray-800 !border-gray-600 !text-white hover:!bg-red-600 hover:!text-white'}
                 >
                   Rating {sortBy === 'averageRating' && (sortDir === 'asc' ? '↑' : '↓')}
                 </Button>

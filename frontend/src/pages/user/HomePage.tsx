@@ -111,7 +111,7 @@ const HomePage: React.FC = () => {
             <p className="text-gray-400 mb-6">{error}</p>
             <Button
               onClick={() => window.location.reload()}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Try Again
             </Button>
@@ -141,7 +141,7 @@ const HomePage: React.FC = () => {
               browse the full catalog.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild className="bg-red-600 hover:bg-red-700">
+              <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
                 <Link to="/movies">
                   <Play className="w-4 h-4 mr-2" />
                   Browse Movies
