@@ -110,12 +110,20 @@ public class UserGenrePreferenceService {
     }
 
     /**
-     * Initialize user preferences based on available genres
+     * Replace all genre preferences for a user with the provided list.
+     * Existing preferences are deleted first to avoid unique constraint violations.
      */
     @Transactional
     public List<UserGenrePreference> initializeUserPreferences(Long userId, List<String> preferredGenres) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        // Remove all existing preferences so we can do a clean replace
+        List<UserGenrePreference> existing = preferenceRepository.findByUserIdOrderByPreferenceDesc(userId);
+        if (!existing.isEmpty()) {
+            preferenceRepository.deleteAll(existing);
+            preferenceRepository.flush();
+        }
 
         List<String> availableGenres = movieService.getAllGenres();
 
@@ -125,7 +133,7 @@ public class UserGenrePreferenceService {
                     UserGenrePreference preference = UserGenrePreference.builder()
                             .user(user)
                             .genre(genre)
-                            .preferenceScore(4) // Default high preference for selected genres
+                            .preferenceScore(4)
                             .build();
                     return preferenceRepository.save(preference);
                 })

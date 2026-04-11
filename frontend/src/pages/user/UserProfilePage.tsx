@@ -15,9 +15,9 @@ import {
   Film,
 } from "lucide-react";
 
-// OLD API services (keep 100% logic) - UNCHANGED
 import GenreSelector from "../../components/GenreSelector";
 import { authService } from "../../services/authService";
+import { userService } from "../../services/userService";
 
 // NEW UI components
 import { Button } from "../../components/ui/button";
@@ -47,9 +47,8 @@ const UserProfilePage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Load user basic info from localStorage (no API call needed)
+      // Load basic info from localStorage
       const userData = authService.getCurrentUserFromStorage();
-
       if (userData) {
         setProfileData({
           fullName: userData.fullName || "",
@@ -57,6 +56,10 @@ const UserProfilePage: React.FC = () => {
           email: userData.email || "",
         });
       }
+
+      // Load genre preferences from API
+      const genres = await userService.getMyGenrePreferences();
+      setSelectedGenres(genres);
     } catch (err: any) {
       setError("Failed to load user profile");
       console.error("Error loading user profile:", err);
@@ -71,8 +74,19 @@ const UserProfilePage: React.FC = () => {
       setUpdating(true);
       setError(null);
 
-      // Update basic profile info
-      // await userService.updateProfile(profileData);
+      const updated = await userService.updateProfile({
+        fullName: profileData.fullName,
+        phone: profileData.phone,
+      });
+
+      // Sync updated data back to localStorage so it's consistent
+      const storedUser = authService.getCurrentUserFromStorage();
+      if (storedUser) {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ ...storedUser, ...updated })
+        );
+      }
 
       setSuccess("Profile updated successfully!");
       setTimeout(() => setSuccess(null), 3000);
@@ -88,8 +102,7 @@ const UserProfilePage: React.FC = () => {
       setUpdating(true);
       setError(null);
 
-      // Update genre preferences
-      // await userService.updateGenrePreferences(selectedGenres);
+      await userService.updateGenrePreferences(selectedGenres);
 
       setSuccess("Movie preferences updated successfully!");
       setTimeout(() => setSuccess(null), 3000);

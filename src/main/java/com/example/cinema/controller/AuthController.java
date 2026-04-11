@@ -127,6 +127,39 @@ public class AuthController {
     }
 
     /**
+     * Get current authenticated user info
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        try {
+            User currentUser = userService.getCurrentUser();
+            return ResponseEntity.ok(UserDto.from(currentUser));
+        } catch (Exception e) {
+            log.warn("Could not retrieve current user: {}", e.getMessage());
+            return ResponseEntity.status(401).body(Map.of("error", "User not authenticated"));
+        }
+    }
+
+    /**
+     * Update current authenticated user's profile
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
+        try {
+            User currentUser = userService.getCurrentUser();
+            UserDto updated = userService.updateUserProfile(
+                    currentUser.getId(), request.fullName(), request.phone());
+            log.info("Profile updated for user: {}", currentUser.getEmail());
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            log.error("Error updating profile: ", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Failed to update profile"));
+        }
+    }
+
+    public record UpdateProfileRequest(String fullName, String phone) {}
+
+    /**
      * Get system statistics (for admin)
      */
     @GetMapping("/stats")

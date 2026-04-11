@@ -1,5 +1,6 @@
 package com.example.cinema.controller;
 
+import com.example.cinema.dto.UserGenrePreferenceDto;
 import com.example.cinema.entity.User;
 import com.example.cinema.entity.UserGenrePreference;
 import com.example.cinema.service.MovieService;
@@ -41,9 +42,10 @@ public class UserGenrePreferenceController {
      * Get current user's genre preferences
      */
     @GetMapping("/my-preferences")
-    public ResponseEntity<List<UserGenrePreference>> getMyGenrePreferences() {
+    public ResponseEntity<List<UserGenrePreferenceDto>> getMyGenrePreferences() {
         User currentUser = userService.getCurrentUser();
-        List<UserGenrePreference> preferences = preferenceService.getUserGenrePreferences(currentUser.getId());
+        List<UserGenrePreferenceDto> preferences = preferenceService.getUserGenrePreferences(currentUser.getId())
+                .stream().map(UserGenrePreferenceDto::from).toList();
         return ResponseEntity.ok(preferences);
     }
 
@@ -51,9 +53,10 @@ public class UserGenrePreferenceController {
      * Get current user's high preference genres
      */
     @GetMapping("/my-preferences/high")
-    public ResponseEntity<List<UserGenrePreference>> getMyHighPreferences() {
+    public ResponseEntity<List<UserGenrePreferenceDto>> getMyHighPreferences() {
         User currentUser = userService.getCurrentUser();
-        List<UserGenrePreference> highPreferences = preferenceService.getHighPreferenceGenres(currentUser.getId());
+        List<UserGenrePreferenceDto> highPreferences = preferenceService.getHighPreferenceGenres(currentUser.getId())
+                .stream().map(UserGenrePreferenceDto::from).toList();
         return ResponseEntity.ok(highPreferences);
     }
 
@@ -82,23 +85,24 @@ public class UserGenrePreferenceController {
      * Set preference for a specific genre
      */
     @PostMapping("/set")
-    public ResponseEntity<UserGenrePreference> setGenrePreference(
+    public ResponseEntity<UserGenrePreferenceDto> setGenrePreference(
             @Valid @RequestBody SetPreferenceRequest request) {
         User currentUser = userService.getCurrentUser();
         UserGenrePreference preference = preferenceService.setGenrePreference(
                 currentUser.getId(), request.genre(), request.score());
-        return ResponseEntity.ok(preference);
+        return ResponseEntity.ok(UserGenrePreferenceDto.from(preference));
     }
 
     /**
      * Set multiple genre preferences at once
      */
     @PostMapping("/set-multiple")
-    public ResponseEntity<List<UserGenrePreference>> setMultiplePreferences(
+    public ResponseEntity<List<UserGenrePreferenceDto>> setMultiplePreferences(
             @Valid @RequestBody SetMultiplePreferencesRequest request) {
         User currentUser = userService.getCurrentUser();
-        List<UserGenrePreference> preferences = preferenceService.setMultipleGenrePreferences(
-                currentUser.getId(), request.genreScores());
+        List<UserGenrePreferenceDto> preferences = preferenceService.setMultipleGenrePreferences(
+                currentUser.getId(), request.genreScores())
+                .stream().map(UserGenrePreferenceDto::from).toList();
         return ResponseEntity.ok(preferences);
     }
 
@@ -106,11 +110,12 @@ public class UserGenrePreferenceController {
      * Initialize preferences with selected favorite genres
      */
     @PostMapping("/initialize")
-    public ResponseEntity<List<UserGenrePreference>> initializePreferences(
+    public ResponseEntity<List<UserGenrePreferenceDto>> initializePreferences(
             @Valid @RequestBody InitializePreferencesRequest request) {
         User currentUser = userService.getCurrentUser();
-        List<UserGenrePreference> preferences = preferenceService.initializeUserPreferences(
-                currentUser.getId(), request.preferredGenres());
+        List<UserGenrePreferenceDto> preferences = preferenceService.initializeUserPreferences(
+                currentUser.getId(), request.preferredGenres())
+                .stream().map(UserGenrePreferenceDto::from).toList();
         return ResponseEntity.ok(preferences);
     }
 
@@ -118,13 +123,13 @@ public class UserGenrePreferenceController {
      * Update preference score for specific genre
      */
     @PutMapping("/update/{genre}")
-    public ResponseEntity<UserGenrePreference> updatePreference(
+    public ResponseEntity<UserGenrePreferenceDto> updatePreference(
             @PathVariable String genre,
             @Valid @RequestBody UpdatePreferenceRequest request) {
         User currentUser = userService.getCurrentUser();
         UserGenrePreference preference = preferenceService.updatePreferenceScore(
                 currentUser.getId(), genre, request.score());
-        return ResponseEntity.ok(preference);
+        return ResponseEntity.ok(UserGenrePreferenceDto.from(preference));
     }
 
     /**
