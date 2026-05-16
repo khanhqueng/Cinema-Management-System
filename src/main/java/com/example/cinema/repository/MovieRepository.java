@@ -25,6 +25,19 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     // Filter by genre
     Page<Movie> findByGenreIgnoreCase(String genre, Pageable pageable);
 
+    // Top movies in preferred genres by number of reviews, then average rating
+    @Query("SELECT m FROM Movie m LEFT JOIN m.reviews r " +
+           "WHERE LOWER(m.genre) IN :genres " +
+           "GROUP BY m " +
+           "ORDER BY COUNT(r) DESC, COALESCE(AVG(r.rating), 0.0) DESC, m.createdAt DESC")
+    List<Movie> findTopReviewedMoviesByGenres(@Param("genres") List<String> genres, Pageable pageable);
+
+    // Global top-rated movies by average rating, then number of reviews
+    @Query("SELECT m FROM Movie m LEFT JOIN m.reviews r " +
+           "GROUP BY m " +
+           "ORDER BY COALESCE(AVG(r.rating), 0.0) DESC, COUNT(r) DESC, m.createdAt DESC")
+    List<Movie> findTopRatedMovies(Pageable pageable);
+
     // Currently showing movies
     @Query("SELECT m FROM Movie m WHERE m.releaseDate <= :currentDate ORDER BY m.releaseDate DESC")
     Page<Movie> findCurrentlyShowing(@Param("currentDate") LocalDate currentDate, Pageable pageable);

@@ -257,6 +257,14 @@ public class RecommendationService {
      * Get popular movies from specific genres
      */
     private List<Movie> getPopularMoviesFromGenres(List<String> genres, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        if (genres == null || genres.isEmpty()) {
+            return movieRepository.findTopRatedMovies(PageRequest.of(0, limit));
+        }
+
         List<Movie> movies = new ArrayList<>();
         int moviesPerGenre = Math.max(1, limit / genres.size());
 
@@ -327,52 +335,51 @@ public class RecommendationService {
                     .map(fm -> fm.getMovie().getTitle())
                     .collect(Collectors.toList());
 
-                int prefVersion = EmbeddingService.prefListVersion(
+            int prefVersion = EmbeddingService.prefListVersion(
                     preferences.stream()
-                        .map(p -> p.getGenre() + ":" + p.getPreferenceScore())
-                        .collect(Collectors.toList())
-                );
-                int favVersion = EmbeddingService.prefListVersion(
+                            .map(p -> p.getGenre() + ":" + p.getPreferenceScore())
+                            .collect(Collectors.toList())
+            );
+            int favVersion = EmbeddingService.prefListVersion(
                     favorites.stream()
-                        .map(fm -> String.valueOf(fm.getMovie().getId()))
-                        .collect(Collectors.toList())
-                );
+                            .map(fm -> String.valueOf(fm.getMovie().getId()))
+                            .collect(Collectors.toList())
+            );
 
-                List<Long> favoriteMovieIdsForMetadata = favorites.stream()
+            List<Long> favoriteMovieIdsForMetadata = favorites.stream()
                     .map(fm -> fm.getMovie().getId())
                     .collect(Collectors.toList());
 
-                List<Double> userPreferenceEmbedding = userPreferenceVectorService
+            List<Double> userPreferenceEmbedding = userPreferenceVectorService
                     .findVectorIfCurrent(userId, prefVersion, favVersion)
                     .orElseGet(() -> {
                         List<Double> generated = embeddingService.generateUserPreferenceEmbedding(
-                            userId,
-                            prefVersion,
-                            favVersion,
-                            preferredGenres,
-                            favoriteMovieTitles
+                                userId,
+                                prefVersion,
+                                favVersion,
+                                preferredGenres,
+                                favoriteMovieTitles
                         );
                         userPreferenceVectorService.upsertVector(
-                            userId,
-                            generated,
-                            prefVersion,
-                            favVersion,
-                            preferredGenres,
-                            favoriteMovieIdsForMetadata
+                                userId,
+                                generated,
+                                prefVersion,
+                                favVersion,
+                                preferredGenres,
+                                favoriteMovieIdsForMetadata
                         );
                         return generated;
                     });
 
-                String queryVector = EmbeddingService.toVectorLiteral(userPreferenceEmbedding);
+            String queryVector = EmbeddingService.toVectorLiteral(userPreferenceEmbedding);
 
             int candidateMultiplier = Math.max(aiProperties.getRecommendationCandidateMultiplier(), 1);
             int topK = Math.max(limit * candidateMultiplier, limit);
             double primaryThreshold = aiProperties.getPersonalizedPrimaryThreshold();
             double fallbackThreshold = Math.min(primaryThreshold - 0.05, aiProperties.getPersonalizedFallbackThreshold());
 
-                List<Long> movieIds = movieRepository.findTopMovieIdsByEmbedding(queryVector, primaryThreshold, topK);
-
-                if (movieIds.size() < Math.min(2, topK)) {
+            List<Long> movieIds = movieRepository.findTopMovieIdsByEmbedding(queryVector, primaryThreshold, topK);
+            if (movieIds.size() < Math.min(2, topK)) {
                 movieIds = movieRepository.findTopMovieIdsByEmbedding(queryVector, fallbackThreshold, topK);
             }
 
@@ -380,15 +387,15 @@ public class RecommendationService {
                     .map(fm -> fm.getMovie().getId())
                     .collect(Collectors.toSet());
 
-                List<Long> filteredMovieIds = movieIds.stream()
+            List<Long> filteredMovieIds = movieIds.stream()
                     .filter(id -> !favoriteMovieIds.contains(id))
                     .limit(limit)
                     .collect(Collectors.toList());
 
-                List<Movie> loadedMovies = movieRepository.findAllById(filteredMovieIds);
-                Map<Long, Movie> movieById = loadedMovies.stream()
+            List<Movie> loadedMovies = movieRepository.findAllById(filteredMovieIds);
+            Map<Long, Movie> movieById = loadedMovies.stream()
                     .collect(Collectors.toMap(Movie::getId, m -> m));
-                List<Movie> recommendations = filteredMovieIds.stream()
+            List<Movie> recommendations = filteredMovieIds.stream()
                     .map(movieById::get)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -402,21 +409,81 @@ public class RecommendationService {
                 );
             }
 
+            return getTopReviewedGenreFallbackRecommendations(
+                    userId,
+                    limit,
+                    "AI results were not sufficient - showing top reviewed movies in your preferred genres"
+            );
+
         } catch (Exception e) {
             System.err.println("AI recommendation failed (attempting DB-vector fallback): " + e.getMessage());
             try {
-                return getAIPersonalizedRecommendationsFromStoredVector(userId, limit);
+                RecommendationResponse fallbackFromStoredVector = getAIPersonalizedRecommendationsFromStoredVector(userId, limit);
+                if (!fallbackFromStoredVector.movies().isEmpty()) {
+                    return fallbackFromStoredVector;
+                }
             } catch (Exception fallbackError) {
                 System.err.println("DB-vector fallback also failed: " + fallbackError.getMessage());
             }
-        }
 
-        return new RecommendationResponse("", List.of(), List.of(), RecommendationType.AI_PERSONALIZED);
+            return getTopReviewedGenreFallbackRecommendations(
+                    userId,
+                    limit,
+                    "AI temporarily unavailable (network/token issue) - showing top reviewed movies in your preferred genres"
+            );
+        }
     }
 
-        private RecommendationResponse getAIPersonalizedRecommendationsFromStoredVector(Long userId, int limit) {
+    private RecommendationResponse getTopReviewedGenreFallbackRecommendations(Long userId, int limit, String reason) {
+        if (limit <= 0) {
+            return new RecommendationResponse(
+                    "AI-Powered Recommendations",
+                    List.of(),
+                    List.of(reason),
+                    RecommendationType.AI_PERSONALIZED
+            );
+        }
+
+        List<String> preferredGenres = genrePreferenceService.getUserGenrePreferences(userId).stream()
+                .filter(p -> p.getPreferenceScore() >= 3)
+                .sorted(Comparator.comparing(UserGenrePreference::getPreferenceScore).reversed())
+                .map(UserGenrePreference::getGenre)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(genre -> !genre.isEmpty())
+                .map(String::toLowerCase)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (preferredGenres.isEmpty()) {
+            return getDefaultRecommendations(limit, reason);
+        }
+
+        List<Movie> fallbackMovies = movieRepository
+                .findTopReviewedMoviesByGenres(preferredGenres, PageRequest.of(0, limit))
+                .stream()
+                .limit(limit)
+                .collect(Collectors.toList());
+
+        if (fallbackMovies.isEmpty()) {
+            fallbackMovies = getPopularMoviesFromGenres(preferredGenres, limit);
+        }
+
+        if (fallbackMovies.isEmpty()) {
+            return getDefaultRecommendations(limit, reason);
+        }
+
+        return new RecommendationResponse(
+                "AI-Powered Recommendations",
+                fallbackMovies,
+                List.of(reason),
+                RecommendationType.AI_PERSONALIZED
+        );
+    }
+
+    private RecommendationResponse getAIPersonalizedRecommendationsFromStoredVector(Long userId, int limit) {
         List<Double> fallbackVector = userPreferenceVectorService.findLatestVector(userId)
-            .orElseThrow(() -> new RuntimeException("No stored user preference vector for userId=" + userId));
+                .orElseThrow(() -> new RuntimeException("No stored user preference vector for userId=" + userId));
 
         String queryVector = EmbeddingService.toVectorLiteral(fallbackVector);
         int candidateMultiplier = Math.max(aiProperties.getRecommendationCandidateMultiplier(), 1);
@@ -432,20 +499,20 @@ public class RecommendationService {
 
         List<Movie> loadedMovies = movieRepository.findAllById(movieIds);
         Map<Long, Movie> movieById = loadedMovies.stream()
-            .collect(Collectors.toMap(Movie::getId, m -> m));
+                .collect(Collectors.toMap(Movie::getId, m -> m));
         List<Movie> recommendations = movieIds.stream()
-            .map(movieById::get)
-            .filter(Objects::nonNull)
-            .limit(limit)
-            .collect(Collectors.toList());
+                .map(movieById::get)
+                .filter(Objects::nonNull)
+                .limit(limit)
+                .collect(Collectors.toList());
 
         return new RecommendationResponse(
-            "AI-Powered Recommendations",
-            recommendations,
-            List.of("Served from stored user vector (OpenAI/cache fallback)"),
-            RecommendationType.AI_PERSONALIZED
+                "AI-Powered Recommendations",
+                recommendations,
+                List.of("Served from stored user vector (OpenAI/cache fallback)"),
+                RecommendationType.AI_PERSONALIZED
         );
-        }
+    }
 
     /**
      * Find movies similar to a specific movie using AI embeddings
