@@ -23,6 +23,7 @@ public class MovieResponseDto {
     private Integer durationMinutes;
     private LocalDate releaseDate;
     private String posterUrl;
+    private String trailerUrl;
     private BigDecimal priceBase;
     private LocalDateTime createdAt;
 
@@ -45,6 +46,7 @@ public class MovieResponseDto {
                 .durationMinutes(movie.getDurationMinutes())
                 .releaseDate(movie.getReleaseDate())
                 .posterUrl(movie.getPosterUrl())
+                .trailerUrl(movie.getTrailerUrl())
                 .priceBase(movie.getPriceBase())
                 .createdAt(movie.getCreatedAt())
                 .currentlyShowing(movie.isCurrentlyShowing())
@@ -67,6 +69,7 @@ public class MovieResponseDto {
                 .durationMinutes(movie.getDurationMinutes())
                 .releaseDate(movie.getReleaseDate())
                 .posterUrl(movie.getPosterUrl())
+                .trailerUrl(movie.getTrailerUrl())
                 .priceBase(movie.getPriceBase())
                 .createdAt(movie.getCreatedAt())
                 .currentlyShowing(movie.isCurrentlyShowing())

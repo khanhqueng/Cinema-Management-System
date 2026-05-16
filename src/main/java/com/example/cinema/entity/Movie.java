@@ -59,6 +59,10 @@ public class Movie {
     @Column(name = "poster_url")
     private String posterUrl;
 
+    @Size(max = 500, message = "Trailer URL cannot exceed 500 characters")
+    @Column(name = "trailer_url")
+    private String trailerUrl;
+
     @Positive(message = "Base price must be positive")
     @Column(name = "price_base", precision = 10, scale = 2, nullable = false)
     @Builder.Default

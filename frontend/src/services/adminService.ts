@@ -10,6 +10,7 @@ export interface CreateMovieRequest {
   durationMinutes: number;
   releaseDate: string;
   posterUrl?: string;
+  trailerUrl?: string;
   priceBase: number;
 }
 

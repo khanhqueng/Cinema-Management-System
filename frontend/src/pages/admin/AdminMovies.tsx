@@ -19,6 +19,7 @@ import {
   FileText,
   ArrowLeft,
   ArrowRight,
+  Video,
 } from "lucide-react";
 
 import { movieService } from "../../services/movieService";
@@ -81,6 +82,7 @@ const AdminMovies: React.FC = () => {
     durationMinutes: 0,
     releaseDate: "",
     posterUrl: "",
+    trailerUrl: "",
     priceBase: 0,
   });
   const [currentPage, setCurrentPage] = useState(0);
@@ -189,6 +191,7 @@ const AdminMovies: React.FC = () => {
       durationMinutes: movie.durationMinutes,
       releaseDate: movie.releaseDate.split("T")[0],
       posterUrl: movie.posterUrl || "",
+      trailerUrl: movie.trailerUrl || "",
       priceBase: movie.priceBase,
     });
     setShowForm(true);
@@ -217,6 +220,7 @@ const AdminMovies: React.FC = () => {
       durationMinutes: 0,
       releaseDate: "",
       posterUrl: "",
+      trailerUrl: "",
       priceBase: 0,
     });
   };
@@ -553,6 +557,26 @@ const AdminMovies: React.FC = () => {
                 {posterUploadError && (
                   <p className="text-xs text-red-300">{posterUploadError}</p>
                 )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5" /> Trailer URL{" "}
+                  <span className="text-gray-500">(YouTube)</span>
+                </label>
+                <Input
+                  type="url"
+                  title="YouTube trailer URL"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={formData.trailerUrl ?? ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, trailerUrl: e.target.value })
+                  }
+                  className={inputClass}
+                />
+                <p className="text-xs text-gray-500">
+                  Supports: youtube.com/watch?v=... or short links
+                </p>
               </div>
 
               <div className="space-y-1.5">

@@ -124,6 +124,7 @@ public class MovieService {
                     movie.setDurationMinutes(movieDetails.getDurationMinutes());
                     movie.setReleaseDate(movieDetails.getReleaseDate());
                     movie.setPosterUrl(movieDetails.getPosterUrl());
+                    movie.setTrailerUrl(movieDetails.getTrailerUrl());
                     movie.setPriceBase(movieDetails.getPriceBase());
 
                     return movieRepository.save(movie);
@@ -144,6 +145,7 @@ public class MovieService {
         movie.setDurationMinutes(movieDetails.getDurationMinutes());
         movie.setReleaseDate(movieDetails.getReleaseDate());
         movie.setPosterUrl(movieDetails.getPosterUrl());
+        movie.setTrailerUrl(movieDetails.getTrailerUrl());
         movie.setPriceBase(movieDetails.getPriceBase());
 
         Movie savedMovie = movieRepository.save(movie);

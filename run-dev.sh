@@ -11,7 +11,7 @@ fi
 # ─── Config (chỉnh ở đây nếu cần) ─────────────────────────────────────────────
 DB_CONTAINER="cinema-postgres-dev"
 DB_HOST="localhost"
-DB_PORT="5433"
+DB_PORT="5435"
 DB_NAME="cinema_db"
 DB_USER="cinema_user"
 DB_PASS="cinema_password"

@@ -14,12 +14,14 @@ import {
   MessageSquare,
   Pencil,
   Trash2,
+  Clapperboard,
 } from "lucide-react";
 
 import { movieService } from "../../services/movieService";
 import { reviewService } from "../../services/reviewService";
 import { authService } from "../../services/authService";
 import { Movie, Review } from "../../types";
+import { filterText } from "../../utils/profanityFilter";
 
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
@@ -28,6 +30,28 @@ import { Textarea } from "../../components/ui/textarea";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 
 const REVIEW_PAGE_SIZE = 10;
+
+function extractYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    // short link: youtu.be/VIDEO_ID
+    if (u.hostname === "youtu.be" || u.hostname === "www.youtu.be") {
+      return u.pathname.slice(1).split("?")[0] || null;
+    }
+    // standard: youtube.com/watch?v=VIDEO_ID  or  youtube.com/embed/VIDEO_ID
+    if (u.hostname.includes("youtube.com")) {
+      return (
+        u.searchParams.get("v") ??
+        (u.pathname.startsWith("/embed/")
+          ? u.pathname.slice(7).split("/")[0]
+          : null)
+      );
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 function parseApiError(err: unknown): string {
   if (err && typeof err === "object" && "response" in err) {
@@ -88,10 +112,7 @@ const MovieDetailPage: React.FC = () => {
       if (authService.isAuthenticated()) {
         const u = authService.getCurrentUserFromStorage();
         if (u?.id) {
-          const mine = await reviewService.findMyReviewForMovie(
-            movieId,
-            u.id,
-          );
+          const mine = await reviewService.findMyReviewForMovie(movieId, u.id);
           setMyReview(mine);
           if (mine) {
             setFormRating(mine.rating);
@@ -173,16 +194,17 @@ const MovieDetailPage: React.FC = () => {
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const cleanText = formText.trim() ? filterText(formText.trim()) : null;
       if (myReview && editing) {
         await reviewService.updateReview(myReview.id, {
           rating: formRating,
-          reviewText: formText.trim() || null,
+          reviewText: cleanText,
         });
       } else {
         await reviewService.createReview({
           movieId,
           rating: formRating,
-          reviewText: formText.trim() || null,
+          reviewText: cleanText,
         });
       }
       setEditing(false);
@@ -260,7 +282,10 @@ const MovieDetailPage: React.FC = () => {
                 <p className="text-gray-400 mb-6">
                   {error || "The requested movie could not be found."}
                 </p>
-                <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
+                <Button
+                  asChild
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
                   <Link to="/movies">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Movies
@@ -387,7 +412,11 @@ const MovieDetailPage: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button asChild size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+              <Button
+                asChild
+                size="lg"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
                 <Link to={`/movies/${movie.id}/showtimes`}>
                   <Play className="w-5 h-5 mr-2" />
                   Book Tickets
@@ -416,7 +445,7 @@ const MovieDetailPage: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="mb-16"
           >
-            <h2 className="text-3xl font-bold text-white mb-6">Synopsis</h2>
+            <h2 className="text-3xl font-bold text-white mb-6">Overview</h2>
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-8">
                 <p className="text-gray-300 text-lg leading-relaxed max-w-4xl">
@@ -426,6 +455,32 @@ const MovieDetailPage: React.FC = () => {
               </CardContent>
             </Card>
           </motion.section>
+
+          {/* Trailer section — only rendered when movie has a valid YouTube URL */}
+          {movie.trailerUrl && extractYouTubeId(movie.trailerUrl) && (
+            <motion.section
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-16"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-red-600/20 rounded-lg">
+                  <Clapperboard className="w-6 h-6 text-red-500" />
+                </div>
+                <h2 className="text-3xl font-bold text-white">Trailer</h2>
+              </div>
+              <div className="aspect-video max-w-5xl mx-auto overflow-hidden rounded-xl border border-gray-700/60 bg-black">
+                <iframe
+                  className="w-full h-full"
+                  src={`https://www.youtube.com/embed/${extractYouTubeId(movie.trailerUrl)}?rel=0&modestbranding=1`}
+                  title={`${movie.title} — Trailer`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </motion.section>
+          )}
 
           <motion.section
             initial={{ opacity: 0, y: 30 }}
@@ -439,7 +494,9 @@ const MovieDetailPage: React.FC = () => {
                 <MessageSquare className="w-6 h-6 text-red-500" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-white">Ratings & Reviews</h2>
+                <h2 className="text-3xl font-bold text-white">
+                  Ratings & Reviews
+                </h2>
                 <p className="text-gray-400 text-sm mt-0.5">
                   {movie.reviewCount > 0
                     ? `${movie.reviewCount} review${movie.reviewCount !== 1 ? "s" : ""}`
@@ -473,10 +530,18 @@ const MovieDetailPage: React.FC = () => {
                     </div>
                     <div className="flex-1 space-y-1.5">
                       {[5, 4, 3, 2, 1].map((star) => {
-                        const count = reviews.filter((r) => r.rating === star).length;
-                        const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                        const count = reviews.filter(
+                          (r) => r.rating === star,
+                        ).length;
+                        const pct =
+                          reviews.length > 0
+                            ? (count / reviews.length) * 100
+                            : 0;
                         return (
-                          <div key={star} className="flex items-center gap-2 text-xs">
+                          <div
+                            key={star}
+                            className="flex items-center gap-2 text-xs"
+                          >
                             <span className="text-gray-400 w-3">{star}</span>
                             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400 shrink-0" />
                             <div className="flex-1 bg-gray-700 rounded-full h-1.5 overflow-hidden">
@@ -485,7 +550,9 @@ const MovieDetailPage: React.FC = () => {
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-gray-500 w-4 text-right">{count}</span>
+                            <span className="text-gray-500 w-4 text-right">
+                              {count}
+                            </span>
                           </div>
                         );
                       })}
@@ -552,14 +619,18 @@ const MovieDetailPage: React.FC = () => {
                           {myReview.reviewText}
                         </p>
                       ) : (
-                        <p className="text-gray-500 text-sm italic">No written comment.</p>
+                        <p className="text-gray-500 text-sm italic">
+                          No written comment.
+                        </p>
                       )}
                     </div>
                   ) : (
                     /* Review form */
                     <form onSubmit={handleSubmitReview} className="space-y-5">
                       <p className="text-sm font-semibold text-red-400 uppercase tracking-wide">
-                        {myReview && editing ? "Edit Your Review" : "Write a Review"}
+                        {myReview && editing
+                          ? "Edit Your Review"
+                          : "Write a Review"}
                       </p>
 
                       {/* Star rating picker */}
@@ -567,7 +638,10 @@ const MovieDetailPage: React.FC = () => {
                         <span className="text-gray-300 text-sm block mb-3">
                           Your rating
                         </span>
-                        <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
+                        <div
+                          className="flex gap-1"
+                          onMouseLeave={() => setHoverRating(0)}
+                        >
                           {[1, 2, 3, 4, 5].map((n) => (
                             <button
                               key={n}
@@ -587,9 +661,16 @@ const MovieDetailPage: React.FC = () => {
                             </button>
                           ))}
                           <span className="self-center ml-2 text-gray-400 text-sm min-w-[60px]">
-                            {["", "Poor", "Fair", "Good", "Great", "Excellent"][
-                              hoverRating || formRating
-                            ]}
+                            {
+                              [
+                                "",
+                                "Poor",
+                                "Fair",
+                                "Good",
+                                "Great",
+                                "Excellent",
+                              ][hoverRating || formRating]
+                            }
                           </span>
                         </div>
                       </div>
@@ -664,7 +745,9 @@ const MovieDetailPage: React.FC = () => {
                 <div className="h-1 bg-gradient-to-r from-red-600 via-red-500 to-orange-500" />
                 <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <p className="text-white font-medium">Want to share your thoughts?</p>
+                    <p className="text-white font-medium">
+                      Want to share your thoughts?
+                    </p>
                     <p className="text-gray-400 text-sm mt-1">
                       Sign in to rate this movie and leave a comment.
                     </p>
@@ -759,7 +842,7 @@ const MovieDetailPage: React.FC = () => {
 
                         {r.reviewText?.trim() ? (
                           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-                            {r.reviewText}
+                            {filterText(r.reviewText)}
                           </p>
                         ) : (
                           <p className="text-gray-600 text-xs italic">

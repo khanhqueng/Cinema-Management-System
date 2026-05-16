@@ -18,6 +18,7 @@ export interface Movie {
   durationMinutes: number;
   releaseDate: string;
   posterUrl?: string;
+  trailerUrl?: string;
   priceBase: number;
   createdAt: string;
   duration: number;
