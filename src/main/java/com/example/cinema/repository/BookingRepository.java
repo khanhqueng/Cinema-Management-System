@@ -37,6 +37,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Find bookings by status
     Page<Booking> findByBookingStatus(Booking.BookingStatus status, Pageable pageable);
 
+    // Find stale bookings by status
+    List<Booking> findByBookingStatusAndCreatedAtBefore(Booking.BookingStatus status, LocalDateTime createdAt);
+
     // Recent bookings
     @Query("SELECT b FROM Booking b WHERE b.createdAt >= :fromDate ORDER BY b.createdAt DESC")
     Page<Booking> findRecentBookings(@Param("fromDate") LocalDateTime fromDate, Pageable pageable);
@@ -95,4 +98,24 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Check if user has already booked for showtime (prevent duplicate bookings)
     boolean existsByUserIdAndShowtimeIdAndBookingStatus(Long userId, Long showtimeId, Booking.BookingStatus status);
+
+    // Find first booking for a user and showtime with a specific status (useful for pending/confirmed checks)
+    Optional<Booking> findFirstByUserIdAndShowtimeIdAndBookingStatus(Long userId, Long showtimeId, Booking.BookingStatus status);
+
+    // Find booking by ID with user (for payment processing)
+    @Query("SELECT b FROM Booking b LEFT JOIN FETCH b.user LEFT JOIN FETCH b.showtime WHERE b.id = :id")
+    Optional<Booking> findByIdWithUser(@Param("id") Long id);
+
+    // Find booking by ID with details needed for confirmation page
+    @Query("""
+        SELECT DISTINCT b FROM Booking b
+        LEFT JOIN FETCH b.user
+        LEFT JOIN FETCH b.showtime st
+        LEFT JOIN FETCH st.movie
+        LEFT JOIN FETCH st.theater
+        LEFT JOIN FETCH b.seatBookings sb
+        LEFT JOIN FETCH sb.seat
+        WHERE b.id = :id
+    """)
+    Optional<Booking> findByIdWithDetails(@Param("id") Long id);
 }

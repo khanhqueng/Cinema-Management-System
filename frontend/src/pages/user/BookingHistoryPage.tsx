@@ -51,11 +51,24 @@ function formatDate(dateStr: string) {
 
 const STATUS_FILTERS = [
   { label: "All", value: "" },
+  { label: "Pending", value: "PENDING" },
   { label: "Confirmed", value: "CONFIRMED" },
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
 const PAGE_SIZE = 8;
+
+function getStatusBadgeClass(status: string) {
+  if (status === "CONFIRMED") return styles.statusBadgeConfirmed;
+  if (status === "PENDING") return styles.statusBadgePending;
+  return styles.statusBadgeCancelled;
+}
+
+function getStatusLabel(status: string) {
+  if (status === "CONFIRMED") return "✓ Confirmed";
+  if (status === "PENDING") return "Pending payment";
+  return "✕ Cancelled";
+}
 
 // ─── page component ──────────────────────────────────────────────────────────
 
@@ -237,15 +250,11 @@ const BookingHistoryPage: React.FC = () => {
                             {booking.showtime.movieTitle}
                           </h3>
                           <span
-                            className={
-                              booking.bookingStatus === "CONFIRMED"
-                                ? styles.statusBadgeConfirmed
-                                : styles.statusBadgeCancelled
-                            }
+                            className={getStatusBadgeClass(
+                              booking.bookingStatus,
+                            )}
                           >
-                            {booking.bookingStatus === "CONFIRMED"
-                              ? "✓ Confirmed"
-                              : "✕ Cancelled"}
+                            {getStatusLabel(booking.bookingStatus)}
                           </span>
                         </div>
 

@@ -176,6 +176,7 @@ export interface BookingDto {
   createdAt: string;
   user: UserDto;
   showtime: ShowtimeDto;
+  seatBookings?: SeatBookingDto[];
 }
 
 // SeatBookingDto from backend - matches exactly
@@ -243,6 +244,7 @@ export interface SeatAvailabilityResponse {
 export interface SeatReservationRequest {
   showtimeId: number;
   seatIds: number[];
+  leaseSeconds?: number;
 }
 
 export interface SeatLockResponse {
@@ -377,7 +379,7 @@ export interface BookingHistoryDto {
   bookingReference: string | null;
   seatsBooked: number;
   totalAmount: number;
-  bookingStatus: string; // "CONFIRMED" | "CANCELLED"
+  bookingStatus: string; // "PENDING" | "CONFIRMED" | "CANCELLED"
   createdAt: string;
   canCancel: boolean;
   showtime: ShowtimeDto;

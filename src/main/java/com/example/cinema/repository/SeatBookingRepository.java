@@ -5,6 +5,7 @@ import com.example.cinema.entity.Seat;
 import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -56,6 +57,8 @@ public interface SeatBookingRepository extends JpaRepository<SeatBooking, Long> 
     @Query("""
         SELECT sb FROM SeatBooking sb
         JOIN FETCH sb.seat s
+        JOIN FETCH sb.booking b
+        JOIN FETCH b.user
         WHERE sb.showtime.id = :showtimeId
         AND sb.status = 'RESERVED'
         ORDER BY s.rowLetter ASC, s.seatNumber ASC
@@ -89,6 +92,7 @@ public interface SeatBookingRepository extends JpaRepository<SeatBooking, Long> 
     /**
      * Cancel all seat bookings for a booking
      */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE SeatBooking sb SET sb.status = 'CANCELLED', sb.updatedAt = CURRENT_TIMESTAMP WHERE sb.booking.id = :bookingId")
     void cancelSeatBookingsByBookingId(@Param("bookingId") Long bookingId);
 

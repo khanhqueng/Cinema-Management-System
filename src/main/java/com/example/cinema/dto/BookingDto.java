@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * DTO for Booking entity to avoid Hibernate proxy serialization issues
@@ -27,6 +28,7 @@ public class BookingDto {
     // Nested DTOs for related entities
     private UserDto user;
     private ShowtimeDto showtime;
+    private List<SeatBookingDto> seatBookings;
 
     /**
      * Convert Booking entity to DTO
@@ -41,6 +43,13 @@ public class BookingDto {
                 .createdAt(booking.getCreatedAt())
                 .user(UserDto.fromEntity(booking.getUser()))
                 .showtime(ShowtimeDto.fromEntity(booking.getShowtime()))
+                .seatBookings(
+                        booking.getSeatBookings() == null
+                                ? List.of()
+                                : booking.getSeatBookings().stream()
+                                        .map(SeatBookingDto::fromEntity)
+                                        .toList()
+                )
                 .build();
     }
 

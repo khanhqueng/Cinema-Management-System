@@ -63,10 +63,15 @@ public class SeatService {
         List<SeatInfo> seatInfos = allSeats.stream()
                 .map(seat -> {
                     SeatBooking booking = bookedSeatMap.get(seat.getId());
+                    boolean hasReservedSeatBooking = booking != null;
+                    boolean pendingPaymentHold = hasReservedSeatBooking
+                            && booking.getBooking() != null
+                            && booking.getBooking().getBookingStatus() == Booking.BookingStatus.PENDING;
+                    boolean confirmedBooking = hasReservedSeatBooking && !pendingPaymentHold;
                     boolean dbAvailable = booking == null;
 
                     // Check Redis lock for temporarily-reserved seats
-                    boolean lockedByOther = false;
+                    boolean lockedByOther = pendingPaymentHold;
                     boolean lockedByCurrentUser = false;
                     if (dbAvailable) {
                         String lockOwner = distributedLockService.getSeatLockOwner(showtimeId, seat.getId());
@@ -88,7 +93,7 @@ public class SeatService {
                             .isAvailable(dbAvailable && !lockedByOther && !lockedByCurrentUser)
                             .isActive(seat.getIsActive())
                             .priceMultiplier(seat.getSeatType().getPriceMultiplier())
-                            .bookedByCurrentUser(booking != null
+                            .bookedByCurrentUser(confirmedBooking
                                     && currentUserId != null
                                     && booking.getBooking() != null
                                     && currentUserId.equals(booking.getBooking().getUser().getId()))
