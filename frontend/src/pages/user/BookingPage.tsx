@@ -528,8 +528,14 @@ const BookingPage: React.FC = () => {
                                   const isSelected = ids.some((id) =>
                                     selectedSeats.includes(id),
                                   );
+                                  const isLockedByCurrentUser = pair.some(
+                                    (s) => s.lockedByCurrentUser === true,
+                                  );
                                   const isBooked = pair.some(
-                                    (s) => !s.isAvailable && !s.lockedByOther,
+                                    (s) =>
+                                      !s.isAvailable &&
+                                      !s.lockedByOther &&
+                                      !s.lockedByCurrentUser,
                                   );
                                   const isLockedByOther = pair.some(
                                     (s) => s.lockedByOther === true,
@@ -551,7 +557,7 @@ const BookingPage: React.FC = () => {
                                   } else if (isLockedByOther) {
                                     cls +=
                                       " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
-                                  } else if (isSelected) {
+                                  } else if (isSelected || isLockedByCurrentUser) {
                                     cls +=
                                       " bg-green-600 border-emerald-400 hover:bg-emerald-600 shadow-lg shadow-green-600/30 cursor-pointer";
                                   } else {
@@ -561,6 +567,8 @@ const BookingPage: React.FC = () => {
 
                                   const tooltip = isLockedByOther
                                     ? `${label} - Temporarily held`
+                                    : isLockedByCurrentUser
+                                      ? `${label} - Held by you`
                                     : `${label} - Sweetbox (2 seats)`;
 
                                   const shouldAddAisle =
@@ -620,8 +628,12 @@ const BookingPage: React.FC = () => {
                                 const isSelected = selectedSeats.includes(
                                   seat.id,
                                 );
+                                const isLockedByCurrentUser =
+                                  seat.lockedByCurrentUser === true;
                                 const isBooked =
-                                  !seat.isAvailable && !seat.lockedByOther;
+                                  !seat.isAvailable &&
+                                  !seat.lockedByOther &&
+                                  !isLockedByCurrentUser;
                                 const isLockedByOther =
                                   seat.lockedByOther === true;
                                 const isVIP = seat.seatType === "VIP";
@@ -649,7 +661,7 @@ const BookingPage: React.FC = () => {
                                 } else if (isLockedByOther) {
                                   seatClasses +=
                                     " bg-orange-500 cursor-not-allowed opacity-70";
-                                } else if (isSelected) {
+                                } else if (isSelected || isLockedByCurrentUser) {
                                   seatClasses +=
                                     " bg-green-600 hover:bg-emerald-600 shadow-lg shadow-green-600/30";
                                 } else if (isVIP) {
@@ -670,7 +682,8 @@ const BookingPage: React.FC = () => {
                                   isCenterZone &&
                                   !isBooked &&
                                   !isLockedByOther &&
-                                  !isSelected
+                                  !isSelected &&
+                                  !isLockedByCurrentUser
                                 ) {
                                   seatClasses +=
                                     " ring-1 ring-green-600/80 ring-offset-0";
@@ -679,6 +692,8 @@ const BookingPage: React.FC = () => {
                                 const isDisabled = isBooked || isLockedByOther;
                                 const tooltip = isLockedByOther
                                   ? `${row}${seat.seatNumber} - Temporarily held by another user`
+                                  : isLockedByCurrentUser
+                                    ? `${row}${seat.seatNumber} - Held by you`
                                   : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
 
                                 return (

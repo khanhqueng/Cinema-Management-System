@@ -129,6 +129,7 @@ export interface SeatInfo {
   priceMultiplier: number;
   bookedByCurrentUser: boolean;
   lockedByOther?: boolean;
+  lockedByCurrentUser?: boolean;
 }
 
 export interface SeatMapResponse {

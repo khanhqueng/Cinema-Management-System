@@ -64,6 +64,11 @@ public class SeatService {
                 .map(seat -> {
                     SeatBooking booking = bookedSeatMap.get(seat.getId());
                     boolean hasReservedSeatBooking = booking != null;
+                    Long bookingUserId = hasReservedSeatBooking
+                            && booking.getBooking() != null
+                            && booking.getBooking().getUser() != null
+                            ? booking.getBooking().getUser().getId()
+                            : null;
                     boolean pendingPaymentHold = hasReservedSeatBooking
                             && booking.getBooking() != null
                             && booking.getBooking().getBookingStatus() == Booking.BookingStatus.PENDING;
@@ -71,8 +76,10 @@ public class SeatService {
                     boolean dbAvailable = booking == null;
 
                     // Check Redis lock for temporarily-reserved seats
-                    boolean lockedByOther = pendingPaymentHold;
-                    boolean lockedByCurrentUser = false;
+                    boolean lockedByCurrentUser = pendingPaymentHold
+                            && currentUserId != null
+                            && currentUserId.equals(bookingUserId);
+                    boolean lockedByOther = pendingPaymentHold && !lockedByCurrentUser;
                     if (dbAvailable) {
                         String lockOwner = distributedLockService.getSeatLockOwner(showtimeId, seat.getId());
                         if (lockOwner != null) {
@@ -95,9 +102,9 @@ public class SeatService {
                             .priceMultiplier(seat.getSeatType().getPriceMultiplier())
                             .bookedByCurrentUser(confirmedBooking
                                     && currentUserId != null
-                                    && booking.getBooking() != null
-                                    && currentUserId.equals(booking.getBooking().getUser().getId()))
+                                    && currentUserId.equals(bookingUserId))
                             .lockedByOther(lockedByOther)
+                            .lockedByCurrentUser(lockedByCurrentUser)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -396,6 +403,7 @@ public class SeatService {
         public Double priceMultiplier;
         public boolean bookedByCurrentUser;
         public boolean lockedByOther;
+        public boolean lockedByCurrentUser;
 
         public static SeatInfoBuilder builder() {
             return new SeatInfoBuilder();
@@ -453,6 +461,11 @@ public class SeatService {
 
             public SeatInfoBuilder lockedByOther(boolean lockedByOther) {
                 info.lockedByOther = lockedByOther;
+                return this;
+            }
+
+            public SeatInfoBuilder lockedByCurrentUser(boolean lockedByCurrentUser) {
+                info.lockedByCurrentUser = lockedByCurrentUser;
                 return this;
             }
 
