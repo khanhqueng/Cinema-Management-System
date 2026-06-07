@@ -540,7 +540,10 @@ const BookingPage: React.FC = () => {
                                   const isLockedByOther = pair.some(
                                     (s) => s.lockedByOther === true,
                                   );
-                                  const isDisabled = isBooked || isLockedByOther;
+                                  const isDisabled =
+                                    isBooked ||
+                                    isLockedByOther ||
+                                    isLockedByCurrentUser;
 
                                   const label =
                                     pair.length === 2
@@ -557,7 +560,10 @@ const BookingPage: React.FC = () => {
                                   } else if (isLockedByOther) {
                                     cls +=
                                       " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
-                                  } else if (isSelected || isLockedByCurrentUser) {
+                                  } else if (isLockedByCurrentUser) {
+                                    cls +=
+                                      " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
+                                  } else if (isSelected) {
                                     cls +=
                                       " bg-green-600 border-emerald-400 hover:bg-emerald-600 shadow-lg shadow-green-600/30 cursor-pointer";
                                   } else {
@@ -568,7 +574,7 @@ const BookingPage: React.FC = () => {
                                   const tooltip = isLockedByOther
                                     ? `${label} - Temporarily held`
                                     : isLockedByCurrentUser
-                                      ? `${label} - Held by you`
+                                      ? `${label} - Temporarily held`
                                     : `${label} - Sweetbox (2 seats)`;
 
                                   const shouldAddAisle =
@@ -661,7 +667,10 @@ const BookingPage: React.FC = () => {
                                 } else if (isLockedByOther) {
                                   seatClasses +=
                                     " bg-orange-500 cursor-not-allowed opacity-70";
-                                } else if (isSelected || isLockedByCurrentUser) {
+                                } else if (isLockedByCurrentUser) {
+                                  seatClasses +=
+                                    " bg-orange-500 cursor-not-allowed opacity-70";
+                                } else if (isSelected) {
                                   seatClasses +=
                                     " bg-green-600 hover:bg-emerald-600 shadow-lg shadow-green-600/30";
                                 } else if (isVIP) {
@@ -689,11 +698,14 @@ const BookingPage: React.FC = () => {
                                     " ring-1 ring-green-600/80 ring-offset-0";
                                 }
 
-                                const isDisabled = isBooked || isLockedByOther;
+                                const isDisabled =
+                                  isBooked ||
+                                  isLockedByOther ||
+                                  isLockedByCurrentUser;
                                 const tooltip = isLockedByOther
                                   ? `${row}${seat.seatNumber} - Temporarily held by another user`
                                   : isLockedByCurrentUser
-                                    ? `${row}${seat.seatNumber} - Held by you`
+                                    ? `${row}${seat.seatNumber} - Temporarily held`
                                   : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
 
                                 return (
