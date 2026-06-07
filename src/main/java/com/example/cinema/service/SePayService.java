@@ -45,8 +45,6 @@ public class SePayService {
     private final DistributedLockService distributedLockService;
     private final SeatBookingRepository seatBookingRepository;
     private final BookingService bookingService;
-    private static final DateTimeFormatter SEPAY_TRANSACTION_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * Generate one-time payment form fields for SePay checkout
@@ -300,12 +298,6 @@ public class SePayService {
                         "order.order_currency",
                         "currency"
                 );
-                LocalDateTime transactionTime = parseTransactionTime(firstPresent(
-                        webhookData,
-                        "transaction.transaction_date",
-                        "transaction_date"
-                ));
-
                 if (!isPaymentMatch(payment, paidAmount, currency)) {
                     payment.markAsFailed("Webhook amount or currency does not match payment");
                     paymentRepository.save(payment);
@@ -313,7 +305,7 @@ public class SePayService {
                     return WebhookResult.OK;
                 }
 
-                if (!isPaymentOnTime(payment, transactionTime)) {
+                if (!isPaymentOnTime(payment)) {
                     expirePaymentAndBooking(payment, "Payment completed after checkout expired");
                     log.warn("Rejected late SePay success webhook for booking {}", bookingId);
                     return WebhookResult.OK;
@@ -477,12 +469,13 @@ public class SePayService {
         return amountMatch;
     }
 
-    private boolean isPaymentOnTime(Payment payment, LocalDateTime transactionTime) {
+    private boolean isPaymentOnTime(Payment payment) {
         if (payment.getExpiresAt() == null) {
             return true;
         }
-        LocalDateTime effectiveTime = transactionTime != null ? transactionTime : LocalDateTime.now();
-        return !effectiveTime.isAfter(payment.getExpiresAt());
+        LocalDateTime deadline = payment.getExpiresAt()
+                .plusSeconds(sePayConfig.getPaymentExpirationGraceSeconds());
+        return !LocalDateTime.now().isAfter(deadline);
     }
 
     private BigDecimal parseAmount(String amount) {
@@ -493,18 +486,6 @@ public class SePayService {
             return new BigDecimal(amount);
         } catch (NumberFormatException e) {
             log.warn("Cannot parse SePay amount '{}'", amount);
-            return null;
-        }
-    }
-
-    private LocalDateTime parseTransactionTime(String transactionDate) {
-        if (transactionDate == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(transactionDate, SEPAY_TRANSACTION_DATE_FORMAT);
-        } catch (Exception e) {
-            log.warn("Cannot parse SePay transaction date '{}'", transactionDate);
             return null;
         }
     }
