@@ -221,20 +221,24 @@ const BookingPage: React.FC = () => {
 
         // Seats successfully reserved, proceed to payment page
       } catch (reserveErr: any) {
-        // Handle seat reservation conflicts
-        if (reserveErr.response?.status === 409) {
-          toast.error(
+        // Handle seat reservation conflicts. The API returns these as 400
+        // (BusinessRuleViolationException / SeatLockException), not 409, so
+        // surface its message directly instead of branching on status code.
+        toast.error(
+          reserveErr.response?.data?.message ||
             "Some selected seats are already taken by another user. Please select different seats.",
-          );
-        } else {
-          toast.error("Unable to reserve selected seats. Please try again.");
-        }
-
-        // Refresh seat map and reset selection
-        const updatedSeatMap = await bookingService.getSeatMapForShowtime(
-          parseInt(showtimeId, 10),
         );
-        setSeatMap(updatedSeatMap);
+
+        // Refresh the seat map so seat colors reflect the theater's current
+        // real-time state (not just the seats this user had selected).
+        try {
+          const updatedSeatMap = await bookingService.getSeatMapForShowtime(
+            parseInt(showtimeId, 10),
+          );
+          setSeatMap(updatedSeatMap);
+        } catch (refreshErr) {
+          console.error("Error refreshing seat map after conflict:", refreshErr);
+        }
         setSelectedSeats([]);
         return;
       }
