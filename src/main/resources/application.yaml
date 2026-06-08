@@ -8,7 +8,7 @@ spring:
   # AI Configuration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:}
       base-url: https://api.openai.com
       embedding:
         # Better semantic quality while keeping 1536 dims compatible with existing pgvector schema.
@@ -132,3 +132,18 @@ logging:
   pattern:
     file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# SePay payment gateway configuration
+sepay:
+  enabled: ${SEPAY_ENABLED:true}
+  webhook-signature-required: ${SEPAY_WEBHOOK_SIGNATURE_REQUIRED:false}
+  merchant-id: ${SEPAY_MERCHANT_ID:SP-TEST-ND4A5B2A}
+  secret-key: ${SEPAY_SECRET_KEY:}
+  webhook-secret: ${SEPAY_WEBHOOK_SECRET:}
+  webhook-timestamp-tolerance-seconds: ${SEPAY_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS:300}
+  payment-timeout-minutes: ${SEPAY_PAYMENT_TIMEOUT_MINUTES:15}
+  payment-expiration-grace-seconds: ${SEPAY_PAYMENT_EXPIRATION_GRACE_SECONDS:60}
+  # Sandbox: https://sandbox.pay.sepay.vn/v1/init
+  # Production: https://pay.sepay.vn/v1/init
+  checkout-url: ${SEPAY_CHECKOUT_URL:https://sandbox.pay.sepay.vn/v1/init}
+  callback-url: ${SEPAY_CALLBACK_URL:http://localhost:8080/api/payments/sepay/webhook}

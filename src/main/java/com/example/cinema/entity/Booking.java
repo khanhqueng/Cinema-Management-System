@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Booking Entity - Core Business Logic
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"user", "showtime"})
+@ToString(exclude = {"user", "showtime", "payment", "seatBookings"})
 public class Booking {
 
     @Id
@@ -56,6 +57,12 @@ public class Booking {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Payment payment; // Payment information for this booking
+
+    @OneToMany(mappedBy = "booking", fetch = FetchType.LAZY)
+    private List<SeatBooking> seatBookings;
 
     // Utility methods
     public boolean canBeCancelled() {
@@ -112,6 +119,7 @@ public class Booking {
 
     // Booking status enum
     public enum BookingStatus {
+        PENDING("Pending"),
         CONFIRMED("Confirmed"),
         CANCELLED("Cancelled");
 

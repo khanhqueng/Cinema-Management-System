@@ -64,6 +64,9 @@ public class DistributedLockService {
             log.error("Thread interrupted while waiting for lock: {}", lockKey, e);
             Thread.currentThread().interrupt();
             throw new RuntimeException("Thread interrupted while waiting for lock", e);
+        } catch (RuntimeException e) {
+            log.error("Error occurred while executing task with lock: {}", lockKey, e);
+            throw e;
         } catch (Exception e) {
             log.error("Error occurred while executing task with lock: {}", lockKey, e);
             throw new RuntimeException("Error executing task with lock", e);
@@ -138,8 +141,16 @@ public class DistributedLockService {
             if (success) {
                 log.info("✅ Seat lock acquired: showtime={}, seat={}, user={}", showtimeId, seatId, userId);
             } else {
+                Object owner = redisTemplate.opsForValue().get(lockKey);
+                if (owner != null && owner.toString().startsWith(userId + ":")) {
+                    redisTemplate.opsForValue().set(lockKey, lockValue, Duration.ofSeconds(leaseTime));
+                    log.info("✅ Seat lock extended: showtime={}, seat={}, user={}, lease={}s",
+                            showtimeId, seatId, userId, leaseTime);
+                    return true;
+                }
+
                 log.warn("❌ Failed to acquire seat lock (already taken): showtime={}, seat={}, user={}",
-                         showtimeId, seatId, userId);
+                        showtimeId, seatId, userId);
             }
 
             return success;
@@ -162,6 +173,19 @@ public class DistributedLockService {
         String lockKey = getSeatLockKey(showtimeId, seatId);
 
         try {
+            Object owner = redisTemplate.opsForValue().get(lockKey);
+            if (owner == null) {
+                log.warn("⚠️ Seat lock was already released or expired: showtime={}, seat={}, user={}",
+                         showtimeId, seatId, userId);
+                return;
+            }
+
+            if (!owner.toString().startsWith(userId + ":")) {
+                log.warn("⚠️ Ignored release for seat lock owned by another user: showtime={}, seat={}, requester={}",
+                         showtimeId, seatId, userId);
+                return;
+            }
+
             Boolean deleted = redisTemplate.delete(lockKey);
 
             if (Boolean.TRUE.equals(deleted)) {

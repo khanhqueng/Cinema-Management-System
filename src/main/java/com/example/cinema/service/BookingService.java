@@ -1,6 +1,7 @@
 package com.example.cinema.service;
 
 import com.example.cinema.entity.Booking;
+import com.example.cinema.entity.Payment;
 import com.example.cinema.entity.Showtime;
 import com.example.cinema.entity.User;
 import com.example.cinema.entity.SeatBooking;
@@ -15,12 +16,15 @@ import com.example.cinema.exception.SeatLockException;
 import com.example.cinema.exception.UnauthorizedException;
 import com.example.cinema.exception.ValidationException;
 import com.example.cinema.repository.BookingRepository;
+import com.example.cinema.repository.PaymentRepository;
 import com.example.cinema.repository.SeatBookingRepository;
 import com.example.cinema.repository.ShowtimeRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,13 +40,18 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookingService {
+
+    private static final int SEAT_PAYMENT_LOCK_SECONDS = 15 * 60;
+    private static final int SEAT_SELECTION_LOCK_SECONDS = 5 * 60;
 
     private final BookingRepository bookingRepository;
     private final ShowtimeRepository showtimeRepository;
     private final SeatService seatService;
     private final DistributedLockService distributedLockService;
     private final SeatBookingRepository seatBookingRepository;
+    private final PaymentRepository paymentRepository;
 
     /**
      * Get all bookings with pagination (Admin only)
@@ -59,10 +68,25 @@ public class BookingService {
     }
 
     /**
+     * Get booking by ID with user and showtime (for payment processing)
+     */
+    public Optional<Booking> getBookingByIdWithUser(Long id) {
+        return bookingRepository.findByIdWithUser(id);
+    }
+
+    /**
      * Get booking by ID or throw exception
      */
     public Booking getBookingByIdOrThrow(Long id) {
         return bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+    }
+
+    /**
+     * Get booking with all details needed by the confirmation page.
+     */
+    public Booking getBookingDetailsByIdOrThrow(Long id) {
+        return bookingRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
     }
 
@@ -131,6 +155,49 @@ public class BookingService {
 
         // Execute booking with distributed lock to prevent race conditions
         return distributedLockService.executeBookingWithLock(user.getId(), showtimeId, () -> {
+            // Check for existing PENDING booking - only reuse if seats match
+            Optional<Booking> existingPending = bookingRepository.findFirstByUserIdAndShowtimeIdAndBookingStatus(
+                    user.getId(), showtimeId, Booking.BookingStatus.PENDING);
+            if (existingPending.isPresent()) {
+                Booking existing = existingPending.get();
+
+                // Check if booking has expired (older than 10 minutes) - allow new booking
+                if (existing.getCreatedAt() != null &&
+                    existing.getCreatedAt().plusMinutes(10).isBefore(LocalDateTime.now())) {
+                    rollbackPendingBooking(existing.getId());
+                } else {
+                    // Active PENDING booking - check seats
+                    List<SeatBooking> existingSeatBookings = seatBookingRepository.findByBooking(existing);
+
+                    // Check if requested seats match existing booking seats
+                    List<Long> existingSeatIds = existingSeatBookings.stream()
+                            .map(sb -> sb.getSeat().getId())
+                            .sorted()
+                            .collect(Collectors.toList());
+                    List<Long> requestedSeatIds = seatIds.stream()
+                            .sorted()
+                            .collect(Collectors.toList());
+
+                    boolean seatsMatch = existingSeatIds.equals(requestedSeatIds);
+
+                    if (seatsMatch) {
+                        // Same seats - return existing booking
+                        BookingDto bookingDto = BookingDto.fromEntity(existing);
+                        List<SeatBookingDto> seatBookingDtos = existingSeatBookings.stream()
+                                .map(SeatBookingDto::fromEntity)
+                                .collect(Collectors.toList());
+                        return new BookingWithSeatsResponse(bookingDto, seatBookingDtos);
+                    } else {
+                        // Different seats - reject, user must cancel existing first
+                        throw new BusinessRuleViolationException(
+                                "You already have a pending booking with different seats. Please complete payment or cancel your existing booking first.");
+                    }
+                }
+            }
+
+            // Confirmed bookings do not block buying more seats for the same showtime.
+            // Seat availability below still prevents re-booking seats that are already sold.
+
             // Check if showtime exists
             Showtime showtime = showtimeRepository.findById(showtimeId)
                     .orElseThrow(() -> new ResourceNotFoundException("Showtime", "id", showtimeId));
@@ -160,7 +227,8 @@ public class BookingService {
                     .showtime(showtime)
                     .seatsBooked(seatIds.size())
                     .totalAmount(totalAmount)
-                    .bookingStatus(Booking.BookingStatus.CONFIRMED)
+                    // Create booking in PENDING status until payment succeeds
+                    .bookingStatus(Booking.BookingStatus.PENDING)
                     .build();
 
             // Save booking first
@@ -227,6 +295,31 @@ public class BookingService {
         if (updatedRows == 0) {
             throw new BusinessRuleViolationException("Failed to book seats - insufficient availability");
         }
+
+        return bookingRepository.save(booking);
+    }
+
+    /**
+     * Roll back a pending booking after payment failure.
+     * Cancels the booking, cancels seat reservations, and releases showtime seat capacity.
+     */
+    @Transactional
+    public Booking rollbackPendingBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.isCancelled()) {
+            return booking;
+        }
+
+        // Mark booking cancelled first so repeated rollback attempts are idempotent.
+        booking.cancel();
+
+        // Cancel all reserved seat bookings linked to this booking.
+        seatBookingRepository.cancelSeatBookingsByBookingId(bookingId);
+
+        // Release the showtime capacity that was reserved by the booking.
+        showtimeRepository.releaseSeats(booking.getShowtime().getId(), booking.getSeatsBooked());
 
         return bookingRepository.save(booking);
     }
@@ -346,10 +439,16 @@ public class BookingService {
      * @throws SeatLockException if seats cannot be reserved (HTTP 409)
      */
     public SeatLockResponse reserveSeatsForSelection(User user, Long showtimeId, List<Long> seatIds) {
+        return reserveSeatsForSelection(user, showtimeId, seatIds, SEAT_SELECTION_LOCK_SECONDS);
+    }
+
+    public SeatLockResponse reserveSeatsForSelection(User user, Long showtimeId, List<Long> seatIds, Integer requestedLeaseSeconds) {
         // Validate input
         if (seatIds == null || seatIds.isEmpty()) {
             throw new ValidationException("Seat selection cannot be empty");
         }
+
+        int leaseSeconds = normalizeSeatLockLeaseSeconds(requestedLeaseSeconds);
 
         // Check if showtime exists and is bookable
         Showtime showtime = showtimeRepository.findById(showtimeId)
@@ -370,7 +469,7 @@ public class BookingService {
         // Try to acquire all locks - if any fails, we fail immediately
         for (Long seatId : seatIds) {
             boolean acquired = distributedLockService.tryAcquireSeatLock(
-                    showtimeId, seatId, user.getId(), 300); // 0 wait = fail immediately if locked
+                    showtimeId, seatId, user.getId(), leaseSeconds);
 
             if (acquired) {
                 lockedSeats.add(seatId);
@@ -385,12 +484,23 @@ public class BookingService {
 
         // All seats successfully locked
         return new SeatLockResponse(true, lockedSeats, List.of(),
-            "All seats successfully reserved for 5 minutes");
+            "All seats successfully reserved for " + (leaseSeconds / 60) + " minutes");
+    }
+
+    private int normalizeSeatLockLeaseSeconds(Integer requestedLeaseSeconds) {
+        if (requestedLeaseSeconds == null) {
+            return SEAT_SELECTION_LOCK_SECONDS;
+        }
+        if (requestedLeaseSeconds <= SEAT_SELECTION_LOCK_SECONDS) {
+            return SEAT_SELECTION_LOCK_SECONDS;
+        }
+        return Math.min(requestedLeaseSeconds, SEAT_PAYMENT_LOCK_SECONDS);
     }
 
     /**
      * Release seat reservations when user deselects seats or leaves the page
      */
+    @Transactional
     public void releaseSeatsReservation(User user, Long showtimeId, List<Long> seatIds) {
         if (seatIds == null || seatIds.isEmpty()) {
             return;
@@ -398,6 +508,54 @@ public class BookingService {
 
         seatIds.forEach(seatId ->
             distributedLockService.releaseSeatLock(showtimeId, seatId, user.getId()));
+
+        bookingRepository.findFirstByUserIdAndShowtimeIdAndBookingStatus(
+                user.getId(), showtimeId, Booking.BookingStatus.PENDING)
+            .filter(booking -> hasSameActiveSeats(booking, seatIds))
+            .ifPresent(booking -> {
+                expirePendingPaymentForBooking(booking, "Seat reservation was released");
+                rollbackPendingBooking(booking.getId());
+                log.info("Released pending booking {} after seat reservation release", booking.getId());
+            });
+    }
+
+    @Scheduled(fixedDelay = 60_000L)
+    @Transactional
+    public void cleanupExpiredPendingBookings() {
+        LocalDateTime cutoff = LocalDateTime.now().minusSeconds(SEAT_PAYMENT_LOCK_SECONDS);
+        List<Booking> expiredBookings = bookingRepository.findByBookingStatusAndCreatedAtBefore(
+                Booking.BookingStatus.PENDING,
+                cutoff
+        );
+
+        for (Booking booking : expiredBookings) {
+            expirePendingPaymentForBooking(booking, "Payment checkout expired");
+            rollbackPendingBooking(booking.getId());
+            log.info("Expired pending booking {} after seat payment lock timeout", booking.getId());
+        }
+    }
+
+    private void expirePendingPaymentForBooking(Booking booking, String reason) {
+        paymentRepository.findByBookingId(booking.getId())
+                .filter(Payment::isPending)
+                .ifPresent(payment -> {
+                    payment.markAsExpired(reason);
+                    paymentRepository.save(payment);
+                });
+    }
+
+    private boolean hasSameActiveSeats(Booking booking, List<Long> seatIds) {
+        List<Long> existingSeatIds = seatBookingRepository.findByBooking(booking).stream()
+                .filter(SeatBooking::isActive)
+                .map(seatBooking -> seatBooking.getSeat().getId())
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<Long> requestedSeatIds = seatIds.stream()
+                .sorted()
+                .collect(Collectors.toList());
+
+        return existingSeatIds.equals(requestedSeatIds);
     }
 
     /**

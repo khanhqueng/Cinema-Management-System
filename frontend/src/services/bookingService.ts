@@ -286,15 +286,25 @@ export const bookingService = {
     }).format(price);
   },
 
-  formatBookingDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleString("vi-VN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  formatBookingDate(dateString: string | undefined | null): string {
+    if (!dateString) {
+      return "N/A";
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "N/A";
+      }
+      return date.toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "N/A";
+    }
   },
 
   isBookingCancellable(booking: Booking): boolean {

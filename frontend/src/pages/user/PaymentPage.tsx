@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import {
-  Clock,
   CreditCard,
   AlertTriangle,
   CheckCircle2,
@@ -14,11 +13,19 @@ import {
   DollarSign,
   Loader2,
   AlertCircle,
+  Wallet,
 } from "lucide-react";
 
-// OLD API services (keep 100% logic) - UNCHANGED
+import { SePayPgClient } from "sepay-pg-node";
 import { bookingService } from "../../services/bookingService";
+import { paymentService } from "../../services/paymentService";
 import { Showtime } from "../../types";
+import {
+  getPendingPaymentForShowtime,
+  syncPendingPaymentForShowtime,
+  removePendingPaymentForShowtime,
+  savePendingPayment,
+} from "../../utils/pendingPaymentStorage";
 
 // NEW UI components
 import { Button } from "../../components/ui/button";
@@ -29,8 +36,55 @@ interface PaymentPageState {
   selectedSeats: number[];
   totalPrice: number;
   showtime: Showtime;
-  reservedUntil: number; // timestamp
+  selectionLockUntil?: number; // 5-minute lock from the booking page
+  reservedUntil?: number; // 15-minute payment lock after SePay starts
 }
+
+type PaymentMethodId = "sepay" | "momo" | "card" | "counter";
+
+interface PaymentMethod {
+  id: PaymentMethodId;
+  title: string;
+  description: string;
+  detail: string;
+  status: "available" | "coming_soon";
+  icon: React.ElementType;
+}
+
+const paymentMethods: PaymentMethod[] = [
+  {
+    id: "sepay",
+    title: "SePay",
+    description: "VietQR, bank transfer, ATM/Napas",
+    detail: "Redirect to SePay secure checkout",
+    status: "available",
+    icon: Wallet,
+  },
+  {
+    id: "momo",
+    title: "MoMo Wallet",
+    description: "Pay from your MoMo account",
+    detail: "Coming soon",
+    status: "coming_soon",
+    icon: Wallet,
+  },
+  {
+    id: "card",
+    title: "Credit/Debit Card",
+    description: "Visa, Mastercard, JCB",
+    detail: "Coming soon",
+    status: "coming_soon",
+    icon: CreditCard,
+  },
+  {
+    id: "counter",
+    title: "Pay at Counter",
+    description: "Reserve now, pay at cinema",
+    detail: "Coming soon",
+    status: "coming_soon",
+    icon: DollarSign,
+  },
+];
 
 const PaymentPage: React.FC = () => {
   const { showtimeId } = useParams<{ showtimeId: string }>();
@@ -49,75 +103,99 @@ const PaymentPage: React.FC = () => {
   const [reservedUntil, setReservedUntil] = useState<number>(
     state?.reservedUntil ?? 0,
   );
+  const [selectionLockUntil] = useState<number>(state?.selectionLockUntil ?? 0);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [seatLabelsById, setSeatLabelsById] = useState<Record<number, string>>(
+    {},
+  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethodId>("sepay");
 
   // Active state is either from navigation or from recovery
   const activeState = state ?? recoveredState;
+
+  const PAYMENT_LOCK_SECONDS = 15 * 60;
+  const waitForNextFrame = () =>
+    new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const paymentStatus = searchParams.get("payment");
+
+    if (paymentStatus === "cancelled") {
+      setError("Payment was cancelled. You can resume the reservation here.");
+      navigate(location.pathname, { replace: true, state: location.state });
+    }
+  }, [location, navigate]);
 
   // Recovery: When page is reloaded (no location.state), read sessionStorage + query Redis TTL
   useEffect(() => {
     if (state) return; // normal navigation — nothing to recover
 
-    const raw = localStorage.getItem("pendingPayment");
-    if (!raw) {
+    if (!showtimeId) {
       setRecovering(false);
       return;
     }
 
-    const parsed = JSON.parse(raw) as {
-      selectedSeats: number[];
-      showtimeId: number;
-      showtime: Showtime;
-      totalPrice: number;
-    };
+    const localEntry = getPendingPaymentForShowtime(parseInt(showtimeId, 10));
 
-    // Verify the showtimeId matches the current URL
-    if (String(parsed.showtimeId) !== showtimeId) {
-      localStorage.removeItem("pendingPayment");
-      setRecovering(false);
-      return;
-    }
+    syncPendingPaymentForShowtime(parseInt(showtimeId, 10))
+      .then((pendingEntry) => {
+        const fallbackEntry = pendingEntry ?? localEntry;
 
-    bookingService
-      .getSeatLockStatus(parsed.showtimeId, parsed.selectedSeats)
-      .then((lockStatus) => {
-        if (lockStatus.locked && lockStatus.remainingMs > 0) {
-          const until = Date.now() + lockStatus.remainingMs;
-          // Use actual locked seatIds from API for accurate count
-          const actualSeats =
-            lockStatus.seatIds && lockStatus.seatIds.length > 0
-              ? lockStatus.seatIds
-              : parsed.selectedSeats;
-          setReservedUntil(until);
-          setRecoveredState({
-            selectedSeats: actualSeats,
-            totalPrice: parsed.totalPrice,
-            showtime: parsed.showtime,
-            reservedUntil: until,
-          });
-        } else {
-          // Locks expired — send user back to booking with seats pre-selected
-          localStorage.removeItem("pendingPayment");
-          navigate(`/booking/${showtimeId}`, {
-            state: { prevSelectedSeats: parsed.selectedSeats },
-          });
+        if (!fallbackEntry) {
+          setRecovering(false);
+          return;
         }
+
+        if (!pendingEntry && fallbackEntry.reservedUntil > Date.now()) {
+          savePendingPayment(fallbackEntry);
+        }
+
+        setReservedUntil(fallbackEntry.reservedUntil);
+        setRecoveredState({
+          selectedSeats: fallbackEntry.selectedSeats,
+          totalPrice: fallbackEntry.totalPrice,
+          showtime: fallbackEntry.showtime,
+          reservedUntil: fallbackEntry.reservedUntil,
+        });
       })
       .catch(() => {
-        localStorage.removeItem("pendingPayment");
         navigate(`/booking/${showtimeId}`);
       })
       .finally(() => setRecovering(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync local reservedUntil when navigation state provides a fresh timestamp
+  // Sync local reservedUntil when navigation state provides an active lock timestamp
   useEffect(() => {
     if (state?.reservedUntil) {
       setReservedUntil(state.reservedUntil);
     }
   }, [state?.reservedUntil]);
+
+  useEffect(() => {
+    if (!showtimeId || !activeState?.selectedSeats?.length) return;
+
+    bookingService
+      .getSeatMapForShowtime(parseInt(showtimeId, 10))
+      .then((seatMap) => {
+        const labels = seatMap.seats.reduce<Record<number, string>>(
+          (acc, seat) => {
+            acc[seat.id] = seat.seatLabel;
+            return acc;
+          },
+          {},
+        );
+        setSeatLabelsById(labels);
+      })
+      .catch((err) => {
+        console.error("Error loading seat labels:", err);
+      });
+  }, [showtimeId, activeState?.selectedSeats]);
 
   // Countdown timer
   useEffect(() => {
@@ -135,6 +213,27 @@ const PaymentPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservedUntil]);
 
+  // The initial 5-minute selection hold is intentionally not shown in the UI.
+  // If the user does not start SePay in time, release the hold and return to booking.
+  useEffect(() => {
+    if (!selectionLockUntil || reservedUntil || !showtimeId || !activeState?.selectedSeats) {
+      return;
+    }
+
+    const remaining = selectionLockUntil - Date.now();
+    if (remaining <= 0) {
+      handleTimeout();
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      handleTimeout();
+    }, remaining);
+
+    return () => window.clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionLockUntil, reservedUntil, showtimeId, activeState?.selectedSeats]);
+
   // Handle timeout - release seats and redirect
   const handleTimeout = async () => {
     if (!showtimeId || !activeState?.selectedSeats) return;
@@ -148,30 +247,145 @@ const PaymentPage: React.FC = () => {
       console.error("Error releasing seats on timeout:", err);
     }
 
-    localStorage.removeItem("pendingPayment");
+    removePendingPaymentForShowtime(parseInt(showtimeId, 10));
     navigate(`/booking/${showtimeId}`, {
       state: { prevSelectedSeats: activeState.selectedSeats },
     });
   };
 
-  // Handle payment completion
   const handlePayment = async () => {
     if (!showtimeId || !activeState?.selectedSeats) return;
 
+    if (selectedPaymentMethod !== "sepay") {
+      setError("This payment method is coming soon. Please use SePay for now.");
+      return;
+    }
+
     setPaymentLoading(true);
+    setError(null);
 
     try {
+      if (selectionLockUntil && selectionLockUntil <= Date.now() && !reservedUntil) {
+        await handleTimeout();
+        return;
+      }
+
+      if (!reservedUntil || reservedUntil <= Date.now()) {
+        console.log(
+          "Step 1: Extending seat lock for SePay checkout...",
+          activeState.selectedSeats,
+        );
+        const lockResponse = await bookingService.reserveSeatsForSelection({
+          showtimeId: parseInt(showtimeId, 10),
+          seatIds: activeState.selectedSeats,
+          leaseSeconds: PAYMENT_LOCK_SECONDS,
+        });
+
+        const until = Date.now() + PAYMENT_LOCK_SECONDS * 1000;
+        setReservedUntil(until);
+        setTimeRemaining(until - Date.now());
+        savePendingPayment({
+          selectedSeats:
+            lockResponse.lockedSeatIds?.length > 0
+              ? lockResponse.lockedSeatIds
+              : activeState.selectedSeats,
+          showtimeId: parseInt(showtimeId, 10),
+          showtime: activeState.showtime,
+          totalPrice: activeState.totalPrice,
+          reservedUntil: until,
+        });
+
+        await waitForNextFrame();
+      }
+
+      console.log("Step 2: Creating booking with seats...", activeState.selectedSeats);
       const bookingResponse = await bookingService.createBookingWithSeats({
         showtimeId: parseInt(showtimeId, 10),
         seatIds: activeState.selectedSeats,
       });
+      console.log("Booking created:", bookingResponse);
 
-      localStorage.removeItem("pendingPayment");
-      navigate(`/booking-confirmation/${bookingResponse.booking.id}`, {
-        state: { bookingData: bookingResponse },
+      const bookingId = bookingResponse.booking.id;
+      const totalAmount =
+        bookingResponse.booking.totalAmount ?? activeState.totalPrice;
+
+      const baseUrl = window.location.origin;
+      const successUrl = `${baseUrl}/booking-confirmation/${bookingId}?payment=success`;
+      const errorUrl = `${baseUrl}/booking-confirmation/${bookingId}?payment=error`;
+      const cancelUrl = `${baseUrl}/booking/${showtimeId}?payment=cancelled`;
+
+      console.log("Step 3: Registering pending payment...");
+      const pendingPayment = await paymentService.getSePayCheckout(
+        bookingId,
+        successUrl,
+        errorUrl,
+        cancelUrl,
+      );
+      console.log("Pending payment registered:", pendingPayment.paymentId);
+
+      console.log("Step 4: Initializing SePay SDK...");
+
+      const sepayClient = new SePayPgClient({
+        env: import.meta.env.VITE_SEPAY_ENV || "sandbox",
+        merchant_id: import.meta.env.VITE_SEPAY_MERCHANT_ID || "",
+        secret_key: import.meta.env.VITE_SEPAY_SECRET_KEY || "",
       });
+
+      const checkoutUrl = sepayClient.checkout.initCheckoutUrl();
+      console.log("Checkout URL:", checkoutUrl);
+
+      const formFields = sepayClient.checkout.initOneTimePaymentFields({
+        operation: "PURCHASE",
+        payment_method: "BANK_TRANSFER",
+        order_invoice_number: pendingPayment.formFields?.order_invoice_number || bookingId.toString(),
+        order_amount: totalAmount,
+        currency: "VND",
+        order_description: `Cinema Booking #${bookingId} - ${activeState.showtime.movieTitle}`,
+        success_url: successUrl,
+        error_url: errorUrl,
+        cancel_url: cancelUrl,
+      });
+
+      console.log("Form fields:", JSON.stringify(formFields, null, 2));
+      console.log("Step 5: Submitting to SePay...");
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = checkoutUrl;
+      form.target = "_self";
+
+      Object.entries(formFields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value as string;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      window.history.replaceState(
+        { prevSelectedSeats: activeState.selectedSeats },
+        "",
+        `/booking/${showtimeId}`,
+      );
+      form.submit();
+      document.body.removeChild(form);
     } catch (err: any) {
-      console.error("Error creating booking:", err);
+      console.error("Error in payment flow:", err);
+      console.error("Response data:", err.response?.data);
+
+      removePendingPaymentForShowtime(parseInt(showtimeId, 10));
+      setReservedUntil(0);
+      setTimeRemaining(0);
+
+      try {
+        await bookingService.releaseSeatsReservation({
+          showtimeId: parseInt(showtimeId, 10),
+          seatIds: activeState.selectedSeats,
+        });
+      } catch (releaseErr) {
+        console.error("Error releasing seats after payment failure:", releaseErr);
+      }
 
       if (err.response?.status === 409) {
         setError(
@@ -180,8 +394,10 @@ const PaymentPage: React.FC = () => {
         setTimeout(() => {
           navigate(`/booking/${showtimeId}`);
         }, 2000);
+      } else if (err.response?.status === 400) {
+        setError(`Payment error: ${err.response?.data?.message || "Bad request"}`);
       } else {
-        setError("Payment failed. Please try again.");
+        setError("Payment failed. Please try again. " + (err.message || ""));
       }
     } finally {
       setPaymentLoading(false);
@@ -192,16 +408,18 @@ const PaymentPage: React.FC = () => {
   const handleCancel = async () => {
     if (!showtimeId || !activeState?.selectedSeats) return;
 
-    try {
-      await bookingService.releaseSeatsReservation({
-        showtimeId: parseInt(showtimeId, 10),
-        seatIds: activeState.selectedSeats,
-      });
-    } catch (err) {
-      console.error("Error releasing seats on cancel:", err);
+    if (reservedUntil > Date.now() || selectionLockUntil > Date.now()) {
+      try {
+        await bookingService.releaseSeatsReservation({
+          showtimeId: parseInt(showtimeId, 10),
+          seatIds: activeState.selectedSeats,
+        });
+      } catch (err) {
+        console.error("Error releasing seats on cancel:", err);
+      }
     }
 
-    localStorage.removeItem("pendingPayment");
+    removePendingPaymentForShowtime(parseInt(showtimeId, 10));
     navigate(`/booking/${showtimeId}`, {
       state: { prevSelectedSeats: activeState.selectedSeats },
     });
@@ -255,42 +473,48 @@ const PaymentPage: React.FC = () => {
     );
   }
 
-  const isExpiringSoon = timeRemaining < 60000; // Less than 1 minute
+  const displayedTimeRemaining =
+    reservedUntil > Date.now()
+      ? Math.max(timeRemaining, reservedUntil - Date.now())
+      : 0;
+  const hasActiveReservation = displayedTimeRemaining > 0;
+  const isExpiringSoon = hasActiveReservation && displayedTimeRemaining < 60000; // Less than 1 minute
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Header with timer - NEW UI */}
-      <section
-        className={`py-4 border-b-4 ${isExpiringSoon ? "border-red-500 bg-red-900/20" : "border-yellow-500 bg-yellow-900/20"}`}
-      >
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <div
-              className={`text-xl font-bold mb-2 flex items-center justify-center ${
-                isExpiringSoon ? "text-red-400" : "text-yellow-400"
-              }`}
+      {hasActiveReservation && (
+        <section
+          className={`py-4 border-b-4 ${isExpiringSoon ? "border-red-500 bg-red-900/20" : "border-yellow-500 bg-yellow-900/20"}`}
+        >
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center"
             >
-              <Timer className="w-6 h-6 mr-2" />
-              Time remaining: {formatTimeRemaining(timeRemaining)}
-            </div>
-            {isExpiringSoon && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-400 text-sm flex items-center justify-center animate-pulse"
+              <div
+                className={`text-xl font-bold mb-2 flex items-center justify-center ${
+                  isExpiringSoon ? "text-red-400" : "text-yellow-400"
+                }`}
               >
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                Your reservation will expire soon!
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-      </section>
+                <Timer className="w-6 h-6 mr-2" />
+                Time remaining: {formatTimeRemaining(displayedTimeRemaining)}
+              </div>
+              {isExpiringSoon && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-red-400 text-sm flex items-center justify-center animate-pulse"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  Your reservation will expire soon!
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* Payment content */}
       <main className="py-8 bg-gray-950">
@@ -352,7 +576,7 @@ const PaymentPage: React.FC = () => {
                           key={seatId}
                           className="bg-red-600 text-white hover:bg-red-700"
                         >
-                          Seat {seatId}
+                          {seatLabelsById[seatId] ?? `Seat ${seatId}`}
                         </Badge>
                       ))}
                     </div>
@@ -394,47 +618,86 @@ const PaymentPage: React.FC = () => {
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
                   <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-                    <CreditCard className="w-5 h-5 mr-2" />
+                    <Wallet className="w-5 h-5 mr-2" />
                     Payment Method
                   </h3>
-                  <div className="space-y-4">
-                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
-                      <input
-                        type="radio"
-                        name="payment"
-                        defaultChecked
-                        className="text-red-600 focus:ring-red-500"
-                      />
-                      <CreditCard className="w-5 h-5 text-blue-400" />
-                      <span className="text-white font-medium">
-                        Credit/Debit Card
-                      </span>
-                    </label>
-                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
-                      <input
-                        type="radio"
-                        name="payment"
-                        className="text-red-600 focus:ring-red-500"
-                      />
-                      <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                        🏦
-                      </div>
-                      <span className="text-white font-medium">
-                        Bank Transfer
-                      </span>
-                    </label>
-                    <label className="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
-                      <input
-                        type="radio"
-                        name="payment"
-                        className="text-red-600 focus:ring-red-500"
-                      />
-                      <div className="w-5 h-5 bg-red-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                        📱
-                      </div>
-                      <span className="text-white font-medium">VNPay</span>
-                    </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {paymentMethods.map((method) => {
+                      const Icon = method.icon;
+                      const isSelected = selectedPaymentMethod === method.id;
+                      const isAvailable = method.status === "available";
+
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => {
+                            if (!isAvailable) return;
+                            setError(null);
+                            setSelectedPaymentMethod(method.id);
+                          }}
+                          disabled={!isAvailable || paymentLoading}
+                          aria-pressed={isSelected}
+                          className={`min-h-[120px] rounded-lg border p-4 text-left transition-all ${
+                            isSelected
+                              ? "border-green-500 bg-green-950/40 shadow-[0_0_0_1px_rgba(34,197,94,0.35)]"
+                              : "border-gray-700 bg-gray-900/70 hover:border-gray-500"
+                          } ${!isAvailable ? "cursor-not-allowed opacity-60" : ""}`}
+                        >
+                          <div className="flex h-full gap-3">
+                            <div
+                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
+                                isSelected
+                                  ? "bg-green-500 text-white"
+                                  : "bg-gray-800 text-gray-300"
+                              }`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="font-semibold text-white">
+                                    {method.title}
+                                  </p>
+                                  <p className="mt-1 text-sm leading-5 text-gray-300">
+                                    {method.description}
+                                  </p>
+                                </div>
+
+                                {isSelected ? (
+                                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
+                                ) : (
+                                  <span className="mt-1 h-5 w-5 shrink-0 rounded-full border border-gray-600" />
+                                )}
+                              </div>
+
+                              <div className="mt-auto pt-3">
+                                <span
+                                  className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${
+                                    isAvailable
+                                      ? "bg-green-500/15 text-green-300"
+                                      : "bg-yellow-500/15 text-yellow-300"
+                                  }`}
+                                >
+                                  {method.detail}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* <div className="mt-5 rounded-lg border border-green-700/50 bg-green-950/30 p-4">
+                    <p className="text-sm leading-6 text-green-100">
+                      SePay is available now and supports VietQR, bank transfer,
+                      and ATM/Napas flow through its checkout page. Other
+                      methods are shown as placeholders for incoming support.
+                    </p>
+                  </div> */}
                 </motion.div>
               </CardContent>
             </Card>
@@ -472,7 +735,7 @@ const PaymentPage: React.FC = () => {
 
                     <Button
                       onClick={handlePayment}
-                      disabled={paymentLoading || timeRemaining <= 0}
+                      disabled={paymentLoading}
                       size="lg"
                       className="text-white bg-red-600 hover:bg-red-700 min-w-[200px]"
                     >
@@ -483,8 +746,13 @@ const PaymentPage: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Pay{" "}
+                          <Wallet className="w-4 h-4 mr-2" />
+                          Pay with{" "}
+                          {
+                            paymentMethods.find(
+                              (method) => method.id === selectedPaymentMethod,
+                            )?.title
+                          }{" "}
                           {(activeState.totalPrice + 10000).toLocaleString(
                             "vi-VN",
                           )}{" "}

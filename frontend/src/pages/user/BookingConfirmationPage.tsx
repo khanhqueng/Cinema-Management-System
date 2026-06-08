@@ -23,7 +23,9 @@ import {
 
 // OLD API services (keep 100% logic) - UNCHANGED
 import { bookingService } from "../../services/bookingService";
+import { paymentService } from "../../services/paymentService";
 import { BookingDto, BookingWithSeatsResponse, Booking } from "../../types";
+import { removePendingPaymentForShowtime } from "../../utils/pendingPaymentStorage";
 
 // NEW UI components
 import { Button } from "../../components/ui/button";
@@ -34,43 +36,69 @@ const BookingConfirmationPage: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const location = useLocation();
 
-  // Support both BookingDto (from navigation state) and Booking (from API)
   const [booking, setBooking] = useState<BookingDto | Booking | null>(null);
   const [seatBookings, setSeatBookings] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
 
-  // Get booking data from navigation state if available
   const bookingData = location.state?.bookingData as
     | BookingWithSeatsResponse
     | undefined;
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const paymentParam = searchParams.get("payment");
+    if (paymentParam) {
+      setPaymentStatus(paymentParam);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     const fetchBookingData = async () => {
+      const paymentParam = new URLSearchParams(location.search).get("payment");
+
       if (!bookingId) {
         setError("Booking ID not provided");
         setLoading(false);
         return;
       }
 
-      // If we have booking data from navigation state, use it
+      // From navigation state (direct navigation)
       if (bookingData) {
         setBooking(bookingData.booking);
         setSeatBookings(bookingData.seatBookings);
+        if (paymentParam) {
+          removePendingPaymentForShowtime(bookingData.booking.showtime.id);
+        }
         setLoading(false);
         return;
       }
 
-      // Otherwise, fetch from API
+      // Fetch from API (when redirect from SePay)
       try {
         setLoading(true);
+        console.log("Fetching booking:", bookingId);
         const bookingResponse = await bookingService.getBookingById(
           parseInt(bookingId, 10),
         );
+        console.log("Booking response:", bookingResponse);
         setBooking(bookingResponse);
-      } catch (err) {
-        setError("Failed to load booking details");
+        if (paymentParam) {
+          removePendingPaymentForShowtime(bookingResponse.showtime.id);
+        }
+      } catch (err: any) {
         console.error("Error fetching booking:", err);
+        console.error("Status:", err.response?.status);
+        console.error("Data:", err.response?.data);
+        
+        if (err.response?.status === 401) {
+          setError("Please login to view booking");
+        } else if (err.response?.status === 404) {
+          setError("Booking not found. It may have been deleted.");
+        } else {
+          setError("Failed to load booking: " + (err.message || "Unknown error"));
+        }
       } finally {
         setLoading(false);
       }
@@ -78,6 +106,148 @@ const BookingConfirmationPage: React.FC = () => {
 
     fetchBookingData();
   }, [bookingId, bookingData]);
+
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const checkPaymentStatus = async () => {
+      if (!bookingId || !paymentStatus) return;
+
+      if (paymentStatus === "success" || paymentStatus === "error") {
+        console.log("Checking payment status for booking:", bookingId);
+        
+        try {
+          const paymentInfo = await paymentService.getPaymentStatusByBooking(
+            parseInt(bookingId, 10),
+          );
+          console.log("Payment info:", paymentInfo);
+
+          const paymentState = String(
+            paymentInfo?.status ?? paymentInfo?.paymentStatus ?? "",
+          ).toUpperCase();
+
+          if (paymentState === "SUCCESS") {
+            const currentBooking = await bookingService.getBookingById(
+              parseInt(bookingId, 10),
+            );
+            console.log("Updated booking:", currentBooking);
+            setBooking(currentBooking);
+            
+            // Stop polling if we got a response
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          } else if (["FAILED", "CANCELLED", "EXPIRED"].includes(paymentState)) {
+            setError("Payment was not completed. Please try again.");
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          }
+        } catch (err: any) {
+          console.error("Error checking payment status:", err);
+          console.error("Status:", err.response?.status);
+          console.error("Data:", err.response?.data);
+        }
+      }
+    };
+
+    // Check immediately
+    checkPaymentStatus();
+
+    // Poll every 3 seconds for up to 30 seconds (10 times)
+    let pollCount = 0;
+    pollInterval = setInterval(() => {
+      if (pollCount >= 10) {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        return;
+      }
+      checkPaymentStatus();
+      pollCount++;
+    }, 3000);
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [bookingId, paymentStatus]);
+
+  const formatDateTime = (dateValue: string | undefined | null): string => {
+    if (!dateValue) return "N/A";
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        return dateValue;
+      }
+      return date.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return dateValue;
+    }
+  };
+
+  const formatBookingDateEnglish = (
+    dateValue: string | undefined | null,
+  ): string => {
+    if (!dateValue) return "N/A";
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return "N/A";
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "N/A";
+    }
+  };
+
+  const formatPriceEnglish = (price: number): string =>
+    bookingService.formatPrice(price);
+
+  const getBookingStatusDisplayEnglish = (status: string): string => {
+    switch (status) {
+      case "PENDING":
+        return "Pending";
+      case "CONFIRMED":
+        return "Confirmed";
+      case "CANCELLED":
+        return "Cancelled";
+      case "COMPLETED":
+        return "Completed";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const getSeatDisplayStringEnglish = (seatData: any[]): string => {
+    if (!seatData || seatData.length === 0) return "No seats selected";
+
+    return seatData
+      .map((seatBooking) => {
+        if ("seatLabel" in seatBooking) return seatBooking.seatLabel;
+        if ("seat" in seatBooking && seatBooking.seat) {
+          return `${seatBooking.seat.rowLetter}${seatBooking.seat.seatNumber}`;
+        }
+        return "Unknown";
+      })
+      .sort()
+      .join(", ");
+  };
 
   // NEW loading UI (modern design)
   if (loading) {
@@ -146,8 +316,9 @@ const BookingConfirmationPage: React.FC = () => {
     fallbackSeatBookings: any[] | null,
   ) => {
     if ("totalAmount" in booking) {
-      // BookingDto doesn't have seatBookings directly - use the separate seatBookings state
-      return fallbackSeatBookings || [];
+      return (booking as BookingDto & { seatBookings?: any[] }).seatBookings ||
+        fallbackSeatBookings ||
+        [];
     }
     return booking.seatBookings || []; // Booking has seatBookings
   };
@@ -188,46 +359,92 @@ const BookingConfirmationPage: React.FC = () => {
     createLegacyBooking(booking),
   );
 
+  const getHeaderContent = () => {
+    const bookingStatus = booking ? getBookingStatus(booking) : "";
+    
+    if (paymentStatus === "error" || bookingStatus === "CANCELLED") {
+      return {
+        bgClass: "from-red-900 to-red-800",
+        iconBg: "bg-red-500",
+        title: "Payment Failed",
+        message: "Your payment was not successful. Please try again or contact support.",
+        icon: AlertCircle,
+      };
+    }
+    
+    if (bookingStatus === "CONFIRMED" || bookingStatus === "COMPLETED") {
+      return {
+        bgClass: "from-green-900 to-green-800",
+        iconBg: "bg-green-500",
+        title: "Booking Confirmed!",
+        message: "Your tickets have been successfully booked. Check your email for the confirmation.",
+        icon: CheckCircle2,
+      };
+    }
+    
+    return {
+      bgClass: "from-yellow-900 to-yellow-800",
+      iconBg: "bg-yellow-500",
+      title: "Booking Pending",
+      message: "Your booking is awaiting payment confirmation.",
+      icon: Clock,
+    };
+  };
+
+  const headerContent = getHeaderContent();
+  const HeaderIcon = headerContent.icon;
+  const seatsDisplay = getSeatDisplayStringEnglish(
+    getSeatBookingsData(booking, seatBookings),
+  );
+  const movieTitle =
+    booking.showtime?.movieTitle ||
+    (booking.showtime as any)?.movie?.title ||
+    "Unknown Movie";
+  const theaterName =
+    booking.showtime?.theaterName ||
+    (booking.showtime as any)?.theater?.name ||
+    "Unknown Theater";
+
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Success Header - NEW UI */}
-      <section className="bg-linear-to-r from-green-900 to-green-800 py-16 text-center">
-        <div className="container mx-auto px-4">
+      {/* Status Header */}
+      <section className={`bg-gradient-to-r ${headerContent.bgClass} py-10 text-center border-b border-white/10`}>
+        <div className="container mx-auto px-4 max-w-5xl">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-6">
-              <CheckCircle2 className="w-12 h-12 text-white" />
+            <div className={`inline-flex items-center justify-center w-16 h-16 ${headerContent.iconBg} rounded-full mb-5 shadow-lg shadow-black/20`}>
+              <HeaderIcon className="w-9 h-9 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Booking Confirmed!
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+              {headerContent.title}
             </h1>
-            <p className="text-lg text-green-100 max-w-2xl mx-auto">
-              Your tickets have been successfully booked. Check your email for
-              the confirmation.
+            <p className="text-base md:text-lg text-white/85 max-w-2xl mx-auto">
+              {headerContent.message}
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Booking Details */}
-      <main className="py-12 bg-gray-950">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+      <main className="py-8 md:py-10 bg-gray-950">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 lg:gap-8 mb-10">
             {/* Left Side - Booking Details */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="space-y-6">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
+                className="space-y-6"
               >
                 {/* Booking Details Header */}
                 <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-8">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-2xl font-bold text-white flex items-center">
+                  <CardContent className="p-5 md:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                      <h2 className="text-xl md:text-2xl font-bold text-white flex items-center">
                         <Ticket className="w-6 h-6 mr-2 text-green-500" />
                         Booking Details
                       </h2>
@@ -239,34 +456,32 @@ const BookingConfirmationPage: React.FC = () => {
                         }}
                         className="text-white font-medium"
                       >
-                        {bookingService.getBookingStatusDisplay(
-                          getBookingStatus(booking) as any,
-                        )}
+                        {getBookingStatusDisplayEnglish(getBookingStatus(booking))}
                       </Badge>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
-                        <span className="text-gray-400">
+                    <div className="divide-y divide-gray-700">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 text-sm">
                           Booking Reference:
                         </span>
-                        <span className="text-white font-medium">
+                        <span className="text-white font-semibold font-mono tracking-wide sm:text-right">
                           {bookingService.formatBookingReference(
                             booking.bookingReference,
                           )}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
-                        <span className="text-gray-400">Booking Date:</span>
-                        <span className="text-white font-medium">
-                          {bookingService.formatBookingDate(booking.createdAt)}
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 text-sm">Booking Date:</span>
+                        <span className="text-white font-medium sm:text-right">
+                          {formatBookingDateEnglish(booking.createdAt)}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3">
-                        <span className="text-gray-400">Total Amount:</span>
-                        <span className="text-green-500 font-bold text-lg flex items-center">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 text-sm">Total Amount:</span>
+                        <span className="text-green-500 font-bold text-lg flex items-center sm:justify-end">
                           <DollarSign className="w-4 h-4 mr-1" />
-                          {bookingService.formatPrice(getTotalPrice(booking))}
+                          {formatPriceEnglish(getTotalPrice(booking))}
                         </span>
                       </div>
                     </div>
@@ -275,39 +490,37 @@ const BookingConfirmationPage: React.FC = () => {
 
                 {/* Movie Information */}
                 <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-8">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <CardContent className="p-5 md:p-6">
+                    <h3 className="text-xl font-bold text-white mb-5 flex items-center">
                       <Film className="w-5 h-5 mr-2 text-red-500" />
                       Movie Information
                     </h3>
-                    <div className="flex items-start space-x-4">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
                       <img
                         src={
                           booking.showtime?.moviePosterUrl ||
                           (booking.showtime as any)?.movie?.posterUrl ||
-                          `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(booking.showtime?.movieTitle || "Movie")}`
+                          `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(movieTitle)}`
                         }
-                        alt={booking.showtime?.movieTitle || "Movie"}
-                        className="w-20 h-30 object-cover rounded-lg"
+                        alt={movieTitle}
+                        className="w-24 h-36 sm:w-20 sm:h-30 object-cover rounded-lg bg-gray-900"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
-                            `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(booking.showtime?.movieTitle || "Movie")}`;
+                            `https://placehold.co/100x150/141414/E50914?text=${encodeURIComponent(movieTitle)}`;
                         }}
                       />
                       <div className="flex-1">
                         <h4 className="text-lg font-bold text-white mb-2">
-                          {booking.showtime?.movieTitle ||
-                            (booking.showtime as any)?.movie?.title ||
-                            "Unknown Movie"}
+                          {movieTitle}
                         </h4>
-                        <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge
                             variant="secondary"
                             className="bg-blue-600 text-white"
                           >
                             {(booking.showtime as any)?.movie?.genre || "Genre"}
                           </Badge>
-                          <p className="text-gray-400 flex items-center">
+                          <p className="text-gray-400 flex items-center text-sm">
                             <Clock className="w-4 h-4 mr-1" />
                             {(booking.showtime as any)?.movie
                               ?.formattedDuration ||
@@ -321,58 +534,45 @@ const BookingConfirmationPage: React.FC = () => {
 
                 {/* Showtime Information */}
                 <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-8">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <CardContent className="p-5 md:p-6">
+                    <h3 className="text-xl font-bold text-white mb-5 flex items-center">
                       <Calendar className="w-5 h-5 mr-2 text-yellow-500" />
                       Showtime Information
                     </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
-                        <span className="text-gray-400 flex items-center">
+                    <div className="divide-y divide-gray-700">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 flex items-center text-sm">
                           <MapPin className="w-4 h-4 mr-2" />
                           Theater:
                         </span>
-                        <span className="text-white font-medium">
-                          {booking.showtime?.theaterName ||
-                            (booking.showtime as any)?.theater?.name ||
-                            "Unknown Theater"}
+                        <span className="text-white font-medium sm:text-right">
+                          {theaterName}{" "}
                           ({booking.showtime?.theaterCapacity || 0} seats)
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
-                        <span className="text-gray-400 flex items-center">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 flex items-center text-sm">
                           <Calendar className="w-4 h-4 mr-2" />
                           Date & Time:
                         </span>
-                        <span className="text-white font-medium">
+                        <span className="text-white font-medium sm:text-right">
                           {booking.showtime?.showDatetime
-                            ? new Date(
-                                booking.showtime.showDatetime,
-                              ).toLocaleString("vi-VN", {
-                                weekday: "short",
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                            ? formatDateTime(booking.showtime.showDatetime)
                             : "Date not available"}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-gray-700">
-                        <span className="text-gray-400 flex items-center">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-2 sm:gap-4 py-3">
+                        <span className="text-gray-400 flex items-center text-sm">
                           <Users className="w-4 h-4 mr-2" />
                           Seats:
                         </span>
-                        <span className="text-white font-medium">
-                          {bookingService.getSeatDisplayString(
-                            getSeatBookingsData(booking, seatBookings),
-                          )}
+                        <span className="text-white font-medium sm:text-right">
+                          {seatsDisplay}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3">
-                        <span className="text-gray-400">Number of Seats:</span>
-                        <span className="text-white font-medium">
+                      <div className="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-1 sm:gap-4 py-3">
+                        <span className="text-gray-400 text-sm">Number of Seats:</span>
+                        <span className="text-white font-medium sm:text-right">
                           {booking.seatsBooked}
                         </span>
                       </div>
@@ -383,13 +583,37 @@ const BookingConfirmationPage: React.FC = () => {
             </div>
 
             {/* Right Side - Actions and Instructions */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="space-y-6">
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="space-y-6"
+                className="space-y-6 lg:sticky lg:top-24"
               >
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="text-sm text-gray-400 mb-2">
+                      Reference
+                    </div>
+                    <div className="text-2xl font-bold text-white font-mono tracking-wide break-all">
+                      {bookingService.formatBookingReference(
+                        booking.bookingReference,
+                      )}
+                    </div>
+                    <div className="mt-5 rounded-lg border border-gray-700 bg-gray-900 p-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">Seats</span>
+                        <span className="text-white font-semibold">
+                          {booking.seatsBooked}
+                        </span>
+                      </div>
+                      <div className="mt-3 text-white text-sm leading-6">
+                        {seatsDisplay}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Quick Actions */}
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-6">
@@ -428,7 +652,7 @@ const BookingConfirmationPage: React.FC = () => {
                         </Button>
                       )}
 
-                      {canCancel && (
+                      {/* {canCancel && (
                         <Button
                           onClick={() => handleCancelBooking()}
                           variant="destructive"
@@ -437,13 +661,13 @@ const BookingConfirmationPage: React.FC = () => {
                           <X className="w-4 h-4 mr-2" />
                           Cancel Booking
                         </Button>
-                      )}
+                      )} */}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Important Information */}
-                <Card className="bg-blue-900 border-blue-700">
+                <Card className="bg-blue-950 border-blue-800">
                   <CardContent className="p-6">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center">
                       <Info className="w-5 h-5 mr-2" />
@@ -474,15 +698,15 @@ const BookingConfirmationPage: React.FC = () => {
                 </Card>
 
                 {/* QR Code / Digital Ticket */}
-                <Card className="bg-gray-800 border-gray-700">
+                {/* <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-6 text-center">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-center">
                       <QrCode className="w-5 h-5 mr-2" />
                       Digital Ticket
                     </h3>
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center">
-                        <QrCode className="w-12 h-12 text-gray-800" />
+                      <div className="w-24 h-24 bg-white rounded-lg flex items-center justify-center">
+                        <QrCode className="w-14 h-14 text-gray-800" />
                       </div>
                       <div className="text-center">
                         <p className="text-gray-400 text-sm mb-2">
@@ -496,7 +720,7 @@ const BookingConfirmationPage: React.FC = () => {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
               </motion.div>
             </div>
           </div>
@@ -514,7 +738,7 @@ const BookingConfirmationPage: React.FC = () => {
               size="lg"
               className="bg-gray-800! border-gray-600! text-white! hover:bg-gray-700! hover:text-white!"
             >
-              <Link to="/bookings/bookings">
+              <Link to="/bookings">
                 <Ticket className="w-4 h-4 mr-2" />
                 View My Bookings
               </Link>

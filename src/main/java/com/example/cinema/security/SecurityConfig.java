@@ -72,6 +72,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/health").permitAll()
 
+                // SePay webhook - must be public for payment gateway
+                .requestMatchers(HttpMethod.POST, "/api/payments/sepay/webhook").permitAll()
+
                 // Admin only endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/movies/**").hasRole("ADMIN")

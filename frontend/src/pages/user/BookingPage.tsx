@@ -26,6 +26,11 @@ import {
   SeatAvailabilityResponse,
   BookingWithSeatsResponse,
 } from "../../types";
+import {
+  getPendingPaymentForShowtime,
+  syncPendingPaymentForShowtime,
+  removePendingPaymentForShowtime,
+} from "../../utils/pendingPaymentStorage";
 
 // NEW UI components
 import { Button } from "../../components/ui/button";
@@ -54,6 +59,9 @@ const BookingPage: React.FC = () => {
     reservedUntil: number;
   } | null>(null);
   const [bannerTimeLeft, setBannerTimeLeft] = useState<number>(0);
+  const [showRestoreNotice, setShowRestoreNotice] = useState(false);
+
+  const SELECTION_LOCK_SECONDS = 5 * 60;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +87,8 @@ const BookingPage: React.FC = () => {
         const prevSeats = (location.state as any)?.prevSelectedSeats;
         if (Array.isArray(prevSeats) && prevSeats.length > 0) {
           setSelectedSeats(prevSeats);
+          setShowRestoreNotice(true);
+          navigate(location.pathname, { replace: true, state: null });
         }
       } catch (err) {
         setError("Failed to load showtime or seat information");
@@ -89,7 +99,7 @@ const BookingPage: React.FC = () => {
     };
 
     fetchData();
-  }, [showtimeId]);
+  }, [showtimeId, location.state, location.pathname, navigate]);
 
   // Update price when selected seats change
   useEffect(() => {
@@ -114,48 +124,75 @@ const BookingPage: React.FC = () => {
     updatePrice();
   }, [selectedSeats, showtimeId]);
 
-  // No cleanup needed since we're not locking seats until "Book Now" is clicked
+  // SePay redirects to /booking/:showtimeId?payment=cancelled when the user
+  // cancels checkout. SePay does not send a cancel webhook, so release locally.
+  useEffect(() => {
+    if (!showtimeId) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("payment") !== "cancelled") return;
+
+    const parsedShowtimeId = parseInt(showtimeId, 10);
+    const pendingEntry = getPendingPaymentForShowtime(parsedShowtimeId);
+    const seatsToRelease = pendingEntry?.selectedSeats ?? [];
+
+    const cleanupCancelledCheckout = async () => {
+      if (seatsToRelease.length > 0) {
+        try {
+          await bookingService.releaseSeatsReservation({
+            showtimeId: parsedShowtimeId,
+            seatIds: seatsToRelease,
+          });
+        } catch (err) {
+          console.error("Error releasing seats after cancelled SePay checkout:", err);
+        }
+      }
+
+      removePendingPaymentForShowtime(parsedShowtimeId);
+      setPendingPayment(null);
+      setBannerTimeLeft(0);
+      setSelectedSeats(seatsToRelease);
+      toast.info("Payment was cancelled. Your seats have been released.");
+
+      try {
+        const updatedSeatMap =
+          await bookingService.getSeatMapForShowtime(parsedShowtimeId);
+        setSeatMap(updatedSeatMap);
+      } catch (err) {
+        console.error("Error refreshing seat map after cancelled checkout:", err);
+      }
+
+      navigate(location.pathname, { replace: true, state: null });
+    };
+
+    cleanupCancelledCheckout();
+  }, [showtimeId, location.search, location.pathname, navigate]);
 
   // Check localStorage for an active pending payment on this showtime
   useEffect(() => {
     if (!showtimeId) return;
-    const raw = localStorage.getItem("pendingPayment");
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as {
-        selectedSeats: number[];
-        showtimeId: number;
-        showtime: Showtime;
-        totalPrice: number;
-      };
-      if (String(parsed.showtimeId) !== showtimeId) return;
-      bookingService
-        .getSeatLockStatus(parsed.showtimeId, parsed.selectedSeats)
-        .then((status) => {
-          if (status.locked && status.remainingMs > 0) {
-            const until = Date.now() + status.remainingMs;
-            // Use actual locked seatIds from API for accurate count
-            const actualSeats =
-              status.seatIds && status.seatIds.length > 0
-                ? status.seatIds
-                : parsed.selectedSeats;
-            setPendingPayment({
-              selectedSeats: actualSeats,
-              totalPrice: parsed.totalPrice,
-              showtime: parsed.showtime,
-              reservedUntil: until,
-            });
-            setBannerTimeLeft(status.remainingMs);
-          } else {
-            localStorage.removeItem("pendingPayment");
-          }
-        })
-        .catch(() => localStorage.removeItem("pendingPayment"));
-    } catch {
-      localStorage.removeItem("pendingPayment");
-    }
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("payment") === "cancelled") return;
+
+    syncPendingPaymentForShowtime(parseInt(showtimeId, 10)).then(
+      (pendingEntry) => {
+        if (!pendingEntry) return;
+
+        setSelectedSeats((currentSeats) =>
+          currentSeats.length > 0 ? currentSeats : pendingEntry.selectedSeats,
+        );
+
+        setPendingPayment({
+          selectedSeats: pendingEntry.selectedSeats,
+          totalPrice: pendingEntry.totalPrice,
+          showtime: pendingEntry.showtime,
+          reservedUntil: pendingEntry.reservedUntil,
+        });
+        setBannerTimeLeft(pendingEntry.reservedUntil - Date.now());
+      },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showtimeId]);
+  }, [showtimeId, location.search]);
 
   // Countdown for Resume Payment banner
   useEffect(() => {
@@ -166,7 +203,15 @@ const BookingPage: React.FC = () => {
       setBannerTimeLeft(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
-        localStorage.removeItem("pendingPayment");
+        if (showtimeId) {
+          bookingService
+            .releaseSeatsReservation({
+              showtimeId: parseInt(showtimeId, 10),
+              seatIds: pendingPayment.selectedSeats,
+            })
+            .catch(console.error);
+          removePendingPaymentForShowtime(parseInt(showtimeId, 10));
+        }
         setPendingPayment(null);
         // Refresh seat map so previously locked seats become selectable again
         if (showtimeId) {
@@ -212,25 +257,36 @@ const BookingPage: React.FC = () => {
     try {
       setBookingLoading(true);
 
-      // Step 1: Reserve seats first (this is where race condition prevention happens)
-      try {
-        const reserveResponse = await bookingService.reserveSeatsForSelection({
-          showtimeId: parseInt(showtimeId, 10),
-          seatIds: selectedSeats,
-        });
+      const lockResponse = await bookingService.reserveSeatsForSelection({
+        showtimeId: parseInt(showtimeId, 10),
+        seatIds: selectedSeats,
+        leaseSeconds: SELECTION_LOCK_SECONDS,
+      });
 
-        // Seats successfully reserved, proceed to payment page
-      } catch (reserveErr: any) {
-        // Handle seat reservation conflicts. The API returns these as 400
-        // (BusinessRuleViolationException / SeatLockException), not 409, so
-        // surface its message directly instead of branching on status code.
-        toast.error(
-          reserveErr.response?.data?.message ||
-            "Some selected seats are already taken by another user. Please select different seats.",
-        );
+      const lockedSeats =
+        lockResponse.lockedSeatIds?.length > 0
+          ? lockResponse.lockedSeatIds
+          : selectedSeats;
+      const selectionLockUntil = Date.now() + SELECTION_LOCK_SECONDS * 1000;
 
-        // Refresh the seat map so seat colors reflect the theater's current
-        // real-time state (not just the seats this user had selected).
+      navigate(`/payment/${showtimeId}`, {
+        state: {
+          selectedSeats: lockedSeats,
+          totalPrice,
+          showtime,
+          selectionLockUntil,
+        },
+      });
+    } catch (err: any) {
+      console.error("Error in booking process:", err);
+      toast.error(
+        err.response?.data?.message ||
+          "Selected seats are no longer available. Please choose again.",
+      );
+
+      // Refresh the seat map so seat colors reflect the theater's current
+      // real-time state (not just the seats this user had selected).
+      if (showtimeId) {
         try {
           const updatedSeatMap = await bookingService.getSeatMapForShowtime(
             parseInt(showtimeId, 10),
@@ -239,34 +295,8 @@ const BookingPage: React.FC = () => {
         } catch (refreshErr) {
           console.error("Error refreshing seat map after conflict:", refreshErr);
         }
-        setSelectedSeats([]);
-        return;
       }
-
-      // Step 2: Save pending payment state so PaymentPage can recover after reload
-      localStorage.setItem(
-        "pendingPayment",
-        JSON.stringify({
-          selectedSeats,
-          showtimeId: parseInt(showtimeId, 10),
-          showtime,
-          totalPrice,
-        }),
-      );
-
-      // Step 3: Navigate to payment page with reserved seats
-      // Instead of creating booking immediately, go to payment page
-      navigate(`/payment/${showtimeId}`, {
-        state: {
-          selectedSeats,
-          totalPrice,
-          showtime,
-          reservedUntil: Date.now() + 5 * 60 * 1000, // 5 minutes from now
-        },
-      });
-    } catch (err) {
-      console.error("Error in booking process:", err);
-      toast.error("Failed to proceed with booking. Please try again.");
+      setSelectedSeats([]);
     } finally {
       setBookingLoading(false);
     }
@@ -320,10 +350,6 @@ const BookingPage: React.FC = () => {
   const seatMapByRow = bookingService.generateSeatMap(seatMap.seats);
   const rows = Object.keys(seatMapByRow).sort();
 
-  const prevSelectedSeats = (location.state as any)?.prevSelectedSeats as
-    | number[]
-    | undefined;
-
   const pendingMinutes = Math.floor(bannerTimeLeft / 60000);
   const pendingSeconds = Math.floor((bannerTimeLeft % 60000) / 1000);
 
@@ -360,14 +386,14 @@ const BookingPage: React.FC = () => {
                 })
               }
             >
-              Continue to Payment →
+              Continue with Booking →
             </Button>
           </div>
         </div>
       )}
 
       {/* Restore notice banner */}
-      {prevSelectedSeats && prevSelectedSeats.length > 0 && (
+      {showRestoreNotice && (
         <div className="bg-yellow-900/40 border-b border-yellow-700 py-2 px-4 text-center text-yellow-300 text-sm flex items-center justify-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           Your previous seat selection has been restored. Modify or confirm to
@@ -519,13 +545,22 @@ const BookingPage: React.FC = () => {
                                   const isSelected = ids.some((id) =>
                                     selectedSeats.includes(id),
                                   );
+                                  const isLockedByCurrentUser = pair.some(
+                                    (s) => s.lockedByCurrentUser === true,
+                                  );
                                   const isBooked = pair.some(
-                                    (s) => !s.isAvailable && !s.lockedByOther,
+                                    (s) =>
+                                      !s.isAvailable &&
+                                      !s.lockedByOther &&
+                                      !s.lockedByCurrentUser,
                                   );
                                   const isLockedByOther = pair.some(
                                     (s) => s.lockedByOther === true,
                                   );
-                                  const isDisabled = isBooked || isLockedByOther;
+                                  const isDisabled =
+                                    isBooked ||
+                                    isLockedByOther ||
+                                    isLockedByCurrentUser;
 
                                   const label =
                                     pair.length === 2
@@ -542,6 +577,9 @@ const BookingPage: React.FC = () => {
                                   } else if (isLockedByOther) {
                                     cls +=
                                       " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
+                                  } else if (isLockedByCurrentUser) {
+                                    cls +=
+                                      " bg-orange-500 border-orange-400 cursor-not-allowed opacity-70";
                                   } else if (isSelected) {
                                     cls +=
                                       " bg-green-600 border-emerald-400 hover:bg-emerald-600 shadow-lg shadow-green-600/30 cursor-pointer";
@@ -552,6 +590,8 @@ const BookingPage: React.FC = () => {
 
                                   const tooltip = isLockedByOther
                                     ? `${label} - Temporarily held`
+                                    : isLockedByCurrentUser
+                                      ? `${label} - Temporarily held`
                                     : `${label} - Sweetbox (2 seats)`;
 
                                   const shouldAddAisle =
@@ -611,8 +651,12 @@ const BookingPage: React.FC = () => {
                                 const isSelected = selectedSeats.includes(
                                   seat.id,
                                 );
+                                const isLockedByCurrentUser =
+                                  seat.lockedByCurrentUser === true;
                                 const isBooked =
-                                  !seat.isAvailable && !seat.lockedByOther;
+                                  !seat.isAvailable &&
+                                  !seat.lockedByOther &&
+                                  !isLockedByCurrentUser;
                                 const isLockedByOther =
                                   seat.lockedByOther === true;
                                 const isVIP = seat.seatType === "VIP";
@@ -640,6 +684,9 @@ const BookingPage: React.FC = () => {
                                 } else if (isLockedByOther) {
                                   seatClasses +=
                                     " bg-orange-500 cursor-not-allowed opacity-70";
+                                } else if (isLockedByCurrentUser) {
+                                  seatClasses +=
+                                    " bg-orange-500 cursor-not-allowed opacity-70";
                                 } else if (isSelected) {
                                   seatClasses +=
                                     " bg-green-600 hover:bg-emerald-600 shadow-lg shadow-green-600/30";
@@ -661,15 +708,21 @@ const BookingPage: React.FC = () => {
                                   isCenterZone &&
                                   !isBooked &&
                                   !isLockedByOther &&
-                                  !isSelected
+                                  !isSelected &&
+                                  !isLockedByCurrentUser
                                 ) {
                                   seatClasses +=
                                     " ring-1 ring-green-600/80 ring-offset-0";
                                 }
 
-                                const isDisabled = isBooked || isLockedByOther;
+                                const isDisabled =
+                                  isBooked ||
+                                  isLockedByOther ||
+                                  isLockedByCurrentUser;
                                 const tooltip = isLockedByOther
                                   ? `${row}${seat.seatNumber} - Temporarily held by another user`
+                                  : isLockedByCurrentUser
+                                    ? `${row}${seat.seatNumber} - Temporarily held`
                                   : `${row}${seat.seatNumber} - ${bookingService.getSeatTypeDisplay(seat.seatType)} (${seat.priceMultiplier}x)`;
 
                                 return (
@@ -821,7 +874,7 @@ const BookingPage: React.FC = () => {
                           }
                           className="w-full mb-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
                         >
-                          Resume Payment →
+                          Continue with Booking →
                         </Button>
                         <p className="text-xs text-yellow-400 text-center mb-3">
                           You have {pendingPayment.selectedSeats.length} seat

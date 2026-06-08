@@ -12,8 +12,7 @@ import java.time.LocalDateTime;
  * Links specific seats to bookings for detailed seat management
  */
 @Entity
-@Table(name = "seat_bookings",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"showtime_id", "seat_id"}))
+@Table(name = "seat_bookings")
 @Getter
 @Setter
 @NoArgsConstructor

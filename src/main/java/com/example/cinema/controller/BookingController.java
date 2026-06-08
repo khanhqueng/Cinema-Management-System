@@ -5,6 +5,7 @@ import com.example.cinema.entity.User;
 import com.example.cinema.service.BookingEmailService;
 import com.example.cinema.service.BookingService;
 import com.example.cinema.service.UserService;
+import com.example.cinema.dto.BookingDto;
 import com.example.cinema.dto.BookingHistoryDto;
 import com.example.cinema.dto.SeatLockResponse;
 import com.example.cinema.dto.SeatLockStatusResponse;
@@ -61,16 +62,16 @@ public class BookingController {
      * Get booking by ID (User can see their own, Admin can see all)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
+    public ResponseEntity<BookingDto> getBookingById(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
-        Booking booking = bookingService.getBookingByIdOrThrow(id);
+        Booking booking = bookingService.getBookingDetailsByIdOrThrow(id);
 
         // Users can only see their own bookings, admins can see all
         if (!currentUser.isAdmin() && !booking.getUser().getId().equals(currentUser.getId())) {
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(booking);
+        return ResponseEntity.ok(BookingDto.fromEntity(booking));
     }
 
     /**
@@ -171,8 +172,7 @@ public class BookingController {
         User currentUser = userService.getCurrentUser();
         BookingService.BookingWithSeatsResponse response = bookingService.createBookingWithSeats(
                 currentUser, request.showtimeId(), request.seatIds());
-        // Transaction is committed at this point — fire email asynchronously without blocking the response.
-        bookingEmailService.sendBookingConfirmation(response.booking(), response.seatBookings());
+        // Do not send confirmation email here - booking is PENDING and will be confirmed after payment success.
         return ResponseEntity.ok(response);
     }
 
@@ -282,7 +282,7 @@ public class BookingController {
 
         // If this method returns without exception, seats were successfully reserved
         SeatLockResponse response = bookingService.reserveSeatsForSelection(
-                currentUser, request.showtimeId(), request.seatIds());
+                currentUser, request.showtimeId(), request.seatIds(), request.leaseSeconds());
 
         return ResponseEntity.ok(response); // 200 OK - seats reserved successfully
     }
@@ -343,6 +343,7 @@ public class BookingController {
      */
     public record SeatReservationRequest(
         Long showtimeId,
-        List<Long> seatIds
+        List<Long> seatIds,
+        Integer leaseSeconds
     ) {}
 }
